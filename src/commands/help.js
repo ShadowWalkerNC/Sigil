@@ -67,6 +67,25 @@ module.exports = {
                         '**Example:** `/random` \u2022 `/random text:Nova seed:42`',
                 },
                 {
+                    name: '`/saveme` \u2014 Save icon params to history',
+                    value:
+                        '**Required:** `command` `text` `size` `color` `glow`\n' +
+                        '**Optional:** `background` `color2` `opacity` `border` `font` `label`\n' +
+                        '\u2022 Does not regenerate the image \u2014 just saves your params\n' +
+                        '\u2022 `label` lets you name the save (e.g. \'red fire icon\')\n' +
+                        '\u2022 History is capped at 5 entries; oldest is dropped when full\n' +
+                        '**Example:** `/saveme command:/icon text:Nova size:80 color:#FF4500 glow:High background:starfield label:red nova`',
+                },
+                {
+                    name: '`/history` \u2014 View & replay saved icons',
+                    value:
+                        '**Optional:** `clear`\n' +
+                        '\u2022 Lists your last 5 saves with a copy-paste replay command for each\n' +
+                        '\u2022 `clear:True` wipes your entire history\n' +
+                        '\u2022 Only visible to you\n' +
+                        '**Example:** `/history` \u2022 `/history clear:True`',
+                },
+                {
                     name: '`/preview` \u2014 Background mosaic sheet',
                     value:
                         'Generates a single image showing every available background with its name.\n' +
