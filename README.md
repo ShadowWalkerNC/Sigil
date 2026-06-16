@@ -38,6 +38,7 @@ A Discord bot that generates fully customisable profile icons, server banners, a
 - **Background opacity** — `opacity` param (10–100) dims the background before drawing text
 - **10 backgrounds** — 6 procedural (Midnight Gradient, Sunset, Forest, Cyberpunk Grid, Starfield, Carbon Fiber) + 2 plain + 2 custom images
 - **6 fonts** — Another Danger, Bebas Neue, Oswald Bold, Playfair Display, Source Code Pro, Dancing Script
+- **8 border/frame styles** — None, Solid, Glow Ring, Gradient Ring, Double, Dashed, Corner Marks, Neon
 - **Font & background registries** — add new fonts/backgrounds by dropping a file and adding one entry
 - **`setup.html`** — browser-based setup wizard for non-technical users
 - **Improved `/help`** — dynamically lists all fonts and backgrounds, explains every parameter
@@ -86,8 +87,23 @@ npm start
 | `background` | ✅ | See backgrounds table below |
 | `color2` | — | Second colour for a gradient e.g. `#0000FF` |
 | `opacity` | — | Background brightness 10–100 (default: 100) |
-| `border` | — | `None` / `Solid` / `Glow Ring` / `Gradient Ring` |
+| `border` | — | Frame style — see border table below |
 | `font` | — | Font style (default: Another Danger) |
+
+#### Border Styles
+
+| Value | Name | Description |
+|---|---|---|
+| `none` | None | No border (default) |
+| `solid` | Solid | 6px solid rectangle in the primary colour |
+| `glow` | Glow Ring | 4px ring with a wide blur halo matching the primary colour |
+| `gradient` | Gradient Ring | 6px ring sweeping `color` → `color2` → `color` around all four edges |
+| `double` | Double | Two concentric rings (outer 3px, inner 2px) with a 5px gap between them |
+| `dashed` | Dashed | 5px dashed stroke with evenly divided gaps |
+| `corner` | Corner Marks | L-shaped crop marks at each corner — minimal photo-frame look |
+| `neon` | Neon | Three-pass layered glow (soft halo → mid → crisp core) for a neon tube effect |
+
+> 💡 `gradient`, `double`, `dashed`, and `corner` all use `color` for their stroke. `gradient` and `neon` also make use of `color2` if provided.
 
 **Example:** `/icon text:Nova size:80 color:#FF4500 glow:High background:starfield color2:#FFAA00 opacity:70`
 
