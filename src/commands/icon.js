@@ -3,109 +3,140 @@ const { EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
 const path = require('path');
 
+const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+const MAX_TEXT_LENGTH = 20;
+const MIN_FONT_SIZE = 10;
+const MAX_FONT_SIZE = 200;
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('icon')
         .setDescription('Generate a custom profile icon.')
         .addStringOption(option =>
             option.setName('text')
-                .setDescription('The text to display on the profile icon')
+                .setDescription(`The text to display on the icon (max ${MAX_TEXT_LENGTH} characters)`)
                 .setRequired(true))
         .addIntegerOption(option =>
             option.setName('size')
-                .setDescription('The size of the text in integer format (e.g., 50).')
+                .setDescription(`Font size in pixels (${MIN_FONT_SIZE}–${MAX_FONT_SIZE})`)
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
-                .setDescription('The color of the text in hex format (e.g., #FF0000)')
+                .setDescription('Text color in hex format (e.g. #FF0000)')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('glow')
-                .setDescription('The intensity of the font glow.')
-                .setRequired(false)
-                .addChoices(
-                    { name: "Low", value: "5" },
-                    { name: "Medium", value: "10" },
-                    { name: "High", value: "15" }
-                )
-                .setRequired(true))
-        .addStringOption(option =>
-            option.setName('background')
-                .setDescription('Choose a background option.')
+                .setDescription('Glow intensity around the text')
                 .setRequired(true)
                 .addChoices(
-                    { name: "Plain", value: "plain" },
-                    { name: "Custom Background 1", value: "custom1" },
-                    { name: "Custom Background 2", value: "custom2" }
+                    { name: 'Low', value: '5' },
+                    { name: 'Medium', value: '10' },
+                    { name: 'High', value: '15' }
+                ))
+        .addStringOption(option =>
+            option.setName('background')
+                .setDescription('Background style for the icon')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Plain (Black)', value: 'plain' },
+                    { name: 'Custom Background 1', value: 'custom1' },
+                    { name: 'Custom Background 2', value: 'custom2' }
                 )),
+
     async execute(interaction) {
-        const initialEmbed = new EmbedBuilder()
-            .setColor('#808080')
-            .setDescription('Generating your icon. . .');
-
-        const initialReply = await interaction.reply({ embeds: [initialEmbed] });
-
-        // Users Format: TEXT / SIZE / COLOR / GLOW / BACKGROUND
         const text = interaction.options.getString('text');
         const size = interaction.options.getInteger('size');
         const color = interaction.options.getString('color');
         const glowIntensity = interaction.options.getString('glow') || '5';
         const background = interaction.options.getString('background');
 
-        const shadowBlur = parseInt(glowIntensity);
-
-        // Canvas Settings
-        const canvasWidth = 400;
-        const canvasHeight = 400;
-        const canvas = createCanvas(canvasWidth, canvasHeight);
-        const ctx = canvas.getContext('2d');
-
-        // Load font
-        const fontPath = path.resolve(__dirname, '..', 'fonts', 'font.otf');
-        registerFont(fontPath, { family: 'Another Danger' });
-
-        // Load Background Image based on the chosen option
-        let backgroundImage;
-        if (background === 'custom1') {
-            const background1Path = path.resolve(__dirname, '..', 'images', 'background1.jpg');
-            backgroundImage = await loadImage(background1Path);
-        } else if (background === 'custom2') {
-            const background2Path = path.resolve(__dirname, '..', 'images', 'background2.jpg');
-            backgroundImage = await loadImage(background2Path);
-        } else {
-            // For plain or unrecognized background
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        // Input validation
+        if (text.length > MAX_TEXT_LENGTH) {
+            return interaction.reply({
+                content: `Text must be ${MAX_TEXT_LENGTH} characters or fewer.`,
+                ephemeral: true,
+            });
         }
 
-        if (backgroundImage) {
-            ctx.drawImage(backgroundImage, 0, 0, canvasWidth, canvasHeight);
+        if (size < MIN_FONT_SIZE || size > MAX_FONT_SIZE) {
+            return interaction.reply({
+                content: `Font size must be between ${MIN_FONT_SIZE} and ${MAX_FONT_SIZE}.`,
+                ephemeral: true,
+            });
         }
 
-        // Text Settings
-        ctx.font = `${size}px 'Another Danger'`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.translate(canvasWidth / 2, canvasHeight / 2);
-        ctx.rotate(-Math.PI / 20);
-        ctx.shadowColor = color;
-        ctx.shadowBlur = shadowBlur;
-        ctx.fillStyle = color;
-        ctx.fillText(text, 0, 0);
+        if (!HEX_COLOR_REGEX.test(color)) {
+            return interaction.reply({
+                content: 'Color must be a valid hex code (e.g. `#FF0000` or `#F00`).',
+                ephemeral: true,
+            });
+        }
 
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = color;
-        ctx.fillText(text, 0, 0);
+        const loadingEmbed = new EmbedBuilder()
+            .setColor('#808080')
+            .setDescription('Generating your icon...');
 
-        // Convert canvas to buffer
-        const attachment = canvas.toBuffer();
+        const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
-        await initialReply.edit({
-            embeds: [new EmbedBuilder().setColor('#808080').setImage('attachment://profile_icon.png')],
-            files: [{ attachment, name: 'profile_icon.png' }]
-        });
+        try {
+            const canvasSize = 400;
+            const canvas = createCanvas(canvasSize, canvasSize);
+            const ctx = canvas.getContext('2d');
+
+            // Load font
+            const fontPath = path.resolve(__dirname, '..', 'fonts', 'font.otf');
+            registerFont(fontPath, { family: 'Another Danger' });
+
+            // Draw background
+            if (background === 'custom1' || background === 'custom2') {
+                const bgFile = background === 'custom1' ? 'background1.jpg' : 'background2.jpg';
+                const bgPath = path.resolve(__dirname, '..', 'images', bgFile);
+                const backgroundImage = await loadImage(bgPath);
+                ctx.drawImage(backgroundImage, 0, 0, canvasSize, canvasSize);
+            } else {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+            }
+
+            // Draw text with glow
+            const shadowBlur = parseInt(glowIntensity);
+            ctx.font = `${size}px 'Another Danger'`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.translate(canvasSize / 2, canvasSize / 2);
+            ctx.rotate(-Math.PI / 20);
+
+            // Glow pass
+            ctx.shadowColor = color;
+            ctx.shadowBlur = shadowBlur;
+            ctx.fillStyle = color;
+            ctx.fillText(text, 0, 0);
+
+            // Crisp text pass on top
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.fillText(text, 0, 0);
+
+            const attachment = canvas.toBuffer();
+
+            await initialReply.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#808080')
+                        .setImage('attachment://profile_icon.png')
+                        .setFooter({ text: 'Discord Icon Gen • /icon' }),
+                ],
+                files: [{ attachment, name: 'profile_icon.png' }],
+            });
+        } catch (error) {
+            console.error('[ERROR] Icon generation failed:', error);
+            await initialReply.edit({
+                embeds: [
+                    new EmbedBuilder()
+                        .setColor('#FF0000')
+                        .setDescription('Failed to generate your icon. Please try again.'),
+                ],
+            });
+        }
     },
 };
-
-// echo bot sucks lol
