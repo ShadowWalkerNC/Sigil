@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  syntax-check:
+    name: Node.js Syntax Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check syntax on all source files
+        run: |
+          echo "Checking syntax for all JS files in src/..."
+          find src -name "*.js" | while read file; do
+            node --check "$file" && echo "  OK: $file" || { echo "  FAIL: $file"; exit 1; }
+          done
+          echo "All files passed syntax check."
