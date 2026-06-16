@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
 const path = require('path');
+const { getFont, getFontChoices } = require('../utils/fonts');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 const MAX_TEXT_LENGTH = 20;
@@ -11,10 +12,10 @@ const MAX_FONT_SIZE = 200;
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('icon')
-        .setDescription('Generate a custom profile icon.')
+        .setDescription('Generate a custom 400x400 profile icon.')
         .addStringOption(option =>
             option.setName('text')
-                .setDescription(`The text to display on the icon (max ${MAX_TEXT_LENGTH} characters)`)
+                .setDescription(`Text to display on the icon (max ${MAX_TEXT_LENGTH} chars)`)
                 .setRequired(true))
         .addIntegerOption(option =>
             option.setName('size')
@@ -41,7 +42,12 @@ module.exports = {
                     { name: 'Plain (Black)', value: 'plain' },
                     { name: 'Custom Background 1', value: 'custom1' },
                     { name: 'Custom Background 2', value: 'custom2' }
-                )),
+                ))
+        .addStringOption(option =>
+            option.setName('font')
+                .setDescription('Font style for the text')
+                .setRequired(false)
+                .addChoices(...getFontChoices())),
 
     async execute(interaction) {
         const text = interaction.options.getString('text');
@@ -49,22 +55,20 @@ module.exports = {
         const color = interaction.options.getString('color');
         const glowIntensity = interaction.options.getString('glow') || '5';
         const background = interaction.options.getString('background');
+        const fontKey = interaction.options.getString('font') || 'another-danger';
 
-        // Input validation
         if (text.length > MAX_TEXT_LENGTH) {
             return interaction.reply({
                 content: `Text must be ${MAX_TEXT_LENGTH} characters or fewer.`,
                 ephemeral: true,
             });
         }
-
         if (size < MIN_FONT_SIZE || size > MAX_FONT_SIZE) {
             return interaction.reply({
                 content: `Font size must be between ${MIN_FONT_SIZE} and ${MAX_FONT_SIZE}.`,
                 ephemeral: true,
             });
         }
-
         if (!HEX_COLOR_REGEX.test(color)) {
             return interaction.reply({
                 content: 'Color must be a valid hex code (e.g. `#FF0000` or `#F00`).',
@@ -75,7 +79,6 @@ module.exports = {
         const loadingEmbed = new EmbedBuilder()
             .setColor('#808080')
             .setDescription('Generating your icon...');
-
         const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
         try {
@@ -83,11 +86,9 @@ module.exports = {
             const canvas = createCanvas(canvasSize, canvasSize);
             const ctx = canvas.getContext('2d');
 
-            // Load font
-            const fontPath = path.resolve(__dirname, '..', 'fonts', 'font.otf');
-            registerFont(fontPath, { family: 'Another Danger' });
+            const font = getFont(fontKey);
+            registerFont(font.file, { family: font.family });
 
-            // Draw background
             if (background === 'custom1' || background === 'custom2') {
                 const bgFile = background === 'custom1' ? 'background1.jpg' : 'background2.jpg';
                 const bgPath = path.resolve(__dirname, '..', 'images', bgFile);
@@ -98,21 +99,18 @@ module.exports = {
                 ctx.fillRect(0, 0, canvasSize, canvasSize);
             }
 
-            // Draw text with glow
             const shadowBlur = parseInt(glowIntensity);
-            ctx.font = `${size}px 'Another Danger'`;
+            ctx.font = `${size}px '${font.family}'`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.translate(canvasSize / 2, canvasSize / 2);
             ctx.rotate(-Math.PI / 20);
 
-            // Glow pass
             ctx.shadowColor = color;
             ctx.shadowBlur = shadowBlur;
             ctx.fillStyle = color;
             ctx.fillText(text, 0, 0);
 
-            // Crisp text pass on top
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
             ctx.fillText(text, 0, 0);
@@ -124,7 +122,7 @@ module.exports = {
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://profile_icon.png')
-                        .setFooter({ text: 'Discord Icon Gen • /icon' }),
+                        .setFooter({ text: `Discord Icon Gen • font: ${font.label}` }),
                 ],
                 files: [{ attachment, name: 'profile_icon.png' }],
             });
