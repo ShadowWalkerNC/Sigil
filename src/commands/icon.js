@@ -1,16 +1,15 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
-const path = require('path');
 const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
 const { createTextGradient } = require('../utils/gradient');
 const { getBackgroundChoices, drawBackground } = require('../utils/backgrounds');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 const MAX_TEXT_LENGTH = 20;
-const MIN_FONT_SIZE = 10;
-const MAX_FONT_SIZE = 150;
-const CANVAS_SIZE = 400;
+const MIN_FONT_SIZE   = 10;
+const MAX_FONT_SIZE   = 150;
+const CANVAS_SIZE     = 400;
 
 for (const font of getAllFonts()) {
     registerFont(font.file, { family: font.family });
@@ -31,7 +30,7 @@ module.exports = {
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
-                .setDescription('Text color in hex format (e.g. #FF0000)')
+                .setDescription('Text color in hex (e.g. #FF0000)')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('glow')
@@ -51,6 +50,12 @@ module.exports = {
             option.setName('color2')
                 .setDescription('Optional second color for a gradient (e.g. #0000FF)')
                 .setRequired(false))
+        .addIntegerOption(option =>
+            option.setName('opacity')
+                .setDescription('Background opacity 10\u2013100 (default: 100)')
+                .setMinValue(10)
+                .setMaxValue(100)
+                .setRequired(false))
         .addStringOption(option =>
             option.setName('font')
                 .setDescription('Font style for the text')
@@ -64,6 +69,7 @@ module.exports = {
         const color2        = interaction.options.getString('color2') || null;
         const glowIntensity = interaction.options.getString('glow') || '5';
         const background    = interaction.options.getString('background') || 'plain-black';
+        const opacity       = interaction.options.getInteger('opacity') ?? 100;
         const fontKey       = interaction.options.getString('font') || 'another-danger';
 
         if (text.length > MAX_TEXT_LENGTH)
@@ -75,23 +81,30 @@ module.exports = {
         if (color2 && !HEX_COLOR_REGEX.test(color2))
             return interaction.reply({ content: 'Color2 must be a valid hex code (e.g. #0000FF).', ephemeral: true });
 
-        const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your icon...');
+        const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your icon\u2026');
         const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
         try {
             const canvas = createCanvas(CANVAS_SIZE, CANVAS_SIZE);
             const ctx    = canvas.getContext('2d');
 
+            // Draw background at full opacity, then dim if needed
             await drawBackground(ctx, background, CANVAS_SIZE, CANVAS_SIZE, loadImage);
+            if (opacity < 100) {
+                ctx.globalAlpha = 1 - (opacity / 100);
+                ctx.fillStyle   = '#000000';
+                ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+                ctx.globalAlpha = 1.0;
+            }
 
             const font       = getFont(fontKey);
             const shadowBlur = Number(glowIntensity);
             const drawX      = CANVAS_SIZE / 2;
             const drawY      = CANVAS_SIZE / 2;
 
-            ctx.font          = `${size}px '${font.family}'`;
-            ctx.textAlign     = 'center';
-            ctx.textBaseline  = 'middle';
+            ctx.font         = `${size}px '${font.family}'`;
+            ctx.textAlign    = 'center';
+            ctx.textBaseline = 'middle';
 
             const fill = createTextGradient(ctx, color, color2, text, drawX, CANVAS_SIZE);
 
@@ -99,21 +112,20 @@ module.exports = {
             ctx.shadowBlur  = shadowBlur;
             ctx.fillStyle   = fill;
             ctx.fillText(text, drawX, drawY);
-
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur  = 0;
             ctx.fillText(text, drawX, drawY);
 
             const attachment = canvas.toBuffer();
             const colorLabel = color2 ? `gradient ${color}\u2192${color2}` : color;
-            const bgLabel    = interaction.options.getString('background') || 'plain-black';
+            const opacityLabel = opacity < 100 ? ` \u2022 bg:${opacity}%` : '';
 
             await initialReply.edit({
                 embeds: [
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://icon.png')
-                        .setFooter({ text: `Discord Icon Gen \u2022 /icon \u2022 ${bgLabel} \u2022 ${colorLabel} \u2022 font: ${font.label}` }),
+                        .setFooter({ text: `Discord Icon Gen \u2022 /icon \u2022 ${background}${opacityLabel} \u2022 ${colorLabel} \u2022 font: ${font.label}` }),
                 ],
                 files: [{ attachment, name: 'icon.png' }],
             });
