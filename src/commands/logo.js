@@ -1,13 +1,18 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont } = require('canvas');
-const { getFont, getFontChoices } = require('../utils/fonts');
+const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 const MAX_TEXT_LENGTH = 20;
 const MIN_FONT_SIZE = 10;
 const MAX_FONT_SIZE = 200;
 const CANVAS_SIZE = 512;
+
+// Fix #3: register all fonts at module load time, not per-interaction
+for (const font of getAllFonts()) {
+    registerFont(font.file, { family: font.family });
+}
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -19,7 +24,7 @@ module.exports = {
                 .setRequired(true))
         .addIntegerOption(option =>
             option.setName('size')
-                .setDescription(`Font size in pixels (${MIN_FONT_SIZE}–${MAX_FONT_SIZE})`)
+                .setDescription(`Font size in pixels (${MIN_FONT_SIZE}\u2013${MAX_FONT_SIZE})`)
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
@@ -64,7 +69,7 @@ module.exports = {
             return interaction.reply({ content: `Font size must be between ${MIN_FONT_SIZE} and ${MAX_FONT_SIZE}.`, ephemeral: true });
         }
         if (!HEX_COLOR_REGEX.test(color)) {
-            return interaction.reply({ content: 'Color must be a valid hex code (e.g. `#FF4500`).', ephemeral: true });
+            return interaction.reply({ content: 'Color must be a valid hex code (e.g. `#FF4500`).`, ephemeral: true });
         }
 
         const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your logo...');
@@ -73,19 +78,19 @@ module.exports = {
         try {
             const canvas = createCanvas(CANVAS_SIZE, CANVAS_SIZE);
             const ctx = canvas.getContext('2d');
-            // Transparent background — no fillRect
+            // Transparent background \u2014 no fillRect
 
             const font = getFont(fontKey);
-            registerFont(font.file, { family: font.family });
+            // Fix #5: Number() instead of parseInt() without radix
+            const shadowBlur = Number(glowIntensity);
 
             const centerX = CANVAS_SIZE / 2;
             const centerY = CANVAS_SIZE / 2;
-            const shadowBlur = parseInt(glowIntensity);
 
             ctx.strokeStyle = color;
             ctx.fillStyle = color;
 
-            // Draw decorative shape first (behind text)
+            // Draw circle ring behind text
             if (shape === 'circle') {
                 const radius = CANVAS_SIZE * 0.42;
                 ctx.beginPath();
@@ -94,8 +99,10 @@ module.exports = {
                 ctx.shadowColor = color;
                 ctx.shadowBlur = shadowBlur;
                 ctx.stroke();
+                // Crisp pass
                 ctx.shadowColor = 'transparent';
                 ctx.shadowBlur = 0;
+                ctx.stroke();
             }
 
             // Draw text
@@ -114,7 +121,7 @@ module.exports = {
             ctx.shadowBlur = 0;
             ctx.fillText(text, centerX, centerY);
 
-            // Draw underline after text (in front)
+            // Draw underline after text
             if (shape === 'underline') {
                 const metrics = ctx.measureText(text);
                 const lineWidth = metrics.width * 1.1;
@@ -123,15 +130,16 @@ module.exports = {
                 ctx.moveTo(centerX - lineWidth / 2, lineY);
                 ctx.lineTo(centerX + lineWidth / 2, lineY);
                 ctx.lineWidth = Math.max(2, size * 0.04);
+                // Glow pass
                 ctx.shadowColor = color;
                 ctx.shadowBlur = shadowBlur;
                 ctx.stroke();
+                // Fix #2: only two strokes (glow + crisp), not three
                 ctx.shadowColor = 'transparent';
                 ctx.shadowBlur = 0;
                 ctx.stroke();
             }
 
-            // PNG preserves transparency
             const attachment = canvas.toBuffer('image/png');
 
             await initialReply.edit({
@@ -139,7 +147,7 @@ module.exports = {
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://logo.png')
-                        .setFooter({ text: `Discord Icon Gen • /logo • transparent • shape: ${shape} • font: ${font.label}` }),
+                        .setFooter({ text: `Discord Icon Gen \u2022 /logo \u2022 transparent \u2022 shape: ${shape} \u2022 font: ${font.label}` }),
                 ],
                 files: [{ attachment, name: 'logo.png' }],
             });

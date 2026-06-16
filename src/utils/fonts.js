@@ -1,31 +1,28 @@
 const path = require('path');
 
 /**
- * Font Registry
- * Maps font choice names (shown to Discord users) to their file path and
- * canvas family name. Import FONTS into any command that needs font options.
- *
+ * Central font registry.
  * To add a new font:
- *   1. Drop the .otf/.ttf file into src/fonts/
- *   2. Add a new entry below following the same structure
- *   3. Add the key as a choice in your command's font option
+ *   1. Drop the .otf or .ttf file into src/fonts/
+ *   2. Add an entry below using the same pattern.
+ *   3. Done — it appears automatically in all commands that use getFontChoices().
  */
 const FONTS = {
     'another-danger': {
         label: 'Another Danger',
-        file: path.resolve(__dirname, '..', 'fonts', 'font.otf'),
+        file: path.resolve(__dirname, '..', 'fonts', 'AnotherDanger.otf'),
         family: 'Another Danger',
     },
-    // Example for future fonts:
-    // 'impact': {
-    //     label: 'Impact',
-    //     file: path.resolve(__dirname, '..', 'fonts', 'impact.ttf'),
-    //     family: 'Impact',
+    // Add more fonts here:
+    // 'my-font': {
+    //     label: 'My Font',
+    //     file: path.resolve(__dirname, '..', 'fonts', 'my-font.otf'),
+    //     family: 'My Font',
     // },
 };
 
 /**
- * Returns a font entry by key, or the default font if key is not found.
+ * Get a single font config by key. Falls back to 'another-danger' if key not found.
  * @param {string} key
  * @returns {{ label: string, file: string, family: string }}
  */
@@ -34,14 +31,20 @@ function getFont(key) {
 }
 
 /**
- * Returns all fonts as an array of { name, value } Discord choice objects.
- * @returns {{ name: string, value: string }[]}
+ * Returns all font configs as an array.
+ * Used by commands to register all fonts at module load time (Fix #3).
+ * @returns {Array<{ label: string, file: string, family: string }>}
  */
-function getFontChoices() {
-    return Object.entries(FONTS).map(([value, font]) => ({
-        name: font.label,
-        value,
-    }));
+function getAllFonts() {
+    return Object.values(FONTS);
 }
 
-module.exports = { FONTS, getFont, getFontChoices };
+/**
+ * Returns font choice objects formatted for Discord SlashCommandBuilder.addChoices().
+ * @returns {Array<{ name: string, value: string }>}
+ */
+function getFontChoices() {
+    return Object.entries(FONTS).map(([value, font]) => ({ name: font.label, value }));
+}
+
+module.exports = { getFont, getAllFonts, getFontChoices };

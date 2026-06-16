@@ -15,6 +15,12 @@ const TEXT_POSITIONS = {
     bottom: 0.85,
 };
 
+// Fix #3: register all fonts at module load time, not per-interaction
+const { getAllFonts } = require('../utils/fonts');
+for (const font of getAllFonts()) {
+    registerFont(font.file, { family: font.family });
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('avatar')
@@ -25,7 +31,7 @@ module.exports = {
                 .setRequired(true))
         .addIntegerOption(option =>
             option.setName('size')
-                .setDescription(`Font size in pixels (${MIN_FONT_SIZE}–${MAX_FONT_SIZE})`)
+                .setDescription(`Font size in pixels (${MIN_FONT_SIZE}\u2013${MAX_FONT_SIZE})`)
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
@@ -86,16 +92,17 @@ module.exports = {
             const ctx = canvas.getContext('2d');
 
             const font = getFont(fontKey);
-            registerFont(font.file, { family: font.family });
+            // Fix #5: Number() instead of parseInt() without radix
+            const shadowBlur = Number(glowIntensity);
 
-            // Fetch avatar — fallback to default Discord avatar if none set
             const avatarURL = interaction.user.displayAvatarURL({ extension: 'png', size: 256 });
 
             try {
                 const avatarImage = await loadImage(avatarURL);
 
                 if (circular) {
-                    // Clip to circle before drawing avatar
+                    // Fix #1: ctx.save() before clip so state can be fully restored after
+                    ctx.save();
                     ctx.beginPath();
                     ctx.arc(CANVAS_SIZE / 2, CANVAS_SIZE / 2, CANVAS_SIZE / 2, 0, Math.PI * 2);
                     ctx.closePath();
@@ -103,17 +110,18 @@ module.exports = {
                 }
 
                 ctx.drawImage(avatarImage, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+                if (circular) {
+                    // Fix #1: restore clip state so text and any future layers are unclipped
+                    ctx.restore();
+                }
             } catch {
                 // Fallback: solid dark background if avatar fails to load
                 ctx.fillStyle = '#2b2d31';
                 ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
             }
 
-            // Reset clip for text rendering
-            ctx.restore && ctx.restore();
-
             // Overlay text
-            const shadowBlur = parseInt(glowIntensity);
             const textY = CANVAS_SIZE * (TEXT_POSITIONS[position] ?? 0.85);
 
             ctx.font = `${size}px '${font.family}'`;
@@ -138,7 +146,7 @@ module.exports = {
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://avatar_overlay.png')
-                        .setFooter({ text: `Discord Icon Gen • /avatar • ${circular ? 'circular' : 'square'} • position: ${position}` }),
+                        .setFooter({ text: `Discord Icon Gen \u2022 /avatar \u2022 ${circular ? 'circular' : 'square'} \u2022 position: ${position}` }),
                 ],
                 files: [{ attachment, name: 'avatar_overlay.png' }],
             });
