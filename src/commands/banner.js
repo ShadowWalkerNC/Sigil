@@ -12,6 +12,12 @@ const MAX_FONT_SIZE = 150;
 const CANVAS_WIDTH = 1024;
 const CANVAS_HEIGHT = 320;
 
+const ALIGN_X = {
+    left:   CANVAS_WIDTH * 0.05,
+    center: CANVAS_WIDTH / 2,
+    right:  CANVAS_WIDTH * 0.95,
+};
+
 for (const font of getAllFonts()) {
     registerFont(font.file, { family: font.family });
 }
@@ -58,6 +64,15 @@ module.exports = {
                     { name: 'Custom Background 2', value: 'Custom Background 2' }
                 ))
         .addStringOption(option =>
+            option.setName('align')
+                .setDescription('Text alignment (default: Center)')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Left',   value: 'left'   },
+                    { name: 'Center', value: 'center' },
+                    { name: 'Right',  value: 'right'  }
+                ))
+        .addStringOption(option =>
             option.setName('subtitle')
                 .setDescription(`Optional subtitle beneath main text (max ${MAX_SUBTITLE_LENGTH} chars)`)
                 .setRequired(false))
@@ -68,13 +83,14 @@ module.exports = {
                 .addChoices(...getFontChoices())),
 
     async execute(interaction) {
-        const text = interaction.options.getString('text');
-        const size = interaction.options.getInteger('size');
-        const color = interaction.options.getString('color');
+        const text       = interaction.options.getString('text');
+        const size       = interaction.options.getInteger('size');
+        const color      = interaction.options.getString('color');
         const glowIntensity = interaction.options.getString('glow') || '5';
         const background = interaction.options.getString('background') || 'Plain (Black)';
-        const subtitle = interaction.options.getString('subtitle') || null;
-        const fontKey = interaction.options.getString('font') || 'another-danger';
+        const align      = interaction.options.getString('align') || 'center';
+        const subtitle   = interaction.options.getString('subtitle') || null;
+        const fontKey    = interaction.options.getString('font') || 'another-danger';
 
         if (text.length > MAX_TEXT_LENGTH) {
             return interaction.reply({ content: `Text must be ${MAX_TEXT_LENGTH} characters or fewer.`, ephemeral: true });
@@ -111,37 +127,37 @@ module.exports = {
 
             const font = getFont(fontKey);
             const shadowBlur = Number(glowIntensity);
-
-            const centerX = CANVAS_WIDTH / 2;
+            const textX = ALIGN_X[align] ?? ALIGN_X.center;
             const textY = subtitle ? CANVAS_HEIGHT * 0.42 : CANVAS_HEIGHT / 2;
 
             ctx.font = `${size}px '${font.family}'`;
-            ctx.textAlign = 'center';
+            ctx.textAlign = align;
             ctx.textBaseline = 'middle';
 
             ctx.shadowColor = color;
             ctx.shadowBlur = shadowBlur;
             ctx.fillStyle = color;
-            ctx.fillText(text, centerX, textY);
+            ctx.fillText(text, textX, textY);
 
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
-            ctx.fillText(text, centerX, textY);
+            ctx.fillText(text, textX, textY);
 
             if (subtitle) {
                 const subtitleSize = Math.round(size * 0.4);
                 const subtitleY = textY + size * 0.75;
                 ctx.font = `${subtitleSize}px '${font.family}'`;
+                ctx.textAlign = align;
                 ctx.globalAlpha = 0.75;
 
                 ctx.shadowColor = color;
                 ctx.shadowBlur = shadowBlur * 0.6;
                 ctx.fillStyle = color;
-                ctx.fillText(subtitle, centerX, subtitleY);
+                ctx.fillText(subtitle, textX, subtitleY);
 
                 ctx.shadowColor = 'transparent';
                 ctx.shadowBlur = 0;
-                ctx.fillText(subtitle, centerX, subtitleY);
+                ctx.fillText(subtitle, textX, subtitleY);
                 ctx.globalAlpha = 1.0;
             }
 
@@ -152,7 +168,7 @@ module.exports = {
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://banner.png')
-                        .setFooter({ text: `Discord Icon Gen \u2022 /banner \u2022 ${background} \u2022 font: ${font.label}` }),
+                        .setFooter({ text: `Discord Icon Gen \u2022 /banner \u2022 ${background} \u2022 align: ${align} \u2022 font: ${font.label}` }),
                 ],
                 files: [{ attachment, name: 'banner.png' }],
             });
