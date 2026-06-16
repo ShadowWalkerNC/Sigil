@@ -3,6 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
 const path = require('path');
 const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
+const { createTextGradient } = require('../utils/gradient');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 const MAX_TEXT_LENGTH = 20;
@@ -56,18 +57,23 @@ module.exports = {
                     { name: 'Custom Background 2', value: 'Custom Background 2' }
                 ))
         .addStringOption(option =>
+            option.setName('color2')
+                .setDescription('Optional second color for a gradient (e.g. #0000FF)')
+                .setRequired(false))
+        .addStringOption(option =>
             option.setName('font')
                 .setDescription('Font style for the text')
                 .setRequired(false)
                 .addChoices(...getFontChoices())),
 
     async execute(interaction) {
-        const text = interaction.options.getString('text');
-        const size = interaction.options.getInteger('size');
-        const color = interaction.options.getString('color');
+        const text       = interaction.options.getString('text');
+        const size       = interaction.options.getInteger('size');
+        const color      = interaction.options.getString('color');
+        const color2     = interaction.options.getString('color2') || null;
         const glowIntensity = interaction.options.getString('glow') || '5';
         const background = interaction.options.getString('background') || 'Plain (Black)';
-        const fontKey = interaction.options.getString('font') || 'another-danger';
+        const fontKey    = interaction.options.getString('font') || 'another-danger';
 
         if (text.length > MAX_TEXT_LENGTH) {
             return interaction.reply({ content: `Text must be ${MAX_TEXT_LENGTH} characters or fewer.`, ephemeral: true });
@@ -77,6 +83,9 @@ module.exports = {
         }
         if (!HEX_COLOR_REGEX.test(color)) {
             return interaction.reply({ content: 'Color must be a valid hex code (e.g. #FF0000).', ephemeral: true });
+        }
+        if (color2 && !HEX_COLOR_REGEX.test(color2)) {
+            return interaction.reply({ content: 'Color2 must be a valid hex code (e.g. #0000FF).', ephemeral: true });
         }
 
         const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your icon...');
@@ -94,35 +103,38 @@ module.exports = {
                 try {
                     const bgImage = await loadImage(bgPath);
                     ctx.drawImage(bgImage, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
-                } catch {
-                    // Fallback to black if bg image missing
-                }
+                } catch { /* fallback to black */ }
             }
 
             const font = getFont(fontKey);
             const shadowBlur = Number(glowIntensity);
+            const drawX = CANVAS_SIZE / 2;
+            const drawY = CANVAS_SIZE / 2;
 
             ctx.font = `${size}px '${font.family}'`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
+            const fill = createTextGradient(ctx, color, color2, text, drawX, CANVAS_SIZE);
+
             ctx.shadowColor = color;
             ctx.shadowBlur = shadowBlur;
-            ctx.fillStyle = color;
-            ctx.fillText(text, CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+            ctx.fillStyle = fill;
+            ctx.fillText(text, drawX, drawY);
 
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
-            ctx.fillText(text, CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+            ctx.fillText(text, drawX, drawY);
 
             const attachment = canvas.toBuffer();
+            const colorLabel = color2 ? `gradient ${color}\u2192${color2}` : color;
 
             await initialReply.edit({
                 embeds: [
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://icon.png')
-                        .setFooter({ text: `Discord Icon Gen \u2022 /icon \u2022 ${background} \u2022 font: ${font.label}` }),
+                        .setFooter({ text: `Discord Icon Gen \u2022 /icon \u2022 ${background} \u2022 ${colorLabel} \u2022 font: ${font.label}` }),
                 ],
                 files: [{ attachment, name: 'icon.png' }],
             });

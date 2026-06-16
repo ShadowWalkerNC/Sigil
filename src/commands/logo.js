@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont } = require('canvas');
 const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
+const { createTextGradient } = require('../utils/gradient');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 const MAX_TEXT_LENGTH = 20;
@@ -40,13 +41,17 @@ module.exports = {
                     { name: 'High', value: '15' }
                 ))
         .addStringOption(option =>
+            option.setName('color2')
+                .setDescription('Optional second color for a gradient (e.g. #FF00FF)')
+                .setRequired(false))
+        .addStringOption(option =>
             option.setName('shape')
                 .setDescription('Optional decorative shape behind the text')
                 .setRequired(false)
                 .addChoices(
-                    { name: 'None', value: 'none' },
-                    { name: 'Circle Ring', value: 'circle' },
-                    { name: 'Underline', value: 'underline' }
+                    { name: 'None',         value: 'none'      },
+                    { name: 'Circle Ring',  value: 'circle'    },
+                    { name: 'Underline',    value: 'underline' }
                 ))
         .addStringOption(option =>
             option.setName('font')
@@ -55,12 +60,13 @@ module.exports = {
                 .addChoices(...getFontChoices())),
 
     async execute(interaction) {
-        const text = interaction.options.getString('text');
-        const size = interaction.options.getInteger('size');
-        const color = interaction.options.getString('color');
+        const text       = interaction.options.getString('text');
+        const size       = interaction.options.getInteger('size');
+        const color      = interaction.options.getString('color');
+        const color2     = interaction.options.getString('color2') || null;
         const glowIntensity = interaction.options.getString('glow') || '5';
-        const shape = interaction.options.getString('shape') || 'none';
-        const fontKey = interaction.options.getString('font') || 'another-danger';
+        const shape      = interaction.options.getString('shape') || 'none';
+        const fontKey    = interaction.options.getString('font') || 'another-danger';
 
         if (text.length > MAX_TEXT_LENGTH) {
             return interaction.reply({ content: `Text must be ${MAX_TEXT_LENGTH} characters or fewer.`, ephemeral: true });
@@ -70,6 +76,9 @@ module.exports = {
         }
         if (!HEX_COLOR_REGEX.test(color)) {
             return interaction.reply({ content: 'Color must be a valid hex code (e.g. #FF4500).', ephemeral: true });
+        }
+        if (color2 && !HEX_COLOR_REGEX.test(color2)) {
+            return interaction.reply({ content: 'Color2 must be a valid hex code (e.g. #FF00FF).', ephemeral: true });
         }
 
         const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your logo...');
@@ -81,7 +90,6 @@ module.exports = {
 
             const font = getFont(fontKey);
             const shadowBlur = Number(glowIntensity);
-
             const centerX = CANVAS_SIZE / 2;
             const centerY = CANVAS_SIZE / 2;
 
@@ -105,9 +113,11 @@ module.exports = {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
+            const fill = createTextGradient(ctx, color, color2, text, centerX, CANVAS_SIZE);
+
             ctx.shadowColor = color;
             ctx.shadowBlur = shadowBlur;
-            ctx.fillStyle = color;
+            ctx.fillStyle = fill;
             ctx.fillText(text, centerX, centerY);
 
             ctx.shadowColor = 'transparent';
@@ -124,6 +134,7 @@ module.exports = {
                 ctx.lineWidth = Math.max(2, size * 0.04);
                 ctx.shadowColor = color;
                 ctx.shadowBlur = shadowBlur;
+                ctx.strokeStyle = color;
                 ctx.stroke();
                 ctx.shadowColor = 'transparent';
                 ctx.shadowBlur = 0;
@@ -131,13 +142,14 @@ module.exports = {
             }
 
             const attachment = canvas.toBuffer();
+            const colorLabel = color2 ? `gradient ${color}\u2192${color2}` : color;
 
             await initialReply.edit({
                 embeds: [
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://logo.png')
-                        .setFooter({ text: `Discord Icon Gen \u2022 /logo \u2022 transparent \u2022 shape: ${shape} \u2022 font: ${font.label}` }),
+                        .setFooter({ text: `Discord Icon Gen \u2022 /logo \u2022 transparent \u2022 shape: ${shape} \u2022 ${colorLabel} \u2022 font: ${font.label}` }),
                 ],
                 files: [{ attachment, name: 'logo.png' }],
             });

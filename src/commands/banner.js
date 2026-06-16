@@ -3,6 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
 const path = require('path');
 const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
+const { createTextGradient } = require('../utils/gradient');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 const MAX_TEXT_LENGTH = 30;
@@ -60,8 +61,8 @@ module.exports = {
                 .setRequired(true)
                 .addChoices(
                     { name: 'Plain (Black)', value: 'Plain (Black)' },
-                    { name: 'Custom Background 1', value: 'Custom Background 1' },
-                    { name: 'Custom Background 2', value: 'Custom Background 2' }
+                    { name: 'Custom Background 2', value: 'Custom Background 2' },
+                    { name: 'Custom Background 1', value: 'Custom Background 1' }
                 ))
         .addStringOption(option =>
             option.setName('align')
@@ -72,6 +73,10 @@ module.exports = {
                     { name: 'Center', value: 'center' },
                     { name: 'Right',  value: 'right'  }
                 ))
+        .addStringOption(option =>
+            option.setName('color2')
+                .setDescription('Optional second color for a gradient (e.g. #FF00FF)')
+                .setRequired(false))
         .addStringOption(option =>
             option.setName('subtitle')
                 .setDescription(`Optional subtitle beneath main text (max ${MAX_SUBTITLE_LENGTH} chars)`)
@@ -86,6 +91,7 @@ module.exports = {
         const text       = interaction.options.getString('text');
         const size       = interaction.options.getInteger('size');
         const color      = interaction.options.getString('color');
+        const color2     = interaction.options.getString('color2') || null;
         const glowIntensity = interaction.options.getString('glow') || '5';
         const background = interaction.options.getString('background') || 'Plain (Black)';
         const align      = interaction.options.getString('align') || 'center';
@@ -104,6 +110,9 @@ module.exports = {
         if (!HEX_COLOR_REGEX.test(color)) {
             return interaction.reply({ content: 'Color must be a valid hex code (e.g. #00FFFF).', ephemeral: true });
         }
+        if (color2 && !HEX_COLOR_REGEX.test(color2)) {
+            return interaction.reply({ content: 'Color2 must be a valid hex code (e.g. #FF00FF).', ephemeral: true });
+        }
 
         const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your banner...');
         const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
@@ -120,9 +129,7 @@ module.exports = {
                 try {
                     const bgImage = await loadImage(bgPath);
                     ctx.drawImage(bgImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                } catch {
-                    // Fallback to black if bg image missing
-                }
+                } catch { /* fallback to black */ }
             }
 
             const font = getFont(fontKey);
@@ -134,9 +141,11 @@ module.exports = {
             ctx.textAlign = align;
             ctx.textBaseline = 'middle';
 
+            const fill = createTextGradient(ctx, color, color2, text, textX, CANVAS_WIDTH);
+
             ctx.shadowColor = color;
             ctx.shadowBlur = shadowBlur;
-            ctx.fillStyle = color;
+            ctx.fillStyle = fill;
             ctx.fillText(text, textX, textY);
 
             ctx.shadowColor = 'transparent';
@@ -150,9 +159,11 @@ module.exports = {
                 ctx.textAlign = align;
                 ctx.globalAlpha = 0.75;
 
+                const subtitleFill = createTextGradient(ctx, color, color2, subtitle, textX, CANVAS_WIDTH);
+
                 ctx.shadowColor = color;
                 ctx.shadowBlur = shadowBlur * 0.6;
-                ctx.fillStyle = color;
+                ctx.fillStyle = subtitleFill;
                 ctx.fillText(subtitle, textX, subtitleY);
 
                 ctx.shadowColor = 'transparent';
@@ -162,13 +173,14 @@ module.exports = {
             }
 
             const attachment = canvas.toBuffer();
+            const colorLabel = color2 ? `gradient ${color}\u2192${color2}` : color;
 
             await initialReply.edit({
                 embeds: [
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://banner.png')
-                        .setFooter({ text: `Discord Icon Gen \u2022 /banner \u2022 ${background} \u2022 align: ${align} \u2022 font: ${font.label}` }),
+                        .setFooter({ text: `Discord Icon Gen \u2022 /banner \u2022 ${background} \u2022 align: ${align} \u2022 ${colorLabel} \u2022 font: ${font.label}` }),
                 ],
                 files: [{ attachment, name: 'banner.png' }],
             });
