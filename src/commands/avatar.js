@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
 const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
 const { createTextGradient } = require('../utils/gradient');
@@ -70,38 +69,34 @@ module.exports = {
                 .addChoices(...getFontChoices())),
 
     async execute(interaction) {
-        const text       = interaction.options.getString('text');
-        const size       = interaction.options.getInteger('size');
-        const color      = interaction.options.getString('color');
-        const color2     = interaction.options.getString('color2') || null;
+        const text          = interaction.options.getString('text');
+        const size          = interaction.options.getInteger('size');
+        const color         = interaction.options.getString('color');
+        const color2        = interaction.options.getString('color2') || null;
         const glowIntensity = interaction.options.getString('glow') || '5';
-        const position   = interaction.options.getString('position') || 'bottom';
-        const circular   = interaction.options.getBoolean('circular') ?? false;
-        const fontKey    = interaction.options.getString('font') || 'another-danger';
+        const position      = interaction.options.getString('position') || 'bottom';
+        const circular      = interaction.options.getBoolean('circular') ?? false;
+        const fontKey       = interaction.options.getString('font') || 'another-danger';
 
-        if (text.length > MAX_TEXT_LENGTH) {
+        if (text.length > MAX_TEXT_LENGTH)
             return interaction.reply({ content: `Text must be ${MAX_TEXT_LENGTH} characters or fewer.`, ephemeral: true });
-        }
-        if (size < MIN_FONT_SIZE || size > MAX_FONT_SIZE) {
+        if (size < MIN_FONT_SIZE || size > MAX_FONT_SIZE)
             return interaction.reply({ content: `Font size must be between ${MIN_FONT_SIZE} and ${MAX_FONT_SIZE}.`, ephemeral: true });
-        }
-        if (!HEX_COLOR_REGEX.test(color)) {
+        if (!HEX_COLOR_REGEX.test(color))
             return interaction.reply({ content: 'Color must be a valid hex code (e.g. #FFFFFF).', ephemeral: true });
-        }
-        if (color2 && !HEX_COLOR_REGEX.test(color2)) {
+        if (color2 && !HEX_COLOR_REGEX.test(color2))
             return interaction.reply({ content: 'Color2 must be a valid hex code (e.g. #FF00FF).', ephemeral: true });
-        }
 
-        const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your avatar overlay...');
+        const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your avatar overlay\u2026');
         const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
         try {
             const canvas = createCanvas(CANVAS_SIZE, CANVAS_SIZE);
-            const ctx = canvas.getContext('2d');
+            const ctx    = canvas.getContext('2d');
 
-            const font = getFont(fontKey);
+            const font       = getFont(fontKey);
             const shadowBlur = Number(glowIntensity);
-            const drawX = CANVAS_SIZE / 2;
+            const drawX      = CANVAS_SIZE / 2;
 
             const avatarURL = interaction.user.displayAvatarURL({ extension: 'png', size: 256 });
 
@@ -123,19 +118,18 @@ module.exports = {
 
             const textY = CANVAS_SIZE * (TEXT_POSITIONS[position] ?? 0.85);
 
-            ctx.font = `${size}px '${font.family}'`;
-            ctx.textAlign = 'center';
+            ctx.font         = `${size}px '${font.family}'`;
+            ctx.textAlign    = 'center';
             ctx.textBaseline = 'middle';
 
             const fill = createTextGradient(ctx, color, color2, text, drawX, CANVAS_SIZE);
 
             ctx.shadowColor = color;
-            ctx.shadowBlur = shadowBlur;
-            ctx.fillStyle = fill;
+            ctx.shadowBlur  = shadowBlur;
+            ctx.fillStyle   = fill;
             ctx.fillText(text, drawX, textY);
-
             ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur  = 0;
             ctx.fillText(text, drawX, textY);
 
             const attachment = canvas.toBuffer();

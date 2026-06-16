@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
 const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
 const { createTextGradient } = require('../utils/gradient');
@@ -158,8 +157,8 @@ module.exports = {
                 ctx.globalAlpha = 1.0;
             }
 
-            const attachment  = canvas.toBuffer();
-            const colorLabel  = color2 ? `gradient ${color}\u2192${color2}` : color;
+            const attachment   = canvas.toBuffer();
+            const colorLabel   = color2 ? `gradient ${color}\u2192${color2}` : color;
             const opacityLabel = opacity < 100 ? ` \u2022 bg:${opacity}%` : '';
 
             await initialReply.edit({

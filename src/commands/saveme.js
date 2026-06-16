@@ -1,16 +1,8 @@
 /**
  * /saveme — save the icon params you just used into your personal history.
- *
- * Usage:
- *   /saveme text:Nova size:80 color:#FF4500 glow:High background:starfield
- *   /saveme text:Nova size:80 color:#FF4500 glow:High background:starfield label:"my red icon"
- *
- * The command does NOT regenerate the image — it just stores the parameters
- * so /history can replay them instantly.
  */
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder }        = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { saveEntry, MAX_ITEMS } = require('../utils/history');
 
 function buildCopyCommand(cmd, params) {
@@ -46,7 +38,16 @@ module.exports = {
         .addStringOption(o => o.setName('color2')     .setDescription('Second colour if gradient')             .setRequired(false))
         .addIntegerOption(o => o.setName('opacity')   .setDescription('Opacity 10-100')                        .setRequired(false).setMinValue(10).setMaxValue(100))
         .addStringOption(o => o.setName('border')     .setDescription('Border style')                         .setRequired(false)
-            .addChoices({ name:'None',value:'none'},{ name:'Solid',value:'solid'},{ name:'Glow Ring',value:'glow'},{ name:'Gradient Ring',value:'gradient'}))
+            .addChoices(
+                { name: 'None',          value: 'none'     },
+                { name: 'Solid',         value: 'solid'    },
+                { name: 'Glow Ring',     value: 'glow'     },
+                { name: 'Gradient Ring', value: 'gradient' },
+                { name: 'Double',        value: 'double'   },
+                { name: 'Dashed',        value: 'dashed'   },
+                { name: 'Corner Marks',  value: 'corner'   },
+                { name: 'Neon',          value: 'neon'     }
+            ))
         .addStringOption(o => o.setName('font')       .setDescription('Font key')                              .setRequired(false))
         .addStringOption(o => o.setName('label')      .setDescription('Friendly name for this save (e.g. \'red fire icon\')')  .setRequired(false)),
 
@@ -66,7 +67,6 @@ module.exports = {
             font:       interaction.options.getString('font')       || undefined,
         };
 
-        // Strip undefined values
         Object.keys(params).forEach(k => params[k] === undefined && delete params[k]);
 
         saveEntry(interaction.user.id, { label, command, params });
@@ -76,7 +76,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor('#808080')
             .setTitle('\u2705 Saved to your history')
-            .setDescription(`Use \`/history\` to view and replay all your saved icons.`)
+            .setDescription('Use `/history` to view and replay all your saved icons.')
             .addFields(
                 { name: 'Label',   value: label || '*(auto-timestamped)*', inline: true  },
                 { name: 'Command', value: `\`/${command}\``,                inline: true  },

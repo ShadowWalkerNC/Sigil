@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { getFontChoices } = require('../utils/fonts');
 const { getBackgroundChoices } = require('../utils/backgrounds');
 
@@ -28,8 +27,8 @@ module.exports = {
                         '**Optional:** `color2` `opacity` `border` `font`\n' +
                         '\u2022 `opacity` 10\u2013100 dims the background toward black\n' +
                         '\u2022 `color2` adds a left\u2192right text gradient\n' +
-                        '\u2022 `border` \u2014 None / Solid / Glow Ring / Gradient Ring\n' +
-                        '**Example:** `/icon text:Nova size:80 color:#FF4500 glow:High background:starfield border:Glow Ring`',
+                        '\u2022 `border` \u2014 None / Solid / Glow Ring / Gradient Ring / Double / Dashed / Corner Marks / Neon\n' +
+                        '**Example:** `/icon text:Nova size:80 color:#FF4500 glow:High background:starfield border:Neon`',
                 },
                 {
                     name: '`/banner` \u2014 1024\u00d7320 server banner',

@@ -2,8 +2,7 @@
  * /history — view and replay your last saved icons.
  */
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder }        = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { loadHistory, clearHistory, MAX_ITEMS } = require('../utils/history');
 
 function buildCopyCommand(cmd, params) {

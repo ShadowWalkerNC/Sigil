@@ -70,7 +70,6 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 
-    // Set timestamp now, auto-delete after cooldown window to prevent memory growth
     timestamps.set(interaction.user.id, now);
     setTimeout(() => timestamps.delete(interaction.user.id), cooldownMs);
     // --- End cooldown check ---

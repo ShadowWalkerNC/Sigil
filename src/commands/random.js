@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
 const { getFont, getAllFonts } = require('../utils/fonts');
 const { createTextGradient } = require('../utils/gradient');
@@ -12,7 +11,6 @@ for (const font of getAllFonts()) {
     registerFont(font.file, { family: font.family });
 }
 
-// Seeded pseudo-random number generator (mulberry32)
 function makeRng(seed) {
     let s = seed >>> 0;
     return function () {
@@ -29,12 +27,12 @@ function pick(arr, rng) {
 }
 
 function randomHexColor(rng) {
-    const h = Math.floor(rng() * 360);
-    const s = 70 + Math.floor(rng() * 30);
-    const l = 45 + Math.floor(rng() * 25);
+    const h  = Math.floor(rng() * 360);
+    const s  = 70 + Math.floor(rng() * 30);
+    const l  = 45 + Math.floor(rng() * 25);
     const sn = s / 100, ln = l / 100;
-    const a = sn * Math.min(ln, 1 - ln);
-    const f = (n) => {
+    const a  = sn * Math.min(ln, 1 - ln);
+    const f  = (n) => {
         const k = (n + h / 30) % 12;
         const c = ln - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
         return Math.round(255 * c).toString(16).padStart(2, '0');
@@ -45,8 +43,6 @@ function randomHexColor(rng) {
 const BG_KEYS     = ['plain-black','plain-white','midnight-gradient','sunset','forest','cyberpunk-grid','starfield','carbon-fiber','bg-image-1','bg-image-2'];
 const GLOW_VALUES = ['5', '10', '15'];
 const GLOW_LABELS = { '5': 'Low', '10': 'Medium', '15': 'High' };
-// 'none' appears twice (~22%) so most randoms are border-free;
-// the 8 named styles each appear once (~11% each combined for borders).
 const BORDER_KEYS = ['none', 'none', 'solid', 'glow', 'gradient', 'double', 'dashed', 'corner', 'neon'];
 
 module.exports = {

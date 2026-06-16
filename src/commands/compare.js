@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { EmbedBuilder }        = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
 const { getFont, getFontChoices, getAllFonts }   = require('../utils/fonts');
 const { createTextGradient }                     = require('../utils/gradient');
