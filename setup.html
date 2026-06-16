@@ -35,7 +35,7 @@
     border: 1px solid var(--border);
     border-radius: 16px;
     width: 100%;
-    max-width: 560px;
+    max-width: 580px;
     padding: 40px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   }
@@ -90,7 +90,7 @@
   }
   .step.active .step-num  { background: var(--accent); border-color: var(--accent); color: var(--white); }
   .step.done .step-num    { background: var(--success); border-color: var(--success); color: var(--white); }
-  .step-label { font-size: 0.7rem; color: var(--muted); text-align: center; }
+  .step-label { font-size: 0.68rem; color: var(--muted); text-align: center; }
   .step.active .step-label { color: var(--accent); }
   .step.done .step-label   { color: var(--success); }
   .step.skip .step-num     { background: var(--border); border-color: var(--border); color: var(--muted); }
@@ -117,7 +117,7 @@
     margin-bottom: 6px;
   }
   .input-wrap { position: relative; }
-  input[type=text], input[type=password], select {
+  input[type=text], input[type=password], input[type=number], select {
     width: 100%;
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -174,6 +174,19 @@
   }
   .warn-box strong { color: var(--warning); }
 
+  /* Success box */
+  .success-box {
+    background: rgba(59,165,92,0.1);
+    border: 1px solid rgba(59,165,92,0.3);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.83rem;
+    color: var(--text);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .success-box strong { color: var(--success); }
+
   /* Mode cards */
   .mode-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
   .mode-card {
@@ -197,6 +210,38 @@
   .tag-rec  { background: rgba(59,165,92,0.2);  color: var(--success); }
   .tag-prod { background: rgba(88,101,242,0.2); color: #8891f5; }
 
+  /* OS tabs */
+  .os-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .os-tab {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .os-tab.active { background: var(--accent); border-color: var(--accent); color: var(--white); }
+  .os-panel { display: none; }
+  .os-panel.active { display: block; }
+
+  /* Code block */
+  .code-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.82rem;
+    color: #a9dc76;
+    margin-bottom: 12px;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.7;
+  }
+
   /* Buttons */
   .btn-row { display: flex; gap: 10px; margin-top: 28px; }
   button {
@@ -212,6 +257,10 @@
   .btn-back:hover { background: var(--border); color: var(--text); }
   .btn-success { background: var(--success); color: var(--white); flex: 1; }
 
+  /* Inline row for two fields */
+  .field-row { display: flex; gap: 14px; }
+  .field-row .field { flex: 1; }
+
   /* Done screen */
   .done-icon {
     text-align: center; font-size: 3.5rem; margin-bottom: 16px;
@@ -225,18 +274,6 @@
   .done-sub {
     text-align: center; font-size: 0.86rem; color: var(--muted);
     margin-bottom: 24px; line-height: 1.6;
-  }
-  .code-block {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 0.88rem;
-    color: #a9dc76;
-    margin-bottom: 12px;
-    white-space: pre;
-    overflow-x: auto;
   }
   .checklist {
     list-style: none;
@@ -280,6 +317,8 @@
     text-align: center;
   }
   footer a { color: var(--accent); text-decoration: none; }
+
+  select option { background: var(--surface2); color: var(--white); }
 </style>
 </head>
 <body>
@@ -293,13 +332,14 @@
     </div>
   </div>
 
-  <!-- Step indicators -->
+  <!-- Step indicators (6 steps now) -->
   <div class="steps">
     <div class="step active" id="si-1"><div class="step-num">1</div><div class="step-label">Token</div></div>
     <div class="step" id="si-2"><div class="step-num">2</div><div class="step-label">App ID</div></div>
     <div class="step" id="si-3"><div class="step-num">3</div><div class="step-label">Server</div></div>
     <div class="step" id="si-4"><div class="step-num">4</div><div class="step-label">Mode</div></div>
-    <div class="step" id="si-5"><div class="step-num">✓</div><div class="step-label">Done</div></div>
+    <div class="step" id="si-5"><div class="step-num">5</div><div class="step-label">Fonts</div></div>
+    <div class="step" id="si-6"><div class="step-num">✓</div><div class="step-label">Done</div></div>
   </div>
 
   <!-- Panel 1: Token -->
@@ -400,12 +440,80 @@
 
     <div class="btn-row">
       <button class="btn-back" onclick="goTo(3)">← Back</button>
-      <button class="btn-primary" onclick="generate()">Generate .env file ✓</button>
+      <button class="btn-primary" onclick="goTo(5)">Next →</button>
     </div>
   </div>
 
-  <!-- Panel 5: Done -->
+  <!-- Panel 5: Font Installation -->
   <div class="panel" id="p5">
+    <h2>Step 5 — Install Fonts</h2>
+    <p class="subtitle">The bot ships with 1 built-in font. The other 5 are free &amp; open-source — they just need a one-time download. Pick your operating system below.</p>
+
+    <div class="warn-box">
+      <strong>⚠️ Do this BEFORE starting the bot</strong> — fonts are only loaded at startup. If you install them later, restart the bot.
+    </div>
+
+    <div class="os-tabs">
+      <button class="os-tab active" onclick="switchOS('win', this)">🪟 Windows</button>
+      <button class="os-tab" onclick="switchOS('mac', this)">🍎 Mac</button>
+      <button class="os-tab" onclick="switchOS('linux', this)">🐧 Linux</button>
+    </div>
+
+    <!-- Windows -->
+    <div class="os-panel active" id="os-win">
+      <div class="info-box" style="margin-bottom:12px">
+        <strong>How to open a terminal on Windows:</strong><br>
+        Press <strong>Windows key + R</strong>, type <code>cmd</code>, press <strong>Enter</strong>.
+      </div>
+      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:8px">Copy &amp; paste the whole block below into the terminal window, then press Enter:</p>
+      <div class="code-block">cd %USERPROFILE%\Discord-Icon-Gen\src\fonts
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf" -o BebasNeue-Regular.ttf
+curl -fsSL "https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Bold.ttf" -o Oswald-Bold.ttf
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/playfairdisplay/PlayfairDisplay%%5Bwght%%5D.ttf" -o PlayfairDisplay-Bold.ttf
+curl -fsSL "https://github.com/adobe-fonts/source-code-pro/raw/release/TTF/SourceCodePro-Bold.ttf" -o SourceCodePro-Bold.ttf
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/dancingscript/DancingScript%%5Bwght%%5D.ttf" -o DancingScript-Bold.ttf</div>
+      <div class="field-hint" style="margin-bottom:0">If the first line errors, the repo may be in a different location. Replace <code>%USERPROFILE%\Discord-Icon-Gen</code> with the full path to your folder, e.g. <code>%USERPROFILE%\Desktop\Discord-Icon-Gen</code>.</div>
+    </div>
+
+    <!-- Mac -->
+    <div class="os-panel" id="os-mac">
+      <div class="info-box" style="margin-bottom:12px">
+        <strong>How to open a terminal on Mac:</strong><br>
+        Open <strong>Finder</strong> → go to your <strong>Discord-Icon-Gen</strong> folder → right-click it → <strong>New Terminal at Folder</strong>.
+      </div>
+      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:8px">Copy &amp; paste the whole block below, then press Enter:</p>
+      <div class="code-block">cd src/fonts
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf" -o BebasNeue-Regular.ttf
+curl -fsSL "https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Bold.ttf" -o Oswald-Bold.ttf
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf" -o PlayfairDisplay-Bold.ttf
+curl -fsSL "https://github.com/adobe-fonts/source-code-pro/raw/release/TTF/SourceCodePro-Bold.ttf" -o SourceCodePro-Bold.ttf
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/dancingscript/DancingScript%5Bwght%5D.ttf" -o DancingScript-Bold.ttf</div>
+    </div>
+
+    <!-- Linux -->
+    <div class="os-panel" id="os-linux">
+      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:8px">Run from inside your <code>Discord-Icon-Gen</code> folder:</p>
+      <div class="code-block">cd src/fonts
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf" -o BebasNeue-Regular.ttf
+curl -fsSL "https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Bold.ttf" -o Oswald-Bold.ttf
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf" -o PlayfairDisplay-Bold.ttf
+curl -fsSL "https://github.com/adobe-fonts/source-code-pro/raw/release/TTF/SourceCodePro-Bold.ttf" -o SourceCodePro-Bold.ttf
+curl -fsSL "https://github.com/google/fonts/raw/main/ofl/dancingscript/DancingScript%5Bwght%5D.ttf" -o DancingScript-Bold.ttf</div>
+    </div>
+
+    <div class="success-box" style="margin-top:14px">
+      <strong>✅ How to check it worked:</strong><br>
+      Open the <code>Discord-Icon-Gen/src/fonts/</code> folder. You should see 5 <code>.ttf</code> files, each larger than 50 KB. If any file is tiny (&lt;5 KB), delete it and run that one <code>curl</code> line again.
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-back" onclick="goTo(4)">← Back</button>
+      <button class="btn-primary" onclick="generate()">Generate .env &amp; finish ✓</button>
+    </div>
+  </div>
+
+  <!-- Panel 6: Done -->
+  <div class="panel" id="p6">
     <div class="done-icon">🎉</div>
     <div class="done-title">Your .env file has been downloaded!</div>
     <div class="done-sub">Move it into your <strong>Discord-Icon-Gen</strong> folder, then follow the checklist below.</div>
@@ -419,7 +527,7 @@
 
     <ul class="checklist">
       <li><span class="check">✅</span><div>Move the <strong>.env</strong> file into the <strong>Discord-Icon-Gen</strong> folder</div></li>
-      <li><span class="check">🔤</span><div><strong>Install the extra fonts</strong> — see the <a href="https://github.com/ShadowWalkerNC/Discord-Icon-Gen#-font-installation" target="_blank">Font Installation</a> section in the README. The bot will start without them but 5 of the 6 fonts won't work.</div></li>
+      <li><span class="check">🔤</span><div>Confirm you ran the font install commands in Step 5 — if not, go back and do them now before starting the bot</div></li>
       <li><span class="check">▶️</span><div>Start the bot:</div></li>
     </ul>
 
@@ -452,7 +560,7 @@ node src/index.js</div>
 
 <script>
   let currentStep = 1;
-  const TOTAL = 5;
+  const TOTAL = 6;
   let deployMode = 'guild';
 
   function toggleEye(id, btn) {
@@ -460,6 +568,14 @@ node src/index.js</div>
     const isPass = inp.type === 'password';
     inp.type = isPass ? 'text' : 'password';
     btn.textContent = isPass ? '\ud83d\ude48' : '\ud83d\udc41';
+  }
+
+  function switchOS(os, btn) {
+    ['win','mac','linux'].forEach(k => {
+      document.getElementById('os-' + k).classList.toggle('active', k === os);
+    });
+    document.querySelectorAll('.os-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
   }
 
   function selectMode(mode) {
@@ -488,7 +604,6 @@ node src/index.js</div>
       si.className = 'step' + (i === n ? ' active' : i < n ? ' done' : '');
       p.className  = 'panel' + (i === n ? ' active' : '');
     }
-    // Grey out step 3 indicator if global mode and no guild ID entered
     if (n > 3 && deployMode === 'global' && !document.getElementById('guildid').value.trim()) {
       document.getElementById('si-3').className = 'step skip';
     }
@@ -501,8 +616,7 @@ node src/index.js</div>
       const err = document.getElementById('err-token');
       if (v.length < 50) {
         document.getElementById('token').classList.add('error');
-        err.style.display = 'block';
-        return false;
+        err.style.display = 'block'; return false;
       }
       document.getElementById('token').classList.remove('error');
       document.getElementById('token').classList.add('ok');
@@ -513,8 +627,7 @@ node src/index.js</div>
       const err = document.getElementById('err-clientid');
       if (!/^\d{17,20}$/.test(v)) {
         document.getElementById('clientid').classList.add('error');
-        err.style.display = 'block';
-        return false;
+        err.style.display = 'block'; return false;
       }
       document.getElementById('clientid').classList.remove('error');
       document.getElementById('clientid').classList.add('ok');
@@ -523,12 +636,10 @@ node src/index.js</div>
     if (step === 3) {
       const v   = document.getElementById('guildid').value.trim();
       const err = document.getElementById('err-guildid');
-      // Optional if global mode and left blank
       if (v === '' && deployMode === 'global') return true;
       if (!/^\d{17,20}$/.test(v)) {
         document.getElementById('guildid').classList.add('error');
-        err.style.display = 'block';
-        return false;
+        err.style.display = 'block'; return false;
       }
       document.getElementById('guildid').classList.remove('error');
       document.getElementById('guildid').classList.add('ok');
@@ -579,13 +690,11 @@ node src/index.js</div>
   function buildInviteUrl() {
     const cid = document.getElementById('clientid').value.trim();
     if (!cid) return null;
-    // Send Messages (2048) + Attach Files (32768) + Use Application Commands (2147483648)
     const perms = 2147518464;
     return `https://discord.com/oauth2/authorize?client_id=${cid}&scope=bot%20applications.commands&permissions=${perms}`;
   }
 
   function generate() {
-    if (!validate(4)) return;
     downloadEnv(buildEnv());
 
     const inviteUrl  = buildInviteUrl();
@@ -597,7 +706,7 @@ node src/index.js</div>
       inviteLink.textContent = inviteUrl;
     }
 
-    setStep(5);
+    setStep(6);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -607,8 +716,8 @@ node src/index.js</div>
 
   // Enter key advances steps
   document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && currentStep < 4) goTo(currentStep + 1);
-    if (e.key === 'Enter' && currentStep === 4) generate();
+    if (e.key === 'Enter' && currentStep < 5) goTo(currentStep + 1);
+    if (e.key === 'Enter' && currentStep === 5) generate();
   });
 </script>
 </body>

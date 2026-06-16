@@ -7,6 +7,13 @@ A Discord bot that generates fully customisable profile icons, server banners, a
 
 ---
 
+## 🧙 Setup Wizard
+
+> **Not technical? Start here.**  
+> Open **[`setup.html`](setup.html)** in your browser — it walks you through every step (token, app ID, server ID, deploy mode) and downloads a ready-to-use `.env` file for you. No command line needed until the very end.
+
+---
+
 ## 🚀 Quick Start (Non-Technical Users)
 
 1. **[Download Node.js](https://nodejs.org)** — pick the "LTS" version and install it like any normal program
@@ -40,7 +47,7 @@ A Discord bot that generates fully customisable profile icons, server banners, a
 - **6 fonts** — Another Danger, Bebas Neue, Oswald Bold, Playfair Display, Source Code Pro, Dancing Script
 - **8 border/frame styles** — None, Solid, Glow Ring, Gradient Ring, Double, Dashed, Corner Marks, Neon
 - **Font & background registries** — add new fonts/backgrounds by dropping a file and adding one entry
-- **`setup.html`** — browser-based setup wizard for non-technical users
+- **`setup.html`** — browser-based setup wizard: token, app ID, server ID, deploy mode, font install guide, `.env` download
 - **Improved `/help`** — dynamically lists all fonts and backgrounds, explains every parameter
 - **Input validation** — hex colour checking, text length caps, font size bounds
 - **Global command deployment** — `DEPLOY_MODE=guild` for dev, `DEPLOY_MODE=global` for production
