@@ -4,6 +4,7 @@ const { createCanvas, registerFont, loadImage } = require('canvas');
 const path = require('path');
 const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
 const { createTextGradient } = require('../utils/gradient');
+const { getBackgroundChoices, drawBackground } = require('../utils/backgrounds');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 const MAX_TEXT_LENGTH = 20;
@@ -14,12 +15,6 @@ const CANVAS_SIZE = 400;
 for (const font of getAllFonts()) {
     registerFont(font.file, { family: font.family });
 }
-
-const BACKGROUNDS = {
-    'Plain (Black)': null,
-    'Custom Background 1': path.resolve(__dirname, '..', 'images', 'background1.jpg'),
-    'Custom Background 2': path.resolve(__dirname, '..', 'images', 'background2.jpg'),
-};
 
 module.exports = {
     cooldown: 4,
@@ -43,19 +38,15 @@ module.exports = {
                 .setDescription('Glow intensity')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Low', value: '5' },
+                    { name: 'Low',    value: '5'  },
                     { name: 'Medium', value: '10' },
-                    { name: 'High', value: '15' }
+                    { name: 'High',   value: '15' }
                 ))
         .addStringOption(option =>
             option.setName('background')
                 .setDescription('Background style')
                 .setRequired(true)
-                .addChoices(
-                    { name: 'Plain (Black)', value: 'Plain (Black)' },
-                    { name: 'Custom Background 1', value: 'Custom Background 1' },
-                    { name: 'Custom Background 2', value: 'Custom Background 2' }
-                ))
+                .addChoices(...getBackgroundChoices()))
         .addStringOption(option =>
             option.setName('color2')
                 .setDescription('Optional second color for a gradient (e.g. #0000FF)')
@@ -67,74 +58,62 @@ module.exports = {
                 .addChoices(...getFontChoices())),
 
     async execute(interaction) {
-        const text       = interaction.options.getString('text');
-        const size       = interaction.options.getInteger('size');
-        const color      = interaction.options.getString('color');
-        const color2     = interaction.options.getString('color2') || null;
+        const text          = interaction.options.getString('text');
+        const size          = interaction.options.getInteger('size');
+        const color         = interaction.options.getString('color');
+        const color2        = interaction.options.getString('color2') || null;
         const glowIntensity = interaction.options.getString('glow') || '5';
-        const background = interaction.options.getString('background') || 'Plain (Black)';
-        const fontKey    = interaction.options.getString('font') || 'another-danger';
+        const background    = interaction.options.getString('background') || 'plain-black';
+        const fontKey       = interaction.options.getString('font') || 'another-danger';
 
-        if (text.length > MAX_TEXT_LENGTH) {
+        if (text.length > MAX_TEXT_LENGTH)
             return interaction.reply({ content: `Text must be ${MAX_TEXT_LENGTH} characters or fewer.`, ephemeral: true });
-        }
-        if (size < MIN_FONT_SIZE || size > MAX_FONT_SIZE) {
+        if (size < MIN_FONT_SIZE || size > MAX_FONT_SIZE)
             return interaction.reply({ content: `Font size must be between ${MIN_FONT_SIZE} and ${MAX_FONT_SIZE}.`, ephemeral: true });
-        }
-        if (!HEX_COLOR_REGEX.test(color)) {
+        if (!HEX_COLOR_REGEX.test(color))
             return interaction.reply({ content: 'Color must be a valid hex code (e.g. #FF0000).', ephemeral: true });
-        }
-        if (color2 && !HEX_COLOR_REGEX.test(color2)) {
+        if (color2 && !HEX_COLOR_REGEX.test(color2))
             return interaction.reply({ content: 'Color2 must be a valid hex code (e.g. #0000FF).', ephemeral: true });
-        }
 
         const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your icon...');
         const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
         try {
             const canvas = createCanvas(CANVAS_SIZE, CANVAS_SIZE);
-            const ctx = canvas.getContext('2d');
+            const ctx    = canvas.getContext('2d');
 
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+            await drawBackground(ctx, background, CANVAS_SIZE, CANVAS_SIZE, loadImage);
 
-            const bgPath = BACKGROUNDS[background];
-            if (bgPath) {
-                try {
-                    const bgImage = await loadImage(bgPath);
-                    ctx.drawImage(bgImage, 0, 0, CANVAS_SIZE, CANVAS_SIZE);
-                } catch { /* fallback to black */ }
-            }
-
-            const font = getFont(fontKey);
+            const font       = getFont(fontKey);
             const shadowBlur = Number(glowIntensity);
-            const drawX = CANVAS_SIZE / 2;
-            const drawY = CANVAS_SIZE / 2;
+            const drawX      = CANVAS_SIZE / 2;
+            const drawY      = CANVAS_SIZE / 2;
 
-            ctx.font = `${size}px '${font.family}'`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            ctx.font          = `${size}px '${font.family}'`;
+            ctx.textAlign     = 'center';
+            ctx.textBaseline  = 'middle';
 
             const fill = createTextGradient(ctx, color, color2, text, drawX, CANVAS_SIZE);
 
             ctx.shadowColor = color;
-            ctx.shadowBlur = shadowBlur;
-            ctx.fillStyle = fill;
+            ctx.shadowBlur  = shadowBlur;
+            ctx.fillStyle   = fill;
             ctx.fillText(text, drawX, drawY);
 
             ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur  = 0;
             ctx.fillText(text, drawX, drawY);
 
             const attachment = canvas.toBuffer();
             const colorLabel = color2 ? `gradient ${color}\u2192${color2}` : color;
+            const bgLabel    = interaction.options.getString('background') || 'plain-black';
 
             await initialReply.edit({
                 embeds: [
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://icon.png')
-                        .setFooter({ text: `Discord Icon Gen \u2022 /icon \u2022 ${background} \u2022 ${colorLabel} \u2022 font: ${font.label}` }),
+                        .setFooter({ text: `Discord Icon Gen \u2022 /icon \u2022 ${bgLabel} \u2022 ${colorLabel} \u2022 font: ${font.label}` }),
                 ],
                 files: [{ attachment, name: 'icon.png' }],
             });

@@ -1,16 +1,16 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { EmbedBuilder } = require('discord.js');
 const { createCanvas, registerFont, loadImage } = require('canvas');
-const path = require('path');
 const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
 const { createTextGradient } = require('../utils/gradient');
+const { getBackgroundChoices, drawBackground } = require('../utils/backgrounds');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 const MAX_TEXT_LENGTH = 30;
 const MAX_SUBTITLE_LENGTH = 50;
 const MIN_FONT_SIZE = 10;
 const MAX_FONT_SIZE = 150;
-const CANVAS_WIDTH = 1024;
+const CANVAS_WIDTH  = 1024;
 const CANVAS_HEIGHT = 320;
 
 const ALIGN_X = {
@@ -22,12 +22,6 @@ const ALIGN_X = {
 for (const font of getAllFonts()) {
     registerFont(font.file, { family: font.family });
 }
-
-const BACKGROUNDS = {
-    'Plain (Black)': null,
-    'Custom Background 1': path.resolve(__dirname, '..', 'images', 'background1.jpg'),
-    'Custom Background 2': path.resolve(__dirname, '..', 'images', 'background2.jpg'),
-};
 
 module.exports = {
     cooldown: 4,
@@ -51,19 +45,15 @@ module.exports = {
                 .setDescription('Glow intensity')
                 .setRequired(true)
                 .addChoices(
-                    { name: 'Low', value: '5' },
+                    { name: 'Low',    value: '5'  },
                     { name: 'Medium', value: '10' },
-                    { name: 'High', value: '15' }
+                    { name: 'High',   value: '15' }
                 ))
         .addStringOption(option =>
             option.setName('background')
                 .setDescription('Background style')
                 .setRequired(true)
-                .addChoices(
-                    { name: 'Plain (Black)', value: 'Plain (Black)' },
-                    { name: 'Custom Background 2', value: 'Custom Background 2' },
-                    { name: 'Custom Background 1', value: 'Custom Background 1' }
-                ))
+                .addChoices(...getBackgroundChoices()))
         .addStringOption(option =>
             option.setName('align')
                 .setDescription('Text alignment (default: Center)')
@@ -88,86 +78,72 @@ module.exports = {
                 .addChoices(...getFontChoices())),
 
     async execute(interaction) {
-        const text       = interaction.options.getString('text');
-        const size       = interaction.options.getInteger('size');
-        const color      = interaction.options.getString('color');
-        const color2     = interaction.options.getString('color2') || null;
+        const text          = interaction.options.getString('text');
+        const size          = interaction.options.getInteger('size');
+        const color         = interaction.options.getString('color');
+        const color2        = interaction.options.getString('color2') || null;
         const glowIntensity = interaction.options.getString('glow') || '5';
-        const background = interaction.options.getString('background') || 'Plain (Black)';
-        const align      = interaction.options.getString('align') || 'center';
-        const subtitle   = interaction.options.getString('subtitle') || null;
-        const fontKey    = interaction.options.getString('font') || 'another-danger';
+        const background    = interaction.options.getString('background') || 'plain-black';
+        const align         = interaction.options.getString('align') || 'center';
+        const subtitle      = interaction.options.getString('subtitle') || null;
+        const fontKey       = interaction.options.getString('font') || 'another-danger';
 
-        if (text.length > MAX_TEXT_LENGTH) {
+        if (text.length > MAX_TEXT_LENGTH)
             return interaction.reply({ content: `Text must be ${MAX_TEXT_LENGTH} characters or fewer.`, ephemeral: true });
-        }
-        if (subtitle && subtitle.length > MAX_SUBTITLE_LENGTH) {
+        if (subtitle && subtitle.length > MAX_SUBTITLE_LENGTH)
             return interaction.reply({ content: `Subtitle must be ${MAX_SUBTITLE_LENGTH} characters or fewer.`, ephemeral: true });
-        }
-        if (size < MIN_FONT_SIZE || size > MAX_FONT_SIZE) {
+        if (size < MIN_FONT_SIZE || size > MAX_FONT_SIZE)
             return interaction.reply({ content: `Font size must be between ${MIN_FONT_SIZE} and ${MAX_FONT_SIZE}.`, ephemeral: true });
-        }
-        if (!HEX_COLOR_REGEX.test(color)) {
+        if (!HEX_COLOR_REGEX.test(color))
             return interaction.reply({ content: 'Color must be a valid hex code (e.g. #00FFFF).', ephemeral: true });
-        }
-        if (color2 && !HEX_COLOR_REGEX.test(color2)) {
+        if (color2 && !HEX_COLOR_REGEX.test(color2))
             return interaction.reply({ content: 'Color2 must be a valid hex code (e.g. #FF00FF).', ephemeral: true });
-        }
 
         const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('Generating your banner...');
         const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
         try {
             const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
-            const ctx = canvas.getContext('2d');
+            const ctx    = canvas.getContext('2d');
 
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            await drawBackground(ctx, background, CANVAS_WIDTH, CANVAS_HEIGHT, loadImage);
 
-            const bgPath = BACKGROUNDS[background];
-            if (bgPath) {
-                try {
-                    const bgImage = await loadImage(bgPath);
-                    ctx.drawImage(bgImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                } catch { /* fallback to black */ }
-            }
-
-            const font = getFont(fontKey);
+            const font       = getFont(fontKey);
             const shadowBlur = Number(glowIntensity);
-            const textX = ALIGN_X[align] ?? ALIGN_X.center;
-            const textY = subtitle ? CANVAS_HEIGHT * 0.42 : CANVAS_HEIGHT / 2;
+            const textX      = ALIGN_X[align] ?? ALIGN_X.center;
+            const textY      = subtitle ? CANVAS_HEIGHT * 0.42 : CANVAS_HEIGHT / 2;
 
-            ctx.font = `${size}px '${font.family}'`;
-            ctx.textAlign = align;
-            ctx.textBaseline = 'middle';
+            ctx.font          = `${size}px '${font.family}'`;
+            ctx.textAlign     = align;
+            ctx.textBaseline  = 'middle';
 
             const fill = createTextGradient(ctx, color, color2, text, textX, CANVAS_WIDTH);
 
             ctx.shadowColor = color;
-            ctx.shadowBlur = shadowBlur;
-            ctx.fillStyle = fill;
+            ctx.shadowBlur  = shadowBlur;
+            ctx.fillStyle   = fill;
             ctx.fillText(text, textX, textY);
 
             ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
+            ctx.shadowBlur  = 0;
             ctx.fillText(text, textX, textY);
 
             if (subtitle) {
                 const subtitleSize = Math.round(size * 0.4);
-                const subtitleY = textY + size * 0.75;
-                ctx.font = `${subtitleSize}px '${font.family}'`;
-                ctx.textAlign = align;
+                const subtitleY    = textY + size * 0.75;
+                ctx.font        = `${subtitleSize}px '${font.family}'`;
+                ctx.textAlign   = align;
                 ctx.globalAlpha = 0.75;
 
                 const subtitleFill = createTextGradient(ctx, color, color2, subtitle, textX, CANVAS_WIDTH);
 
                 ctx.shadowColor = color;
-                ctx.shadowBlur = shadowBlur * 0.6;
-                ctx.fillStyle = subtitleFill;
+                ctx.shadowBlur  = shadowBlur * 0.6;
+                ctx.fillStyle   = subtitleFill;
                 ctx.fillText(subtitle, textX, subtitleY);
 
                 ctx.shadowColor = 'transparent';
-                ctx.shadowBlur = 0;
+                ctx.shadowBlur  = 0;
                 ctx.fillText(subtitle, textX, subtitleY);
                 ctx.globalAlpha = 1.0;
             }
