@@ -14,17 +14,36 @@ const FONTS = {
         file: path.resolve(__dirname, '..', 'fonts', 'AnotherDanger.otf'),
         family: 'Another Danger',
     },
-    // 'my-font': {
-    //     label: 'My Font',
-    //     file: path.resolve(__dirname, '..', 'fonts', 'my-font.otf'),
-    //     family: 'My Font',
-    // },
+    'bebas-neue': {
+        label: 'Bebas Neue',
+        file: path.resolve(__dirname, '..', 'fonts', 'BebasNeue-Regular.ttf'),
+        family: 'Bebas Neue',
+    },
+    'oswald-bold': {
+        label: 'Oswald Bold',
+        file: path.resolve(__dirname, '..', 'fonts', 'Oswald-Bold.ttf'),
+        family: 'Oswald',
+    },
+    'playfair-display': {
+        label: 'Playfair Display',
+        file: path.resolve(__dirname, '..', 'fonts', 'PlayfairDisplay-Bold.ttf'),
+        family: 'Playfair Display',
+    },
+    'source-code-pro': {
+        label: 'Source Code Pro',
+        file: path.resolve(__dirname, '..', 'fonts', 'SourceCodePro-Bold.ttf'),
+        family: 'Source Code Pro',
+    },
+    'dancing-script': {
+        label: 'Dancing Script',
+        file: path.resolve(__dirname, '..', 'fonts', 'DancingScript-Bold.ttf'),
+        family: 'Dancing Script',
+    },
 };
 
 /**
  * Returns all font configs. Also validates font files exist on disk.
  * Called at module load time by each command to register fonts once.
- * Fix 4: warns on missing font files at startup instead of silently failing.
  * @returns {Array<{ label: string, file: string, family: string }>}
  */
 function getAllFonts() {
