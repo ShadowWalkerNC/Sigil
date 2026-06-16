@@ -1,1 +1,474 @@
-<!-- see commit -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord Icon Gen — Setup Wizard</title>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --surface: #16181f;
+    --surface2: #1e2029;
+    --border: #2e3040;
+    --accent: #5865f2;
+    --accent-hover: #4752c4;
+    --success: #3ba55c;
+    --error: #ed4245;
+    --text: #dcddde;
+    --muted: #8e9297;
+    --white: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 560px;
+    padding: 40px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .logo-icon {
+    width: 52px; height: 52px;
+    background: var(--accent);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+  }
+  .logo h1 { font-size: 1.35rem; font-weight: 700; color: var(--white); }
+  .logo p  { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+
+  /* Steps */
+  .steps {
+    display: flex;
+    gap: 0;
+    margin-bottom: 36px;
+    position: relative;
+  }
+  .steps::before {
+    content: '';
+    position: absolute;
+    top: 15px; left: 16px; right: 16px;
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    z-index: 1;
+  }
+  .step-num {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-weight: 700; color: var(--muted);
+    transition: all 0.3s;
+  }
+  .step.active .step-num  { background: var(--accent); border-color: var(--accent); color: var(--white); }
+  .step.done .step-num    { background: var(--success); border-color: var(--success); color: var(--white); }
+  .step-label { font-size: 0.7rem; color: var(--muted); text-align: center; }
+  .step.active .step-label { color: var(--accent); }
+  .step.done .step-label   { color: var(--success); }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  h2 { font-size: 1.1rem; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+  .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .subtitle a { color: var(--accent); text-decoration: none; }
+  .subtitle a:hover { text-decoration: underline; }
+
+  /* Fields */
+  .field { margin-bottom: 20px; }
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .input-wrap { position: relative; }
+  input[type=text], input[type=password], select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--white);
+    font-size: 0.92rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input.error { border-color: var(--error); }
+  input.ok    { border-color: var(--success); }
+  .eye-btn {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 1rem; padding: 4px;
+  }
+  .eye-btn:hover { color: var(--text); }
+  .field-hint {
+    font-size: 0.77rem; color: var(--muted); margin-top: 5px; line-height: 1.4;
+  }
+  .field-err {
+    font-size: 0.77rem; color: var(--error); margin-top: 5px; display: none;
+  }
+
+  /* Info box */
+  .info-box {
+    background: rgba(88,101,242,0.1);
+    border: 1px solid rgba(88,101,242,0.3);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.83rem;
+    color: var(--text);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .info-box strong { color: var(--white); }
+  .info-box ol { padding-left: 18px; margin-top: 6px; }
+  .info-box ol li { margin-bottom: 3px; }
+  .info-box a { color: var(--accent); text-decoration: none; }
+  .info-box a:hover { text-decoration: underline; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 10px; margin-top: 28px; }
+  button {
+    border: none; border-radius: 8px;
+    font-size: 0.9rem; font-weight: 600;
+    padding: 11px 22px; cursor: pointer;
+    transition: background 0.18s, transform 0.1s;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: var(--white); flex: 1; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-back { background: var(--surface2); color: var(--muted); }
+  .btn-back:hover { background: var(--border); color: var(--text); }
+  .btn-success { background: var(--success); color: var(--white); flex: 1; }
+
+  /* Done screen */
+  .done-icon {
+    text-align: center; font-size: 3.5rem; margin-bottom: 16px;
+    animation: pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+  }
+  @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .done-title {
+    text-align: center; font-size: 1.3rem; font-weight: 700;
+    color: var(--white); margin-bottom: 8px;
+  }
+  .done-sub {
+    text-align: center; font-size: 0.86rem; color: var(--muted);
+    margin-bottom: 24px; line-height: 1.6;
+  }
+  .code-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.88rem;
+    color: #a9dc76;
+    margin-bottom: 12px;
+    white-space: pre;
+  }
+  .next-steps {
+    font-size: 0.82rem; color: var(--muted); line-height: 1.7;
+    margin-top: 16px;
+  }
+  .next-steps strong { color: var(--text); }
+
+  footer {
+    margin-top: 32px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🎨</div>
+    <div>
+      <h1>Discord Icon Gen</h1>
+      <p>Setup Wizard — takes about 2 minutes</p>
+    </div>
+  </div>
+
+  <!-- Step indicators -->
+  <div class="steps">
+    <div class="step active" id="si-1"><div class="step-num">1</div><div class="step-label">Token</div></div>
+    <div class="step" id="si-2"><div class="step-num">2</div><div class="step-label">App IDs</div></div>
+    <div class="step" id="si-3"><div class="step-num">3</div><div class="step-label">Server</div></div>
+    <div class="step" id="si-4"><div class="step-num">4</div><div class="step-label">Mode</div></div>
+    <div class="step" id="si-5"><div class="step-num">✓</div><div class="step-label">Done</div></div>
+  </div>
+
+  <!-- Panel 1: Token -->
+  <div class="panel active" id="p1">
+    <h2>Step 1 — Bot Token</h2>
+    <p class="subtitle">Your bot token is a secret password that lets the code control your bot.</p>
+    <div class="info-box">
+      <strong>How to get your token:</strong>
+      <ol>
+        <li>Go to <a href="https://discord.com/developers/applications" target="_blank">discord.com/developers/applications</a></li>
+        <li>Click your app (or <strong>New Application</strong> if you haven't made one)</li>
+        <li>Click <strong>Bot</strong> in the left sidebar</li>
+        <li>Click <strong>Reset Token</strong> → copy the long string that appears</li>
+      </ol>
+    </div>
+    <div class="field">
+      <label>Bot Token</label>
+      <div class="input-wrap">
+        <input type="password" id="token" placeholder="Paste your token here…" autocomplete="off">
+        <button class="eye-btn" onclick="toggleEye('token', this)" type="button">👁</button>
+      </div>
+      <div class="field-hint">Keep this secret — never share it publicly.</div>
+      <div class="field-err" id="err-token">Token looks too short. Double-check you copied the full string.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="goTo(2)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Panel 2: Client ID -->
+  <div class="panel" id="p2">
+    <h2>Step 2 — Application (Client) ID</h2>
+    <p class="subtitle">This is your bot's unique ID number — different from the token.</p>
+    <div class="info-box">
+      <strong>How to find it:</strong>
+      <ol>
+        <li>On the <a href="https://discord.com/developers/applications" target="_blank">Developer Portal</a>, click your app</li>
+        <li>Click <strong>OAuth2</strong> in the left sidebar</li>
+        <li>Copy the <strong>Client ID</strong> — it's a long number</li>
+      </ol>
+    </div>
+    <div class="field">
+      <label>Client ID</label>
+      <input type="text" id="clientid" placeholder="e.g. 1234567890123456789" autocomplete="off">
+      <div class="field-hint">Numbers only — usually 17–19 digits long.</div>
+      <div class="field-err" id="err-clientid">Client ID should be a long number. Check you copied it correctly.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-back" onclick="goTo(1)">← Back</button>
+      <button class="btn-primary" onclick="goTo(3)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Panel 3: Guild ID -->
+  <div class="panel" id="p3">
+    <h2>Step 3 — Server (Guild) ID</h2>
+    <p class="subtitle">This tells the bot which Discord server to register its commands on.</p>
+    <div class="info-box">
+      <strong>How to find it:</strong>
+      <ol>
+        <li>In Discord, open <strong>User Settings → Advanced</strong> and turn on <strong>Developer Mode</strong></li>
+        <li>Right-click your server name in the left sidebar</li>
+        <li>Click <strong>Copy Server ID</strong></li>
+      </ol>
+    </div>
+    <div class="field">
+      <label>Guild / Server ID</label>
+      <input type="text" id="guildid" placeholder="e.g. 9876543210987654321" autocomplete="off">
+      <div class="field-hint">Numbers only — same length as the Client ID.</div>
+      <div class="field-err" id="err-guildid">Guild ID should be a long number. Check you copied it correctly.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-back" onclick="goTo(2)">← Back</button>
+      <button class="btn-primary" onclick="goTo(4)">Next →</button>
+    </div>
+  </div>
+
+  <!-- Panel 4: Deploy Mode -->
+  <div class="panel" id="p4">
+    <h2>Step 4 — Deploy Mode</h2>
+    <p class="subtitle">Choose how commands get registered. You can always change this later in the <code>.env</code> file.</p>
+    <div class="field">
+      <label>Deploy Mode</label>
+      <select id="deploymode">
+        <option value="guild" selected>Guild (recommended for most users — instant)</option>
+        <option value="global">Global (all servers the bot is in — takes up to 1 hour)</option>
+      </select>
+      <div class="field-hint"><strong>Guild</strong> registers commands only to your chosen server instantly. Use <strong>Global</strong> only if you plan to add the bot to many servers.</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-back" onclick="goTo(3)">← Back</button>
+      <button class="btn-primary" onclick="generate()">Generate .env file ✓</button>
+    </div>
+  </div>
+
+  <!-- Panel 5: Done -->
+  <div class="panel" id="p5">
+    <div class="done-icon">🎉</div>
+    <div class="done-title">Your .env file has been downloaded!</div>
+    <div class="done-sub">Move it into your <strong>Discord-Icon-Gen</strong> folder, then follow the steps below.</div>
+    <div class="code-block">cd Discord-Icon-Gen
+npm install
+node src/index.js</div>
+    <div class="next-steps">
+      <strong>What to expect:</strong> You should see a line like<br>
+      <code style="color:#a9dc76">✅ Logged in as YourBotName#1234</code><br><br>
+      Once that appears, go to your Discord server and type <strong>/help</strong> to see all commands,
+      or <strong>/preview</strong> to browse all backgrounds.
+    </div>
+    <div class="btn-row" style="margin-top:24px">
+      <button class="btn-success" onclick="downloadAgain()">⬇ Download .env again</button>
+    </div>
+    <div class="btn-row" style="margin-top:10px">
+      <button class="btn-back" onclick="goTo(1)" style="width:100%">Start over</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Discord Icon Gen &mdash; Setup Wizard &bull;
+  <a href="https://github.com/ShadowWalkerNC/Discord-Icon-Gen" target="_blank">View on GitHub</a>
+</footer>
+
+<script>
+  let currentStep = 1;
+  const TOTAL = 5;
+
+  function toggleEye(id, btn) {
+    const inp = document.getElementById(id);
+    const isPass = inp.type === 'password';
+    inp.type = isPass ? 'text' : 'password';
+    btn.textContent = isPass ? '🙈' : '👁';
+  }
+
+  function setStep(n) {
+    for (let i = 1; i <= TOTAL; i++) {
+      const si = document.getElementById('si-' + i);
+      const p  = document.getElementById('p'  + i);
+      si.className = 'step' + (i === n ? ' active' : i < n ? ' done' : '');
+      p.className  = 'panel' + (i === n ? ' active' : '');
+    }
+    currentStep = n;
+  }
+
+  function validate(step) {
+    if (step === 1) {
+      const v = document.getElementById('token').value.trim();
+      const err = document.getElementById('err-token');
+      if (v.length < 50) {
+        document.getElementById('token').classList.add('error');
+        err.style.display = 'block';
+        return false;
+      }
+      document.getElementById('token').classList.remove('error');
+      document.getElementById('token').classList.add('ok');
+      err.style.display = 'none';
+    }
+    if (step === 2) {
+      const v = document.getElementById('clientid').value.trim();
+      const err = document.getElementById('err-clientid');
+      if (!/^\d{17,20}$/.test(v)) {
+        document.getElementById('clientid').classList.add('error');
+        err.style.display = 'block';
+        return false;
+      }
+      document.getElementById('clientid').classList.remove('error');
+      document.getElementById('clientid').classList.add('ok');
+      err.style.display = 'none';
+    }
+    if (step === 3) {
+      const v = document.getElementById('guildid').value.trim();
+      const err = document.getElementById('err-guildid');
+      if (!/^\d{17,20}$/.test(v)) {
+        document.getElementById('guildid').classList.add('error');
+        err.style.display = 'block';
+        return false;
+      }
+      document.getElementById('guildid').classList.remove('error');
+      document.getElementById('guildid').classList.add('ok');
+      err.style.display = 'none';
+    }
+    return true;
+  }
+
+  function goTo(n) {
+    if (n > currentStep && !validate(currentStep)) return;
+    setStep(n);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function buildEnv() {
+    const token  = document.getElementById('token').value.trim();
+    const cid    = document.getElementById('clientid').value.trim();
+    const gid    = document.getElementById('guildid').value.trim();
+    const mode   = document.getElementById('deploymode').value;
+    return [
+      '# Discord Bot Token (from https://discord.com/developers/applications)',
+      `TOKEN=${token}`,
+      '',
+      '# Your Discord Application Client ID',
+      `CLIENT_ID=${cid}`,
+      '',
+      '# The Guild (Server) ID',
+      `GUILD_ID=${gid}`,
+      '',
+      '# Command deployment mode: guild | global',
+      `DEPLOY_MODE=${mode}`,
+      '',
+    ].join('\n');
+  }
+
+  function downloadEnv(content) {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '.env';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function generate() {
+    if (!validate(4)) return;
+    const content = buildEnv();
+    downloadEnv(content);
+    setStep(5);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function downloadAgain() {
+    downloadEnv(buildEnv());
+  }
+
+  // Allow Enter key to advance
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && currentStep < 4) goTo(currentStep + 1);
+    if (e.key === 'Enter' && currentStep === 4) generate();
+  });
+</script>
+</body>
+</html>
