@@ -1,16 +1,19 @@
 {
-    "version": "1.0.0",
-    "description": "A Simple Discord Bot that's able to generate a custom profile picture for you!",
+    "name": "discord-icon-gen",
+    "version": "1.1.0",
+    "description": "A Discord bot that generates fully customizable server icons with text, colors, fonts, and glow effects. Forked from NoVa-Gh0ul/Discord-Icon-Gen.",
     "main": "src/index.js",
     "scripts": {
-        "test": "node ."
+        "start": "node src/index.js",
+        "dev": "node --watch src/index.js"
     },
-    "author": "NoVa Gh0ul",
+    "author": "ShadowWalkerNC (fork of NoVa-Gh0ul)",
+    "license": "MIT",
     "dependencies": {
+        "@discordjs/builders": "^1.7.0",
+        "@discordjs/rest": "^2.2.0",
         "canvas": "^2.11.2",
         "discord.js": "^14.14.1",
-        "dotenv": "^16.4.5",
-        "fs": "^0.0.1-security",
-        "path": "^0.12.7"
+        "dotenv": "^16.4.5"
     }
 }
