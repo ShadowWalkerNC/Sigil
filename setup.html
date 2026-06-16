@@ -13,6 +13,7 @@
     --accent: #5865f2;
     --accent-hover: #4752c4;
     --success: #3ba55c;
+    --warning: #f0a500;
     --error: #ed4245;
     --text: #dcddde;
     --muted: #8e9297;
@@ -92,6 +93,8 @@
   .step-label { font-size: 0.7rem; color: var(--muted); text-align: center; }
   .step.active .step-label { color: var(--accent); }
   .step.done .step-label   { color: var(--success); }
+  .step.skip .step-num     { background: var(--border); border-color: var(--border); color: var(--muted); }
+  .step.skip .step-label   { color: var(--border); }
 
   /* Panels */
   .panel { display: none; }
@@ -158,6 +161,42 @@
   .info-box a { color: var(--accent); text-decoration: none; }
   .info-box a:hover { text-decoration: underline; }
 
+  /* Warning box */
+  .warn-box {
+    background: rgba(240,165,0,0.1);
+    border: 1px solid rgba(240,165,0,0.35);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.83rem;
+    color: var(--text);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+  .warn-box strong { color: var(--warning); }
+
+  /* Mode cards */
+  .mode-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .mode-card {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .mode-card:hover { border-color: var(--accent); }
+  .mode-card.selected { border-color: var(--accent); background: rgba(88,101,242,0.08); }
+  .mode-card input[type=radio] { display: none; }
+  .mode-card-title { font-weight: 700; color: var(--white); font-size: 0.92rem; margin-bottom: 3px; }
+  .mode-card-desc  { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+  .mode-tag {
+    display: inline-block;
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
+  }
+  .tag-rec  { background: rgba(59,165,92,0.2);  color: var(--success); }
+  .tag-prod { background: rgba(88,101,242,0.2); color: #8891f5; }
+
   /* Buttons */
   .btn-row { display: flex; gap: 10px; margin-top: 28px; }
   button {
@@ -197,12 +236,42 @@
     color: #a9dc76;
     margin-bottom: 12px;
     white-space: pre;
+    overflow-x: auto;
   }
-  .next-steps {
-    font-size: 0.82rem; color: var(--muted); line-height: 1.7;
-    margin-top: 16px;
+  .checklist {
+    list-style: none;
+    margin: 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
-  .next-steps strong { color: var(--text); }
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .checklist li .check { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .checklist li strong { color: var(--white); }
+  .checklist li a { color: var(--accent); text-decoration: none; }
+  .checklist li a:hover { text-decoration: underline; }
+  .invite-row {
+    background: rgba(59,165,92,0.08);
+    border: 1px solid rgba(59,165,92,0.3);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.83rem;
+    margin: 14px 0;
+    display: none;
+  }
+  .invite-row strong { color: var(--success); display: block; margin-bottom: 6px; }
+  .invite-row a {
+    color: var(--accent); font-weight: 600; word-break: break-all;
+    text-decoration: none;
+  }
+  .invite-row a:hover { text-decoration: underline; }
 
   footer {
     margin-top: 32px;
@@ -227,7 +296,7 @@
   <!-- Step indicators -->
   <div class="steps">
     <div class="step active" id="si-1"><div class="step-num">1</div><div class="step-label">Token</div></div>
-    <div class="step" id="si-2"><div class="step-num">2</div><div class="step-label">App IDs</div></div>
+    <div class="step" id="si-2"><div class="step-num">2</div><div class="step-label">App ID</div></div>
     <div class="step" id="si-3"><div class="step-num">3</div><div class="step-label">Server</div></div>
     <div class="step" id="si-4"><div class="step-num">4</div><div class="step-label">Mode</div></div>
     <div class="step" id="si-5"><div class="step-num">✓</div><div class="step-label">Done</div></div>
@@ -268,8 +337,8 @@
       <strong>How to find it:</strong>
       <ol>
         <li>On the <a href="https://discord.com/developers/applications" target="_blank">Developer Portal</a>, click your app</li>
-        <li>Click <strong>OAuth2</strong> in the left sidebar</li>
-        <li>Copy the <strong>Client ID</strong> — it's a long number</li>
+        <li>Click <strong>General Information</strong> in the left sidebar</li>
+        <li>Copy the <strong>Application ID</strong> — it's a long number</li>
       </ol>
     </div>
     <div class="field">
@@ -287,8 +356,8 @@
   <!-- Panel 3: Guild ID -->
   <div class="panel" id="p3">
     <h2>Step 3 — Server (Guild) ID</h2>
-    <p class="subtitle">This tells the bot which Discord server to register its commands on.</p>
-    <div class="info-box">
+    <p class="subtitle" id="guild-subtitle">This tells the bot which Discord server to register its slash commands on.</p>
+    <div class="info-box" id="guild-howto">
       <strong>How to find it:</strong>
       <ol>
         <li>In Discord, open <strong>User Settings → Advanced</strong> and turn on <strong>Developer Mode</strong></li>
@@ -296,8 +365,11 @@
         <li>Click <strong>Copy Server ID</strong></li>
       </ol>
     </div>
+    <div class="warn-box" id="guild-skip-note" style="display:none">
+      <strong>⚠️ You chose Global mode</strong> — a Guild ID is optional. You can leave this blank and commands will register globally (takes up to 1 hour). If you also want instant guild-mode testing later, enter your server ID here.
+    </div>
     <div class="field">
-      <label>Guild / Server ID</label>
+      <label>Guild / Server ID <span id="guild-optional" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);display:none">(optional for Global mode)</span></label>
       <input type="text" id="guildid" placeholder="e.g. 9876543210987654321" autocomplete="off">
       <div class="field-hint">Numbers only — same length as the Client ID.</div>
       <div class="field-err" id="err-guildid">Guild ID should be a long number. Check you copied it correctly.</div>
@@ -311,15 +383,21 @@
   <!-- Panel 4: Deploy Mode -->
   <div class="panel" id="p4">
     <h2>Step 4 — Deploy Mode</h2>
-    <p class="subtitle">Choose how commands get registered. You can always change this later in the <code>.env</code> file.</p>
-    <div class="field">
-      <label>Deploy Mode</label>
-      <select id="deploymode">
-        <option value="guild" selected>Guild (recommended for most users — instant)</option>
-        <option value="global">Global (all servers the bot is in — takes up to 1 hour)</option>
-      </select>
-      <div class="field-hint"><strong>Guild</strong> registers commands only to your chosen server instantly. Use <strong>Global</strong> only if you plan to add the bot to many servers.</div>
+    <p class="subtitle">Choose how commands get registered in Discord. You can change this later by editing the <code>.env</code> file.</p>
+
+    <div class="mode-cards">
+      <label class="mode-card selected" id="card-guild" onclick="selectMode('guild')">
+        <input type="radio" name="deploymode" value="guild" checked>
+        <div class="mode-card-title">Guild (Server) <span class="mode-tag tag-rec">Recommended</span></div>
+        <div class="mode-card-desc">Commands appear instantly on <strong>your server only</strong>. Perfect for personal use or testing. Requires a Server ID in Step 3.</div>
+      </label>
+      <label class="mode-card" id="card-global" onclick="selectMode('global')">
+        <input type="radio" name="deploymode" value="global">
+        <div class="mode-card-title">Global <span class="mode-tag tag-prod">Production</span></div>
+        <div class="mode-card-desc">Commands appear on <strong>every server</strong> the bot is in. Takes up to 1 hour to propagate. Use this when you're ready to go live.</div>
+      </label>
     </div>
+
     <div class="btn-row">
       <button class="btn-back" onclick="goTo(3)">← Back</button>
       <button class="btn-primary" onclick="generate()">Generate .env file ✓</button>
@@ -330,16 +408,33 @@
   <div class="panel" id="p5">
     <div class="done-icon">🎉</div>
     <div class="done-title">Your .env file has been downloaded!</div>
-    <div class="done-sub">Move it into your <strong>Discord-Icon-Gen</strong> folder, then follow the steps below.</div>
+    <div class="done-sub">Move it into your <strong>Discord-Icon-Gen</strong> folder, then follow the checklist below.</div>
+
+    <!-- Auto-generated invite link -->
+    <div class="invite-row" id="invite-row">
+      <strong>🔗 Bot invite link (auto-generated)</strong>
+      <a href="#" id="invite-link" target="_blank">Loading…</a>
+      <div style="font-size:0.77rem;color:var(--muted);margin-top:6px">Open this link in your browser to add the bot to your server. You must be a server admin to do this.</div>
+    </div>
+
+    <ul class="checklist">
+      <li><span class="check">✅</span><div>Move the <strong>.env</strong> file into the <strong>Discord-Icon-Gen</strong> folder</div></li>
+      <li><span class="check">🔤</span><div><strong>Install the extra fonts</strong> — see the <a href="https://github.com/ShadowWalkerNC/Discord-Icon-Gen#-font-installation" target="_blank">Font Installation</a> section in the README. The bot will start without them but 5 of the 6 fonts won't work.</div></li>
+      <li><span class="check">▶️</span><div>Start the bot:</div></li>
+    </ul>
+
     <div class="code-block">cd Discord-Icon-Gen
 npm install
 node src/index.js</div>
-    <div class="next-steps">
-      <strong>What to expect:</strong> You should see a line like<br>
-      <code style="color:#a9dc76">✅ Logged in as YourBotName#1234</code><br><br>
-      Once that appears, go to your Discord server and type <strong>/help</strong> to see all commands,
-      or <strong>/preview</strong> to browse all backgrounds.
+
+    <ul class="checklist">
+      <li><span class="check">💬</span><div>In Discord, type <strong>/help</strong> to see all commands or <strong>/preview</strong> to browse backgrounds</div></li>
+    </ul>
+
+    <div style="font-size:0.8rem;color:var(--muted);margin-top:8px;line-height:1.6">
+      You should see <code style="color:#a9dc76">✅ Logged in as YourBotName#1234</code> in the terminal when it's working.
     </div>
+
     <div class="btn-row" style="margin-top:24px">
       <button class="btn-success" onclick="downloadAgain()">⬇ Download .env again</button>
     </div>
@@ -358,12 +453,32 @@ node src/index.js</div>
 <script>
   let currentStep = 1;
   const TOTAL = 5;
+  let deployMode = 'guild';
 
   function toggleEye(id, btn) {
     const inp = document.getElementById(id);
     const isPass = inp.type === 'password';
     inp.type = isPass ? 'text' : 'password';
-    btn.textContent = isPass ? '🙈' : '👁';
+    btn.textContent = isPass ? '\ud83d\ude48' : '\ud83d\udc41';
+  }
+
+  function selectMode(mode) {
+    deployMode = mode;
+    document.getElementById('card-guild').classList.toggle('selected', mode === 'guild');
+    document.getElementById('card-global').classList.toggle('selected', mode === 'global');
+    document.querySelector('[value="guild"]').checked = mode === 'guild';
+    document.querySelector('[value="global"]').checked = mode === 'global';
+    updateGuildPanel();
+  }
+
+  function updateGuildPanel() {
+    const isGlobal = deployMode === 'global';
+    document.getElementById('guild-skip-note').style.display = isGlobal ? 'block' : 'none';
+    document.getElementById('guild-howto').style.display     = isGlobal ? 'none'  : 'block';
+    document.getElementById('guild-optional').style.display  = isGlobal ? 'inline' : 'none';
+    document.getElementById('guild-subtitle').textContent = isGlobal
+      ? 'In Global mode, a Server ID is optional but useful for local testing.'
+      : 'This tells the bot which Discord server to register its slash commands on.';
   }
 
   function setStep(n) {
@@ -372,6 +487,10 @@ node src/index.js</div>
       const p  = document.getElementById('p'  + i);
       si.className = 'step' + (i === n ? ' active' : i < n ? ' done' : '');
       p.className  = 'panel' + (i === n ? ' active' : '');
+    }
+    // Grey out step 3 indicator if global mode and no guild ID entered
+    if (n > 3 && deployMode === 'global' && !document.getElementById('guildid').value.trim()) {
+      document.getElementById('si-3').className = 'step skip';
     }
     currentStep = n;
   }
@@ -402,8 +521,10 @@ node src/index.js</div>
       err.style.display = 'none';
     }
     if (step === 3) {
-      const v = document.getElementById('guildid').value.trim();
+      const v   = document.getElementById('guildid').value.trim();
       const err = document.getElementById('err-guildid');
+      // Optional if global mode and left blank
+      if (v === '' && deployMode === 'global') return true;
       if (!/^\d{17,20}$/.test(v)) {
         document.getElementById('guildid').classList.add('error');
         err.style.display = 'block';
@@ -418,29 +539,32 @@ node src/index.js</div>
 
   function goTo(n) {
     if (n > currentStep && !validate(currentStep)) return;
+    if (n === 3) updateGuildPanel();
     setStep(n);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function buildEnv() {
-    const token  = document.getElementById('token').value.trim();
-    const cid    = document.getElementById('clientid').value.trim();
-    const gid    = document.getElementById('guildid').value.trim();
-    const mode   = document.getElementById('deploymode').value;
-    return [
+    const token = document.getElementById('token').value.trim();
+    const cid   = document.getElementById('clientid').value.trim();
+    const gid   = document.getElementById('guildid').value.trim();
+    const lines = [
       '# Discord Bot Token (from https://discord.com/developers/applications)',
       `TOKEN=${token}`,
       '',
       '# Your Discord Application Client ID',
       `CLIENT_ID=${cid}`,
       '',
-      '# The Guild (Server) ID',
-      `GUILD_ID=${gid}`,
-      '',
-      '# Command deployment mode: guild | global',
-      `DEPLOY_MODE=${mode}`,
-      '',
-    ].join('\n');
+    ];
+    if (gid) {
+      lines.push('# The Guild (Server) ID');
+      lines.push(`GUILD_ID=${gid}`);
+      lines.push('');
+    }
+    lines.push('# Command deployment mode: guild | global');
+    lines.push(`DEPLOY_MODE=${deployMode}`);
+    lines.push('');
+    return lines.join('\n');
   }
 
   function downloadEnv(content) {
@@ -452,10 +576,27 @@ node src/index.js</div>
     URL.revokeObjectURL(a.href);
   }
 
+  function buildInviteUrl() {
+    const cid = document.getElementById('clientid').value.trim();
+    if (!cid) return null;
+    // Send Messages (2048) + Attach Files (32768) + Use Application Commands (2147483648)
+    const perms = 2147518464;
+    return `https://discord.com/oauth2/authorize?client_id=${cid}&scope=bot%20applications.commands&permissions=${perms}`;
+  }
+
   function generate() {
     if (!validate(4)) return;
-    const content = buildEnv();
-    downloadEnv(content);
+    downloadEnv(buildEnv());
+
+    const inviteUrl  = buildInviteUrl();
+    const inviteRow  = document.getElementById('invite-row');
+    const inviteLink = document.getElementById('invite-link');
+    if (inviteUrl) {
+      inviteRow.style.display = 'block';
+      inviteLink.href = inviteUrl;
+      inviteLink.textContent = inviteUrl;
+    }
+
     setStep(5);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -464,7 +605,7 @@ node src/index.js</div>
     downloadEnv(buildEnv());
   }
 
-  // Allow Enter key to advance
+  // Enter key advances steps
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter' && currentStep < 4) goTo(currentStep + 1);
     if (e.key === 'Enter' && currentStep === 4) generate();
