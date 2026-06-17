@@ -11,7 +11,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('saveme')
         .setDescription(`Save your current icon params to history (keeps last ${MAX_ITEMS}).`)
-        .addStringOption(o => o.setName('command').setDescription('Which command produced this icon (icon / banner / logo / avatar / random)').setRequired(true)
+        .addStringOption(o => o.setName('command').setDescription('Which command produced this icon').setRequired(true)
             .addChoices(
                 { name: '/icon',   value: 'icon'   },
                 { name: '/banner', value: 'banner' },
@@ -22,16 +22,21 @@ module.exports = {
         .addStringOption(o => o.setName('text')      .setDescription('Text you used')                          .setRequired(true))
         .addIntegerOption(o => o.setName('size')      .setDescription('Font size you used')                    .setRequired(true))
         .addStringOption(o => o.setName('color')      .setDescription('Primary colour (hex)')                  .setRequired(true))
-        // Glow stored as numeric value (5/10/15) to match what rendering commands expect
         .addStringOption(o => o.setName('glow')       .setDescription('Glow level').setRequired(true)
-            .addChoices({ name:'Low',value:'5'},{ name:'Medium',value:'10'},{ name:'High',value:'15' }))
+            .addChoices(
+                { name: 'None',   value: '0'  },
+                { name: 'Low',    value: '5'  },
+                { name: 'Medium', value: '10' },
+                { name: 'High',   value: '15' },
+                { name: 'Ultra',  value: '25' }
+            ))
         .addStringOption(o => o.setName('background') .setDescription('Background key (e.g. starfield)')       .setRequired(false))
         .addStringOption(o => o.setName('color2')     .setDescription('Second colour if gradient')             .setRequired(false))
         .addIntegerOption(o => o.setName('opacity')   .setDescription('Opacity 10-100')                        .setRequired(false).setMinValue(10).setMaxValue(100))
         .addStringOption(o => o.setName('border')     .setDescription('Border style')                         .setRequired(false)
             .addChoices(...getBorderChoices()))
         .addStringOption(o => o.setName('font')       .setDescription('Font key')                              .setRequired(false))
-        .addStringOption(o => o.setName('label')      .setDescription('Friendly name for this save (e.g. \'red fire icon\')')  .setRequired(false)),
+        .addStringOption(o => o.setName('label')      .setDescription("Friendly name for this save (e.g. 'red fire icon')")  .setRequired(false)),
 
     async execute(interaction) {
         const command = interaction.options.getString('command');
@@ -41,7 +46,7 @@ module.exports = {
             text:       interaction.options.getString('text'),
             size:       interaction.options.getInteger('size'),
             color:      interaction.options.getString('color'),
-            glow:       interaction.options.getString('glow'),   // now stores '5'/'10'/'15'
+            glow:       interaction.options.getString('glow'),
             background: interaction.options.getString('background') || undefined,
             color2:     interaction.options.getString('color2')     || undefined,
             opacity:    interaction.options.getInteger('opacity')   || undefined,
@@ -64,7 +69,7 @@ module.exports = {
                 { name: 'Command', value: `\`/${command}\``,                inline: true  },
                 { name: 'Replay',  value: `\`\`\`\n${copyCmd}\n\`\`\``,   inline: false },
             )
-            .setFooter({ text: `Discord Icon Gen \u2022 history capped at ${MAX_ITEMS} entries per user` });
+            .setFooter({ text: `Sigil \u2022 /saveme \u2022 history capped at ${MAX_ITEMS} entries per user` });
 
         await interaction.reply({ embeds: [embed], ephemeral: true });
     },

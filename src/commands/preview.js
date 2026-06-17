@@ -24,7 +24,7 @@ module.exports = {
     async execute(interaction) {
         const loadingEmbed = new EmbedBuilder()
             .setColor('#808080')
-            .setDescription('Generating background preview sheet\u2026');
+            .setDescription('\u2726 Generating background preview sheet\u2026');
         const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
         try {
@@ -52,7 +52,7 @@ module.exports = {
             ctx.fillStyle        = '#ffffff';
             ctx.textAlign        = 'center';
             ctx.textBaseline     = 'middle';
-            ctx.fillText('Background Preview \u2014 Discord Icon Gen', sheetW / 2, HEADER_H / 2);
+            ctx.fillText('\u2726 Sigil \u2014 Background Preview', sheetW / 2, HEADER_H / 2);
 
             for (let i = 0; i < bgChoices.length; i++) {
                 const { name: label, value: key } = bgChoices[i];
@@ -88,7 +88,7 @@ module.exports = {
                     new EmbedBuilder()
                         .setColor('#808080')
                         .setImage('attachment://preview.png')
-                        .setFooter({ text: 'Discord Icon Gen \u2022 /preview \u2022 use these names in /icon or /banner' }),
+                        .setFooter({ text: 'Sigil \u2022 /preview \u2022 use these names in /icon, /banner, or /compare' }),
                 ],
                 files: [{ attachment, name: 'preview.png' }],
             });

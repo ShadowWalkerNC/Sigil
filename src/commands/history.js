@@ -43,7 +43,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setColor('#808080')
             .setTitle(`\uD83D\uDDC2\uFE0F Your icon history (${history.length}/${MAX_ITEMS})`)
-            .setFooter({ text: 'Discord Icon Gen \u2022 /history \u2022 copy a command and paste it into Discord to recreate' });
+            .setFooter({ text: 'Sigil \u2022 /history \u2022 copy a command and paste it into Discord to recreate' });
 
         history.forEach((entry, i) => {
             const copyCmd = buildCopyCommand(entry.command, entry.params);
