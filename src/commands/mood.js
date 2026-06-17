@@ -19,11 +19,11 @@ function parseMoodResponse(raw) {
     const p   = extractJson(raw);
     const hex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
     return {
-        color:      hex.test(p.color)                        ? p.color      : '#FFFFFF',
-        color2:     p.color2 && hex.test(p.color2)           ? p.color2     : null,
-        background: VALID_BACKGROUNDS.includes(p.background) ? p.background : 'plain-black',
-        tagline:    typeof p.tagline === 'string'             ? p.tagline.slice(0, 60).trim() : '',
-        glow:       ['0','5','10','15','25'].includes(String(p.glow)) ? String(p.glow) : '10',
+        color:      hex.test(p.color)                        ? p.color                                           : '#FFFFFF',
+        color2:     p.color2 && hex.test(p.color2)           ? p.color2                                          : null,
+        background: VALID_BACKGROUNDS.includes(p.background) ? p.background                                      : 'plain-black',
+        tagline:    typeof p.tagline === 'string'             ? p.tagline.slice(0, 60).trim()                     : '',
+        glow:       ['0','5','10','15','25'].includes(String(p.glow)) ? String(p.glow)                            : '10',
     };
 }
 
@@ -102,21 +102,23 @@ module.exports = {
             .setDescription(`✦ Reading the vibe: **${vibe}**… asking Gemini for a palette.`);
         const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
-        const prompt = `You are a Discord server branding designer.
-The user wants a brand palette for the mood/vibe: "${vibe}".
+        // Tight schema-only prompt — no prose preamble, keeps tokens low
+        const prompt =
+`Vibe: "${vibe}"
 
-Respond with ONLY a JSON object. Do not include any explanation, markdown, or code fences.
-The JSON object must have these exact keys:
-  color       (string, primary hex color, e.g. "#FF4500")
-  color2      (string or null, second hex for gradient)
-  background  (string, one of: ${VALID_BACKGROUNDS.map(b=>`"${b}"`).join(', ')})
-  glow        (string, one of: "0" "5" "10" "15" "25")
-  tagline     (string, short punchy tagline max 8 words)
+Available backgrounds: ${VALID_BACKGROUNDS.join(', ')}
 
-Start your response with { and end with }. Nothing before or after.`;
+Return ONLY a JSON object:
+  color (hex, primary)
+  color2 (hex or null, for gradient)
+  background (one of the available backgrounds)
+  glow (one of: "0" "5" "10" "15" "25")
+  tagline (string, max 8 words)
+
+Start with { end with }. Nothing else.`;
 
         try {
-            const raw   = await geminiRequest(prompt, { temperature: 1.0 });
+            const raw   = await geminiRequest(prompt, { temperature: 1.0, maxOutputTokens: 150 });
             const mood  = parseMoodResponse(raw);
 
             const [iconBuf, paletteBuf] = await Promise.all([
@@ -132,7 +134,7 @@ Start your response with { and end with }. Nothing before or after.`;
                         .setColor(mood.color)
                         .setTitle(`✦ Mood: ${vibe}`)
                         .setDescription([
-                            mood.tagline ? `*“${mood.tagline}”*\n` : '',
+                            mood.tagline ? `*"${mood.tagline}"*\n` : '',
                             `**Palette** — ${colorLabel}`,
                             `**Background** — \`${mood.background}\``,
                             `**Glow** — ${mood.glow === '0' ? 'None' : mood.glow}`,

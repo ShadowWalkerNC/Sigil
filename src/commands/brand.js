@@ -4,7 +4,7 @@ const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
 const { createTextGradient } = require('../utils/gradient');
 const { getBackgroundChoices, drawBackground } = require('../utils/backgrounds');
 const { drawBorder, getBorderChoices } = require('../utils/borders');
-const { geminiRequest, extractJson } = require('../utils/gemini');
+const { geminiRequest, geminiImageRequest, extractJson } = require('../utils/gemini');
 const { getColorAutocomplete } = require('../utils/colors');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
@@ -14,9 +14,9 @@ const VALID_BACKGROUNDS = [
     'sunset', 'forest', 'cyberpunk-grid', 'starfield', 'carbon-fiber',
 ];
 
+// Keys MUST match drawBorder() / getBorderChoices() exactly
 const VALID_BORDERS = [
-    'none', 'solid', 'glow-ring', 'gradient-ring',
-    'neon', 'double', 'dashed', 'shadow-ring', 'pulse',
+    'none', 'solid', 'glow', 'gradient', 'double', 'dashed', 'corner', 'neon',
 ];
 
 for (const font of getAllFonts()) {
@@ -30,15 +30,15 @@ function parseAiKitResponse(raw) {
     const p   = extractJson(raw);
     const hex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
     return {
-        name:       typeof p.name       === 'string' ? p.name.slice(0, 30).trim()        : 'My Server',
-        initials:   typeof p.initials   === 'string' ? p.initials.slice(0, 4).toUpperCase().trim() : 'SRV',
-        color:      hex.test(p.color)                ? p.color                             : '#FFFFFF',
-        color2:     p.color2 && hex.test(p.color2)   ? p.color2                            : null,
-        background: VALID_BACKGROUNDS.includes(p.background) ? p.background               : 'plain-black',
-        border:     VALID_BORDERS.includes(p.border)          ? p.border                   : 'none',
-        glow:       ['0','5','10','15','25'].includes(String(p.glow)) ? String(p.glow)     : '10',
-        tagline:    typeof p.tagline    === 'string' ? p.tagline.slice(0, 60).trim()       : '',
-        rationale:  typeof p.rationale  === 'string' ? p.rationale.slice(0, 300).trim()   : '',
+        name:       typeof p.name       === 'string' ? p.name.slice(0, 30).trim()                        : 'My Server',
+        initials:   typeof p.initials   === 'string' ? p.initials.slice(0, 4).toUpperCase().trim()        : 'SRV',
+        color:      hex.test(p.color)                ? p.color                                             : '#FFFFFF',
+        color2:     p.color2 && hex.test(p.color2)   ? p.color2                                            : null,
+        background: VALID_BACKGROUNDS.includes(p.background) ? p.background                               : 'plain-black',
+        border:     VALID_BORDERS.includes(p.border)          ? p.border                                   : 'none',
+        glow:       ['0','5','10','15','25'].includes(String(p.glow)) ? String(p.glow)                     : '10',
+        tagline:    typeof p.tagline    === 'string' ? p.tagline.slice(0, 60).trim()                       : '',
+        rationale:  typeof p.rationale  === 'string' ? p.rationale.slice(0, 300).trim()                   : '',
     };
 }
 
@@ -47,7 +47,7 @@ function parseAiKitResponse(raw) {
 async function renderIcon(ctx, { text, size, color, color2, glow, background, border, font }) {
     const W = 400, H = 400;
     await drawBackground(ctx, background, W, H, loadImage);
-    if (border !== 'none') drawBorder(ctx, border, color, color2, W);
+    if (border && border !== 'none') drawBorder(ctx, border, color, color2, W);
     ctx.font = `${size}px '${font.family}'`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -162,12 +162,17 @@ module.exports = {
         )
         .addSubcommand(sub =>
             sub.setName('ai')
-                .setDescription('Describe your server — Gemini designs the full brand kit automatically.')
+                .setDescription('Describe your server — Gemini designs the full brand kit + generates a custom image.')
                 .addStringOption(o =>
                     o.setName('description')
                         .setDescription('Describe your server in plain English (e.g. "dark fantasy RPG with dragons")')
                         .setRequired(true)
                         .setMaxLength(200))
+                .addStringOption(o =>
+                    o.setName('image_prompt')
+                        .setDescription('Describe the image to generate — min 8 words (e.g. "dark mystical forest with glowing runes at dusk")')
+                        .setRequired(true)
+                        .setMaxLength(300))
                 .addStringOption(o =>
                     o.setName('name')
                         .setDescription('Override the server name (optional — Gemini suggests one if omitted)')
@@ -203,8 +208,6 @@ module.exports = {
                 return interaction.reply({ content: '❌ Primary color must be a valid hex code (e.g. #FF4500). Pick from the dropdown or type a hex.', ephemeral: true });
             if (color2 && !HEX_COLOR_REGEX.test(color2))
                 return interaction.reply({ content: '❌ Secondary color must be a valid hex code. Pick from the dropdown or type a hex.', ephemeral: true });
-            if (name.length > 30)
-                return interaction.reply({ content: '❌ Brand name must be 30 characters or fewer.', ephemeral: true });
 
             const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('✦ Crafting your brand kit…');
             const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
@@ -257,43 +260,66 @@ module.exports = {
         // ── /brand ai ─────────────────────────────────────────────────────
         if (sub === 'ai') {
             const description  = interaction.options.getString('description').trim();
+            const imagePrompt  = interaction.options.getString('image_prompt').trim();
             const nameOverride = interaction.options.getString('name') || null;
 
             if (!process.env.GEMINI_API_KEY)
                 return interaction.reply({ content: '❌ `GEMINI_API_KEY` is not configured.', ephemeral: true });
 
+            // Enforce 8-word minimum on image prompt
+            const wordCount = imagePrompt.split(/\s+/).filter(Boolean).length;
+            if (wordCount < 8)
+                return interaction.reply({
+                    content: `❌ Your image prompt is too short (**${wordCount} word${wordCount === 1 ? '' : 's'}**). Use at least **8 words** so Gemini has enough detail to generate something great.\n\n*Example: "dark mystical forest with glowing ancient runes at dusk"*`,
+                    ephemeral: true,
+                });
+
             const loadingEmbed = new EmbedBuilder()
                 .setColor('#808080')
-                .setDescription(`✦ Gemini is designing your brand kit…\n*"${description}"*`);
+                .setDescription(`✦ Gemini is designing your brand kit and generating your image…\n*"${description}"*`);
             const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
-            const prompt = `You are an expert Discord server branding designer.
+            // Tight JSON-only prompt — no prose preamble to keep tokens low
+            const kitPrompt =
+`Server description: "${description}"
+${nameOverride ? `Server name: "${nameOverride}"` : 'Suggest a short punchy server name.'}
 
-The user wants a complete brand kit for their Discord server.
-Server description: "${description}"
-${nameOverride ? `Server name (use this exactly): "${nameOverride}"` : 'Suggest a short, punchy server name that fits the description.'}
+Available backgrounds: ${VALID_BACKGROUNDS.join(', ')}
+Available borders: ${VALID_BORDERS.join(', ')}
 
-Available backgrounds: ${VALID_BACKGROUNDS.map(b => `"${b}"`).join(', ')}
-Available borders: ${VALID_BORDERS.map(b => `"${b}"`).join(', ')}
+Return ONLY a JSON object with these keys:
+  name (string, max 30 chars${nameOverride ? `, use "${nameOverride}"` : ''})
+  initials (string, 1-4 uppercase chars)
+  color (hex string, e.g. "#FF4500")
+  color2 (hex string or null)
+  background (one of the available backgrounds)
+  border (one of the available borders)
+  glow (one of: "0" "5" "10" "15" "25")
+  tagline (string, max 8 words)
+  rationale (string, 1-2 sentences)
 
-Respond with ONLY a JSON object. Do not include any explanation, markdown formatting, or code fences.
-The JSON object must have these exact keys:
-  name        (string, max 30 chars${nameOverride ? `, use "${nameOverride}"` : ''})
-  initials    (string, 1-4 uppercase chars, e.g. "DRG")
-  color       (string, hex color, e.g. "#FF4500")
-  color2      (string or null, second hex for gradient)
-  background  (string, must be one of the available backgrounds listed above)
-  border      (string, must be one of the available borders listed above)
-  glow        (string, one of: "0" "5" "10" "15" "25")
-  tagline     (string, max 8 words)
-  rationale   (string, 1-2 sentences on design choices)
+Start with { and end with }. Nothing else.`;
 
-Start your response with { and end with }. Nothing before or after.`;
+            // Enhance image prompt with branding context
+            const enhancedImagePrompt = `Discord server branding art: ${imagePrompt}. High quality, vibrant, detailed, suitable for a server banner or promotional image.`;
 
             try {
-                const raw  = await geminiRequest(prompt, { temperature: 1.0 });
-                const kit  = parseAiKitResponse(raw);
-                const font = getFont('another-danger');
+                await initialReply.edit({
+                    embeds: [new EmbedBuilder().setColor('#808080')
+                        .setDescription(`✦ Running in parallel…\n\n**1.** Designing brand kit\n**2.** Generating image: *"${imagePrompt}"*`)],
+                });
+
+                // Kit design + image generation run simultaneously
+                const [rawResult, imageBuf] = await Promise.allSettled([
+                    geminiRequest(kitPrompt, { temperature: 1.0, maxOutputTokens: 256 }),
+                    geminiImageRequest(enhancedImagePrompt),
+                ]);
+
+                if (rawResult.status === 'rejected')
+                    throw new Error(`Brand kit design failed: ${rawResult.reason?.message}`);
+
+                const kit    = parseAiKitResponse(rawResult.value);
+                const font   = getFont('another-danger');
                 const params = { color: kit.color, color2: kit.color2, glow: kit.glow, background: kit.background, font };
 
                 const iconCanvas   = createCanvas(400, 400);
@@ -313,6 +339,21 @@ Start your response with { and end with }. Nothing before or after.`;
                 const paletteBuf = renderPalette(kit.color, kit.color2);
                 const colorLabel = kit.color2 ? `${kit.color} → ${kit.color2}` : kit.color;
 
+                const files = [
+                    new AttachmentBuilder(iconCanvas.toBuffer(),   { name: 'icon.png'    }),
+                    new AttachmentBuilder(bannerCanvas.toBuffer(), { name: 'banner.png'  }),
+                    new AttachmentBuilder(paletteBuf,              { name: 'palette.png' }),
+                ];
+
+                let imageNote = '';
+                if (imageBuf.status === 'fulfilled') {
+                    files.push(new AttachmentBuilder(imageBuf.value, { name: 'generated-image.png' }));
+                    imageNote = '\n🎨 **Generated Image** — attached above';
+                } else {
+                    console.warn('[WARN] /brand ai image gen failed (non-fatal):', imageBuf.reason?.message);
+                    imageNote = `\n⚠️ Image generation failed: *${imageBuf.reason?.message || 'unknown error'}* — requires a paid Gemini API key.`;
+                }
+
                 await initialReply.edit({
                     embeds: [
                         new EmbedBuilder()
@@ -326,18 +367,15 @@ Start your response with { and end with }. Nothing before or after.`;
                                 `**Background** — \`${kit.background}\``,
                                 `**Border** — \`${kit.border}\``,
                                 `**Glow** — ${kit.glow}`,
+                                imageNote,
                                 '',
-                                kit.rationale ? `🧠 *${kit.rationale}*`         : '',
+                                kit.rationale ? `🧠 *${kit.rationale}*` : '',
                                 '',
                                 '⚡ Use these values in `/brand kit` to tweak.',
                             ].filter(Boolean).join('\n'))
                             .setFooter({ text: `Sigil • /brand ai • powered by Gemini` }),
                     ],
-                    files: [
-                        new AttachmentBuilder(iconCanvas.toBuffer(),   { name: 'icon.png'    }),
-                        new AttachmentBuilder(bannerCanvas.toBuffer(), { name: 'banner.png'  }),
-                        new AttachmentBuilder(paletteBuf,              { name: 'palette.png' }),
-                    ],
+                    files,
                 });
             } catch (err) {
                 console.error('[ERROR] /brand ai failed:', err);
