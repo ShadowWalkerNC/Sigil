@@ -38,6 +38,7 @@ for (const file of eventFiles) {
     }
 }
 
+// ── Slash command handler ─────────────────────────────────────────────────
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
@@ -87,9 +88,25 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+// ── Autocomplete handler ──────────────────────────────────────────────────
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isAutocomplete()) return;
+
+    const command = client.commands.get(interaction.commandName);
+    if (!command?.autocomplete) return;
+
+    try {
+        await command.autocomplete(interaction);
+    } catch (error) {
+        console.error(`[ERROR] Autocomplete failed for '${interaction.commandName}':`, error);
+        // Respond with empty list so Discord doesn't hang
+        try { await interaction.respond([]); } catch (_) {}
+    }
+});
+
 process.on('unhandledRejection', (error) => {
     console.error('[ERROR] Unhandled Rejection:', error);
 });
 
 client.login(TOKEN);
-console.log('\x1b[32m\x1b[1m Discord-Icon-Gen v1.2.0 starting...\x1b[0m');
+console.log('\x1b[32m\x1b[1m Sigil v2.0.0 starting...\x1b[0m');

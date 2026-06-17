@@ -5,6 +5,7 @@ const { createTextGradient } = require('../utils/gradient');
 const { getBackgroundChoices, drawBackground } = require('../utils/backgrounds');
 const { drawBorder, getBorderChoices } = require('../utils/borders');
 const { geminiRequest, extractJson } = require('../utils/gemini');
+const { getColorAutocomplete } = require('../utils/colors');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 
@@ -26,9 +27,8 @@ for (const font of getAllFonts()) {
 // ── Parse AI kit response ──────────────────────────────────────────────────
 
 function parseAiKitResponse(raw) {
-    const p   = extractJson(raw);  // throws descriptively if extraction fails
+    const p   = extractJson(raw);
     const hex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
-
     return {
         name:       typeof p.name       === 'string' ? p.name.slice(0, 30).trim()        : 'My Server',
         initials:   typeof p.initials   === 'string' ? p.initials.slice(0, 4).toUpperCase().trim() : 'SRV',
@@ -127,6 +127,7 @@ function renderPalette(color, color2) {
 
 module.exports = {
     cooldown: 8,
+
     data: new SlashCommandBuilder()
         .setName('brand')
         .setDescription('Brand kit tools: manual or fully AI-designed.')
@@ -135,9 +136,19 @@ module.exports = {
                 .setDescription('Generate icon + banner + palette manually.')
                 .addStringOption(o => o.setName('name').setDescription('Brand/server name').setRequired(true))
                 .addStringOption(o => o.setName('initials').setDescription('Short initials for the icon (1–4 chars)').setRequired(true))
-                .addStringOption(o => o.setName('color').setDescription('Primary colour hex (e.g. #FF4500)').setRequired(true))
+                .addStringOption(o =>
+                    o.setName('color')
+                        .setDescription('Primary colour — pick a preset or type a hex code like #FF4500')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
                 .addStringOption(o => o.setName('background').setDescription('Background style').setRequired(true).addChoices(...getBackgroundChoices()))
-                .addStringOption(o => o.setName('color2').setDescription('Optional second colour for gradients').setRequired(false))
+                .addStringOption(o =>
+                    o.setName('color2')
+                        .setDescription('Optional second colour for gradients — pick a preset or type a hex code')
+                        .setRequired(false)
+                        .setAutocomplete(true)
+                )
                 .addStringOption(o => o.setName('tagline').setDescription('Subtitle on the banner').setRequired(false))
                 .addStringOption(o => o.setName('glow').setDescription('Glow intensity (default: Medium)').setRequired(false).addChoices(
                     { name: 'None',   value: '0'  },
@@ -164,6 +175,15 @@ module.exports = {
                         .setMaxLength(30))
         ),
 
+    // ── Autocomplete ────────────────────────────────────────────────────────
+    async autocomplete(interaction) {
+        const focused = interaction.options.getFocused(true);
+        if (focused.name === 'color' || focused.name === 'color2') {
+            const choices = getColorAutocomplete(focused.value);
+            await interaction.respond(choices);
+        }
+    },
+
     async execute(interaction) {
         const sub = interaction.options.getSubcommand();
 
@@ -180,11 +200,11 @@ module.exports = {
             const fontKey    = interaction.options.getString('font') || 'another-danger';
 
             if (!HEX_COLOR_REGEX.test(color))
-                return interaction.reply({ content: 'Primary color must be a valid hex code (e.g. #FF4500).', ephemeral: true });
+                return interaction.reply({ content: '❌ Primary color must be a valid hex code (e.g. #FF4500). Pick from the dropdown or type a hex.', ephemeral: true });
             if (color2 && !HEX_COLOR_REGEX.test(color2))
-                return interaction.reply({ content: 'Secondary color must be a valid hex code.', ephemeral: true });
+                return interaction.reply({ content: '❌ Secondary color must be a valid hex code. Pick from the dropdown or type a hex.', ephemeral: true });
             if (name.length > 30)
-                return interaction.reply({ content: 'Brand name must be 30 characters or fewer.', ephemeral: true });
+                return interaction.reply({ content: '❌ Brand name must be 30 characters or fewer.', ephemeral: true });
 
             const loadingEmbed = new EmbedBuilder().setColor('#808080').setDescription('✦ Crafting your brand kit…');
             const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
@@ -244,7 +264,7 @@ module.exports = {
 
             const loadingEmbed = new EmbedBuilder()
                 .setColor('#808080')
-                .setDescription(`✦ Gemini is designing your brand kit…\n*“${description}”*`);
+                .setDescription(`✦ Gemini is designing your brand kit…\n*"${description}"*`);
             const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
             const prompt = `You are an expert Discord server branding designer.
@@ -299,7 +319,7 @@ Start your response with { and end with }. Nothing before or after.`;
                             .setColor(kit.color)
                             .setTitle(`✦ AI Brand Kit — ${kit.name}`)
                             .setDescription([
-                                kit.tagline   ? `*“${kit.tagline}”*\n`           : '',
+                                kit.tagline   ? `*"${kit.tagline}"*\n`           : '',
                                 `**Icon** — \`${kit.initials}\` · 400×400`,
                                 `**Banner** — \`${kit.name}\` · 1024×320`,
                                 `**Palette** — ${colorLabel}`,
