@@ -26,7 +26,8 @@ const { geminiRequest, geminiImageRequest, extractJson } = require('../src/utils
 const { renderKit }                                       = require('../src/utils/canvas');
 
 const PORT    = Number(process.env.GUI_PORT) || 3420;
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
+const START   = Date.now();
 
 // In-memory webhook store (keyed by Discord channel ID)
 const webhooks = {};
@@ -59,20 +60,33 @@ function readBody(req) {
 function configToRenderKitOpts(cfg) {
     const b = cfg.brand   || {};
     const v = cfg.visuals || {};
-    // Map GUI background names to canvas background keys
+    // GUI preset name → backgrounds.js key
+    // All 10 real keys pass through directly; GUI-only presets map to the
+    // closest real background (no more plain-black catch-alls).
     const BG_MAP = {
+        // GUI preset names
         'midnight-gradient': 'midnight-gradient',
-        'deep-space':        'plain-black',
-        'inferno':           'plain-black',
-        'ocean-depth':       'plain-black',
+        'deep-space':        'starfield',
+        'inferno':           'sunset',
+        'ocean-depth':       'cyberpunk-grid',
         'forest-night':      'forest',
         'twilight':          'midnight-gradient',
-        'aurora':            'forest',
-        'storm':             'plain-black',
+        'aurora':            'bg-image-1',
+        'storm':             'carbon-fiber',
         'sunset-fade':       'sunset',
         'void':              'plain-black',
         'neon-city':         'cyberpunk-grid',
-        'polar':             'starfield',
+        'polar':             'bg-image-2',
+        // Pass-through: raw backgrounds.js keys sent directly from GUI
+        'plain-black':       'plain-black',
+        'plain-white':       'plain-white',
+        'sunset':            'sunset',
+        'forest':            'forest',
+        'cyberpunk-grid':    'cyberpunk-grid',
+        'starfield':         'starfield',
+        'carbon-fiber':      'carbon-fiber',
+        'bg-image-1':        'bg-image-1',
+        'bg-image-2':        'bg-image-2',
     };
     return {
         name:       (b.banner_text || b.name || 'Sigil').slice(0, 30),
@@ -83,7 +97,7 @@ function configToRenderKitOpts(cfg) {
         border:     v.border            || 'none',
         glow:       String(v.glow ?? 10),
         tagline:    b.tagline           || null,
-        fontKey:    'another-danger',
+        fontKey:    v.font              || 'another-danger',
     };
 }
 
@@ -108,150 +122,139 @@ async function notifyWebhook(channelId, payload) {
     const body = JSON.stringify({
         username: 'Sigil GUI',
         embeds: [{
-            title:       `\u2726 Brand Kit \u2014 ${payload.name || 'Generated'}`,
+            title:       `✦ Brand Kit — ${payload.name || 'Generated'}`,
             description: payload.description || payload.tagline || '',
             color:       parseInt((payload.palette?.[0] || '#8B0000').replace('#', ''), 16),
             fields: [
                 { name: 'Palette',  value: (payload.palette || []).join('  '), inline: false },
-                { name: 'Tagline',  value: payload.tagline || '\u2014',            inline: false },
+                { name: 'Tagline',  value: payload.tagline || '—',             inline: false },
             ],
             footer: { text: 'Generated via Sigil GUI Builder' },
         }],
     });
-    const u   = new URL(url);
-    const mod = u.protocol === 'https:' ? require('https') : require('http');
-    return new Promise(resolve => {
-        const req = mod.request({
-            hostname: u.hostname, path: u.pathname + u.search,
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-        }, res => { res.resume(); resolve(res.statusCode); });
-        req.on('error', () => resolve(null));
-        req.write(body); req.end();
-    });
+    try {
+        await new Promise((resolve, reject) => {
+            const u   = new URL(url);
+            const req = http.request(
+                { hostname: u.hostname, port: u.port || 443, path: u.pathname + u.search, method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } },
+                res => { res.resume(); resolve(res.statusCode); }
+            );
+            req.on('error', reject);
+            req.write(body); req.end();
+        });
+    } catch (e) { console.warn('[webhook] Failed to notify:', e.message); }
 }
 
-// ── Request Handler ──────────────────────────────────────────────────────────
+// ── Request router ─────────────────────────────────────────────────────────
 
-async function handle(req, res) {
-    if (req.method === 'OPTIONS') { cors(res); res.writeHead(204); res.end(); return; }
+const server = http.createServer(async (req, res) => {
+    cors(res);
+    if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+
     const url = req.url.split('?')[0];
 
-    // GET /health
-    if (req.method === 'GET' && url === '/health')
-        return json(res, 200, { ok: true, version: VERSION, uptime: process.uptime() });
-
-    // GET / — serve GUI HTML
-    if (req.method === 'GET' && (url === '/' || url === '/gui')) {
-        const file = path.join(__dirname, 'sigil-gui-builder.html');
-        if (fs.existsSync(file)) {
-            const html = fs.readFileSync(file);
-            cors(res);
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': html.length });
-            res.end(html);
-        } else {
-            json(res, 404, { error: 'GUI file not found. Place sigil-gui-builder.html in the gui/ folder.' });
+    // GET / — serve the HTML GUI
+    if (req.method === 'GET' && url === '/') {
+        const htmlPath = path.join(__dirname, 'sigil-gui-builder.html');
+        try {
+            const html = fs.readFileSync(htmlPath);
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end(html);
+        } catch {
+            return json(res, 500, { error: 'GUI HTML not found — check gui/sigil-gui-builder.html exists.' });
         }
-        return;
+    }
+
+    // GET /health — uptime ping
+    if (req.method === 'GET' && url === '/health') {
+        return json(res, 200, { ok: true, version: VERSION, uptime: Math.floor((Date.now() - START) / 1000) });
     }
 
     // POST /webhook-register
     if (req.method === 'POST' && url === '/webhook-register') {
         try {
-            const body = await readBody(req);
-            if (!body.channelId || !body.webhookUrl) return json(res, 400, { error: 'channelId and webhookUrl required.' });
-            webhooks[body.channelId] = body.webhookUrl;
-            return json(res, 200, { ok: true, registered: body.channelId });
+            const { channelId, webhookUrl } = await readBody(req);
+            if (!channelId || !webhookUrl) return json(res, 400, { error: 'channelId and webhookUrl required' });
+            webhooks[channelId] = webhookUrl;
+            console.log(`[webhook] Registered channel ${channelId}`);
+            return json(res, 200, { ok: true });
         } catch (e) { return json(res, 400, { error: e.message }); }
     }
 
-    // POST /preview — canvas render only, no Gemini
+    // POST /preview — fast canvas-only render
     if (req.method === 'POST' && url === '/preview') {
         try {
             const cfg  = await readBody(req);
             const opts = configToRenderKitOpts(cfg);
             const kit  = await renderKit(opts);
-            cors(res);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-                ok:         true,
-                icon_b64:   kit.icon.toString('base64'),
-                banner_b64: kit.banner.toString('base64'),
-                palette_b64:kit.palette.toString('base64'),
-                opts_used:  opts,
-            }));
-        } catch (e) { return json(res, 500, { error: e.message }); }
-        return;
-    }
-
-    // POST /generate — full Gemini text + canvas renders
-    if (req.method === 'POST' && url === '/generate') {
-        try {
-            const cfg = await readBody(req);
-            const b   = cfg.brand   || {};
-            const v   = cfg.visuals || {};
-
-            // 1. Text generation
-            let brandData = {};
-            try {
-                const raw = await geminiRequest(buildBrandPrompt(cfg), { maxOutputTokens: 512, temperature: 1.1 });
-                brandData = extractJson(raw);
-            } catch (e) {
-                console.warn('[GUI] Text gen failed:', e.message);
-                brandData = { name: b.name, tagline: b.tagline, palette: [v.primary_color, v.secondary_color] };
-            }
-
-            // 2. Canvas render (icon + banner + palette)
-            const renderOpts = configToRenderKitOpts(cfg);
-            if (brandData.tagline) renderOpts.tagline = brandData.tagline;
-            const kit = await renderKit(renderOpts);
-
-            // 3. Optional Gemini image generation
-            let iconBase64 = null;
-            const iconPrompt = brandData.icon_prompt || b.image_prompt ||
-                `${b.description || b.name} — dark fantasy icon, ${v.primary_color} tones, 400x400`;
-            try {
-                const imgBuf = await geminiImageRequest(iconPrompt, { timeoutMs: 35_000 });
-                iconBase64   = imgBuf.toString('base64');
-            } catch (e) {
-                console.warn('[GUI] Image gen skipped:', e.message);
-            }
-
-            // 4. Notify Discord webhook if registered
-            if (cfg.integration?.channelId)
-                notifyWebhook(cfg.integration.channelId, brandData).catch(() => {});
-
             return json(res, 200, {
-                ok:          true,
-                brand:       brandData,
-                icon_b64:    kit.icon.toString('base64'),
-                banner_b64:  kit.banner.toString('base64'),
-                palette_b64: kit.palette.toString('base64'),
-                ai_image_b64:iconBase64,
-                config_in:   cfg,
+                ok:         true,
+                icon_b64:   kit.icon?.toString('base64')   || null,
+                banner_b64: kit.banner?.toString('base64') || null,
             });
         } catch (e) {
-            console.error('[GUI] /generate error:', e);
+            console.error('[/preview]', e);
             return json(res, 500, { error: e.message });
         }
     }
 
-    json(res, 404, { error: 'Not found', available: ['GET /', 'GET /health', 'POST /generate', 'POST /preview', 'POST /webhook-register'] });
-}
+    // POST /generate — full Gemini + canvas pipeline
+    if (req.method === 'POST' && url === '/generate') {
+        try {
+            const cfg        = await readBody(req);
+            const apiKey     = cfg.gemini_api_key || process.env.GEMINI_API_KEY;
+            if (!apiKey) return json(res, 400, { error: 'Gemini API key required — add it in the GUI or set GEMINI_API_KEY env var.' });
 
-// ── Start ───────────────────────────────────────────────────────────────────
+            process.env.GEMINI_API_KEY = apiKey;
 
-const server = http.createServer((req, res) => {
-    handle(req, res).catch(e => {
-        console.error('[GUI] Unhandled:', e);
-        try { json(res, 500, { error: 'Internal server error' }); } catch {}
-    });
+            // 1. Gemini brand text
+            const prompt  = buildBrandPrompt(cfg);
+            const rawText = await geminiRequest(prompt, { temperature: 0.9, maxOutputTokens: 400 });
+            const brand   = extractJson(rawText);
+
+            // 2. Canvas renders
+            const opts = {
+                ...configToRenderKitOpts(cfg),
+                name:    brand.name    || opts?.name,
+                tagline: brand.tagline || opts?.tagline,
+            };
+            const kit = await renderKit(opts);
+
+            // 3. Optional AI image
+            let ai_image_b64 = null;
+            const imgPrompt = brand.icon_prompt || cfg.brand?.ai_prompt;
+            if (imgPrompt) {
+                try {
+                    const imgBuf   = await geminiImageRequest(imgPrompt);
+                    ai_image_b64   = imgBuf?.toString('base64') || null;
+                } catch (imgErr) {
+                    console.warn('[/generate] AI image skipped:', imgErr.message);
+                }
+            }
+
+            // 4. Notify webhook if registered
+            const channelId = cfg.discord?.channel_id;
+            if (channelId) notifyWebhook(channelId, { ...brand, palette: brand.palette }).catch(() => {});
+
+            return json(res, 200, {
+                ok:          true,
+                brand,
+                icon_b64:    kit.icon?.toString('base64')    || null,
+                banner_b64:  kit.banner?.toString('base64')  || null,
+                palette_b64: kit.palette?.toString('base64') || null,
+                ai_image_b64,
+            });
+        } catch (e) {
+            console.error('[/generate]', e);
+            return json(res, 500, { error: e.message });
+        }
+    }
+
+    json(res, 404, { error: `No route for ${req.method} ${url}` });
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-    console.log(`[Sigil GUI] Server v${VERSION} running \u2192 http://127.0.0.1:${PORT}`);
-    console.log(`[Sigil GUI] Open GUI       \u2192 http://127.0.0.1:${PORT}/`);
-    console.log(`[Sigil GUI] Health check   \u2192 http://127.0.0.1:${PORT}/health`);
+    console.log(`\n  ✦ Sigil GUI Server v${VERSION}`);
+    console.log(`  → http://127.0.0.1:${PORT}\n`);
 });
-
-module.exports = { server, webhooks };
