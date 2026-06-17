@@ -4,7 +4,7 @@ const { getFont, getFontChoices, getAllFonts } = require('../utils/fonts');
 const { createTextGradient } = require('../utils/gradient');
 const { getBackgroundChoices, drawBackground } = require('../utils/backgrounds');
 const { drawBorder, getBorderChoices } = require('../utils/borders');
-const https = require('https');
+const { geminiRequest, extractJson } = require('../utils/gemini');
 
 const HEX_COLOR_REGEX = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 
@@ -23,59 +23,22 @@ for (const font of getAllFonts()) {
     catch (e) { console.error(`[ERROR] Failed to register font '${font.family}':`, e.message); }
 }
 
-// ── Gemini helper ─────────────────────────────────────────────────────────
-
-function geminiRequest(prompt) {
-    return new Promise((resolve, reject) => {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) return reject(new Error('GEMINI_API_KEY is not set.'));
-
-        const body = JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 1.1, maxOutputTokens: 768 },
-        });
-
-        const req = https.request({
-            hostname: 'generativelanguage.googleapis.com',
-            path:     `/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
-            method:   'POST',
-            headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-        }, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                try {
-                    const parsed = JSON.parse(data);
-                    const text   = parsed?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                    resolve(text.trim());
-                } catch (e) { reject(new Error('Failed to parse Gemini response.')); }
-            });
-        });
-        req.on('error', reject);
-        req.write(body);
-        req.end();
-    });
-}
-
 // ── Parse AI kit response ──────────────────────────────────────────────────
 
 function parseAiKitResponse(raw) {
-    const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-    let p;
-    try { p = JSON.parse(cleaned); } catch { throw new Error('Gemini returned invalid JSON.'); }
-
+    const p   = extractJson(raw);  // throws descriptively if extraction fails
     const hex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
 
     return {
-        name:       typeof p.name       === 'string' ? p.name.slice(0, 30)      : 'My Server',
-        initials:   typeof p.initials   === 'string' ? p.initials.slice(0, 4).toUpperCase() : 'SRV',
-        color:      hex.test(p.color)                ? p.color                   : '#FFFFFF',
-        color2:     p.color2 && hex.test(p.color2)   ? p.color2                  : null,
-        background: VALID_BACKGROUNDS.includes(p.background) ? p.background     : 'plain-black',
-        border:     VALID_BORDERS.includes(p.border)          ? p.border         : 'none',
-        glow:       ['0','5','10','15','25'].includes(String(p.glow)) ? String(p.glow) : '10',
-        tagline:    typeof p.tagline    === 'string' ? p.tagline.slice(0, 60)    : '',
-        rationale:  typeof p.rationale  === 'string' ? p.rationale.slice(0, 300) : '',
+        name:       typeof p.name       === 'string' ? p.name.slice(0, 30).trim()        : 'My Server',
+        initials:   typeof p.initials   === 'string' ? p.initials.slice(0, 4).toUpperCase().trim() : 'SRV',
+        color:      hex.test(p.color)                ? p.color                             : '#FFFFFF',
+        color2:     p.color2 && hex.test(p.color2)   ? p.color2                            : null,
+        background: VALID_BACKGROUNDS.includes(p.background) ? p.background               : 'plain-black',
+        border:     VALID_BORDERS.includes(p.border)          ? p.border                   : 'none',
+        glow:       ['0','5','10','15','25'].includes(String(p.glow)) ? String(p.glow)     : '10',
+        tagline:    typeof p.tagline    === 'string' ? p.tagline.slice(0, 60).trim()       : '',
+        rationale:  typeof p.rationale  === 'string' ? p.rationale.slice(0, 300).trim()   : '',
     };
 }
 
@@ -167,8 +130,6 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('brand')
         .setDescription('Brand kit tools: manual or fully AI-designed.')
-
-        // ── /brand kit (manual) ───────────────────────────────────────────
         .addSubcommand(sub =>
             sub.setName('kit')
                 .setDescription('Generate icon + banner + palette manually.')
@@ -188,8 +149,6 @@ module.exports = {
                 .addStringOption(o => o.setName('border').setDescription('Icon border style').setRequired(false).addChoices(...getBorderChoices()))
                 .addStringOption(o => o.setName('font').setDescription('Font for both assets').setRequired(false).addChoices(...getFontChoices()))
         )
-
-        // ── /brand ai (AI-designed) ────────────────────────────────────────
         .addSubcommand(sub =>
             sub.setName('ai')
                 .setDescription('Describe your server — Gemini designs the full brand kit automatically.')
@@ -208,9 +167,7 @@ module.exports = {
     async execute(interaction) {
         const sub = interaction.options.getSubcommand();
 
-        // ══════════════════════════════════════════════════
-        // /brand kit — manual
-        // ══════════════════════════════════════════════════
+        // ── /brand kit ────────────────────────────────────────────────────
         if (sub === 'kit') {
             const name       = interaction.options.getString('name');
             const initials   = interaction.options.getString('initials').slice(0, 4);
@@ -235,21 +192,22 @@ module.exports = {
             try {
                 const font   = getFont(fontKey);
                 const params = { color, color2, glow, background, font };
-
-                const iconCanvas = createCanvas(400, 400);
-                await renderIcon(iconCanvas.getContext('2d'), {
-                    ...params, text: initials, border,
-                    size: Math.min(150, Math.max(60, Math.floor(220 / Math.max(initials.length, 1)))),
-                });
-
+                const iconCanvas   = createCanvas(400, 400);
                 const bannerCanvas = createCanvas(1024, 320);
-                await renderBanner(bannerCanvas.getContext('2d'), {
-                    ...params, text: name, subtitle: tagline,
-                    size: Math.min(90, Math.max(32, Math.floor(900 / Math.max(name.length, 1)))),
-                });
 
-                const paletteBuf   = renderPalette(color, color2);
-                const colorLabel   = color2 ? `${color} → ${color2}` : color;
+                await Promise.all([
+                    renderIcon(iconCanvas.getContext('2d'), {
+                        ...params, text: initials, border,
+                        size: Math.min(150, Math.max(60, Math.floor(220 / Math.max(initials.length, 1)))),
+                    }),
+                    renderBanner(bannerCanvas.getContext('2d'), {
+                        ...params, text: name, subtitle: tagline,
+                        size: Math.min(90, Math.max(32, Math.floor(900 / Math.max(name.length, 1)))),
+                    }),
+                ]);
+
+                const paletteBuf = renderPalette(color, color2);
+                const colorLabel = color2 ? `${color} → ${color2}` : color;
 
                 await initialReply.edit({
                     embeds: [
@@ -261,7 +219,7 @@ module.exports = {
                                 `**Banner** — \`${name}\`${tagline ? ` · *${tagline}*` : ''} · 1024×320`,
                                 `**Palette** — ${colorLabel}`,
                             ].join('\n'))
-                            .setFooter({ text: `Sigil • /brand kit • ${name} • ${background} • ${colorLabel} • font: ${getFont(fontKey).label}` }),
+                            .setFooter({ text: `Sigil • /brand kit • ${name} • ${background} • ${colorLabel}` }),
                     ],
                     files: [
                         new AttachmentBuilder(iconCanvas.toBuffer(),   { name: 'icon.png'    }),
@@ -276,11 +234,9 @@ module.exports = {
             return;
         }
 
-        // ══════════════════════════════════════════════════
-        // /brand ai — Gemini designs everything
-        // ══════════════════════════════════════════════════
+        // ── /brand ai ─────────────────────────────────────────────────────
         if (sub === 'ai') {
-            const description = interaction.options.getString('description').trim();
+            const description  = interaction.options.getString('description').trim();
             const nameOverride = interaction.options.getString('name') || null;
 
             if (!process.env.GEMINI_API_KEY)
@@ -288,7 +244,7 @@ module.exports = {
 
             const loadingEmbed = new EmbedBuilder()
                 .setColor('#808080')
-                .setDescription(`✦ Gemini is designing your brand kit…\n*"${description}"*`);
+                .setDescription(`✦ Gemini is designing your brand kit…\n*“${description}”*`);
             const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
             const prompt = `You are an expert Discord server branding designer.
@@ -300,26 +256,26 @@ ${nameOverride ? `Server name (use this exactly): "${nameOverride}"` : 'Suggest 
 Available backgrounds: ${VALID_BACKGROUNDS.map(b => `"${b}"`).join(', ')}
 Available borders: ${VALID_BORDERS.map(b => `"${b}"`).join(', ')}
 
-Return ONLY a raw JSON object (no markdown, no explanation) with these exact keys:
-- "name"       : server name (max 30 chars)${nameOverride ? ` — use "${nameOverride}"` : ''}
-- "initials"   : 1–4 char initials for the icon (e.g. "DRG" for a dragon server)
-- "color"      : primary brand hex color (e.g. "#FF4500")
-- "color2"     : secondary hex for gradient — null if not needed
-- "background" : best background key from the list above
-- "border"     : best border style from the list above
-- "glow"       : one of "0", "5", "10", "15", "25"
-- "tagline"    : short punchy tagline, max 8 words
-- "rationale"  : 1–2 sentences explaining your design choices
+Respond with ONLY a JSON object. Do not include any explanation, markdown formatting, or code fences.
+The JSON object must have these exact keys:
+  name        (string, max 30 chars${nameOverride ? `, use "${nameOverride}"` : ''})
+  initials    (string, 1-4 uppercase chars, e.g. "DRG")
+  color       (string, hex color, e.g. "#FF4500")
+  color2      (string or null, second hex for gradient)
+  background  (string, must be one of the available backgrounds listed above)
+  border      (string, must be one of the available borders listed above)
+  glow        (string, one of: "0" "5" "10" "15" "25")
+  tagline     (string, max 8 words)
+  rationale   (string, 1-2 sentences on design choices)
 
-Only return the JSON object. No extra text.`;
+Start your response with { and end with }. Nothing before or after.`;
 
             try {
-                const raw  = await geminiRequest(prompt);
+                const raw  = await geminiRequest(prompt, { temperature: 1.0 });
                 const kit  = parseAiKitResponse(raw);
                 const font = getFont('another-danger');
                 const params = { color: kit.color, color2: kit.color2, glow: kit.glow, background: kit.background, font };
 
-                // Render assets in parallel
                 const iconCanvas   = createCanvas(400, 400);
                 const bannerCanvas = createCanvas(1024, 320);
 
@@ -343,7 +299,7 @@ Only return the JSON object. No extra text.`;
                             .setColor(kit.color)
                             .setTitle(`✦ AI Brand Kit — ${kit.name}`)
                             .setDescription([
-                                kit.tagline    ? `*“${kit.tagline}”*\n` : '',
+                                kit.tagline   ? `*“${kit.tagline}”*\n`           : '',
                                 `**Icon** — \`${kit.initials}\` · 400×400`,
                                 `**Banner** — \`${kit.name}\` · 1024×320`,
                                 `**Palette** — ${colorLabel}`,
@@ -351,9 +307,9 @@ Only return the JSON object. No extra text.`;
                                 `**Border** — \`${kit.border}\``,
                                 `**Glow** — ${kit.glow}`,
                                 '',
-                                kit.rationale  ? `🧠 *${kit.rationale}*` : '',
+                                kit.rationale ? `🧠 *${kit.rationale}*`         : '',
                                 '',
-                                '⚡ Use these values in `/brand kit` to regenerate or tweak.',
+                                '⚡ Use these values in `/brand kit` to tweak.',
                             ].filter(Boolean).join('\n'))
                             .setFooter({ text: `Sigil • /brand ai • powered by Gemini` }),
                     ],
@@ -365,7 +321,9 @@ Only return the JSON object. No extra text.`;
                 });
             } catch (err) {
                 console.error('[ERROR] /brand ai failed:', err);
-                await initialReply.edit({ embeds: [new EmbedBuilder().setColor('#FF0000').setDescription(`Failed to generate AI brand kit. ${err.message || 'Please try again.'}`)] });
+                await initialReply.edit({
+                    embeds: [new EmbedBuilder().setColor('#FF0000').setDescription(`Failed to generate AI brand kit. ${err.message || 'Please try again.'}`)],
+                });
             }
         }
     },
