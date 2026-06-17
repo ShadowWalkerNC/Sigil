@@ -2,7 +2,7 @@
  * Shared Gemini API helper for Sigil.
  *
  * geminiRequest(prompt, opts)       — text generation (gemini-2.5-flash)
- * geminiImageRequest(prompt, opts)  — image generation (gemini-2.0-flash-preview-image-generation)
+ * geminiImageRequest(prompt, opts)  — image generation (gemini-2.0-flash-exp)
  * extractJson(raw)                  — bulletproof JSON extractor
  *
  * Perf notes:
@@ -14,7 +14,7 @@
 const https = require('https');
 
 const TEXT_MODEL  = 'gemini-2.5-flash';
-const IMAGE_MODEL = 'gemini-2.0-flash-preview-image-generation';
+const IMAGE_MODEL = 'gemini-2.0-flash-exp';
 
 // Reuse TLS connections across all Gemini requests
 const _agent = new https.Agent({ keepAlive: true, maxSockets: 4 });
@@ -121,7 +121,7 @@ function geminiRequest(prompt, opts = {}) {
 }
 
 /**
- * Image generation via gemini-2.0-flash-preview-image-generation.
+ * Image generation via gemini-2.0-flash-exp.
  * Returns a Buffer of PNG data.
  *
  * @param {string} prompt
