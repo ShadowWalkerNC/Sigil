@@ -2,6 +2,6 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "sh start.sh"
 restartPolicyType = "ON_FAILURE"
 healthcheckPath = "/health"
