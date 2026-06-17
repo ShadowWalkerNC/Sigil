@@ -145,7 +145,7 @@ module.exports = {
                 .addStringOption(o => o.setName('background').setDescription('Background style').setRequired(true).addChoices(...getBackgroundChoices()))
                 .addStringOption(o =>
                     o.setName('color2')
-                        .setDescription('Optional second colour for gradients — pick a preset or type a hex code')
+                        .setDescription('Optional second colour for gradients — hex code or preset')
                         .setRequired(false)
                         .setAutocomplete(true)
                 )
@@ -162,15 +162,15 @@ module.exports = {
         )
         .addSubcommand(sub =>
             sub.setName('ai')
-                .setDescription('Describe your server — Gemini designs the full brand kit + generates a custom image.')
+                .setDescription('Describe your server — Gemini designs the full brand kit + custom image.')
                 .addStringOption(o =>
                     o.setName('description')
-                        .setDescription('Describe your server in plain English (e.g. "dark fantasy RPG with dragons")')
+                        .setDescription('Describe your server (e.g. "dark fantasy RPG with dragons")')
                         .setRequired(true)
                         .setMaxLength(200))
                 .addStringOption(o =>
                     o.setName('image_prompt')
-                        .setDescription('Describe the image to generate — min 8 words (e.g. "dark mystical forest with glowing runes at dusk")')
+                        .setDescription('Image to generate — min 8 words (e.g. "dragon on castle at dusk")')
                         .setRequired(true)
                         .setMaxLength(300))
                 .addStringOption(o =>
@@ -279,7 +279,6 @@ module.exports = {
                 .setDescription(`✦ Gemini is designing your brand kit and generating your image…\n*"${description}"*`);
             const initialReply = await interaction.reply({ embeds: [loadingEmbed] });
 
-            // Tight JSON-only prompt — no prose preamble to keep tokens low
             const kitPrompt =
 `Server description: "${description}"
 ${nameOverride ? `Server name: "${nameOverride}"` : 'Suggest a short punchy server name.'}
@@ -300,7 +299,6 @@ Return ONLY a JSON object with these keys:
 
 Start with { and end with }. Nothing else.`;
 
-            // Enhance image prompt with branding context
             const enhancedImagePrompt = `Discord server branding art: ${imagePrompt}. High quality, vibrant, detailed, suitable for a server banner or promotional image.`;
 
             try {
@@ -309,7 +307,6 @@ Start with { and end with }. Nothing else.`;
                         .setDescription(`✦ Running in parallel…\n\n**1.** Designing brand kit\n**2.** Generating image: *"${imagePrompt}"*`)],
                 });
 
-                // Kit design + image generation run simultaneously
                 const [rawResult, imageBuf] = await Promise.allSettled([
                     geminiRequest(kitPrompt, { temperature: 1.0, maxOutputTokens: 256 }),
                     geminiImageRequest(enhancedImagePrompt),
@@ -351,7 +348,7 @@ Start with { and end with }. Nothing else.`;
                     imageNote = '\n🎨 **Generated Image** — attached above';
                 } else {
                     console.warn('[WARN] /brand ai image gen failed (non-fatal):', imageBuf.reason?.message);
-                    imageNote = `\n⚠️ Image generation failed: *${imageBuf.reason?.message || 'unknown error'}* — requires a paid Gemini API key.`;
+                    imageNote = `\n⚠️ Image generation failed: *${imageBuf.reason?.message || 'unknown error'}*`;
                 }
 
                 await initialReply.edit({
