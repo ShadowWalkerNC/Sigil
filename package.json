@@ -1,22 +1,21 @@
 {
-    "name": "sigil",
-    "version": "2.0.0",
-    "description": "Sigil — Your server's mark. Crafted by AI. A Discord bot for AI-powered server branding, icons, banners, badges, and full brand kit generation.",
-    "main": "src/index.js",
-    "engines": {
-        "node": ">=18 <19"
-    },
-    "scripts": {
-        "start": "node src/index.js",
-        "dev": "node --watch src/index.js",
-        "gui": "node gui/gui-server.js",
-        "gui:dev": "node --watch gui/gui-server.js"
-    },
-    "author": "ShadowWalkerNC (fork of NoVa-Gh0ul)",
-    "license": "MIT",
-    "dependencies": {
-        "discord.js": "^14.26.4",
-        "canvas": "^2.11.2",
-        "dotenv": "^16.4.5"
-    }
+  "name": "sigil",
+  "version": "4.0.0",
+  "type": "module",
+  "description": "Discord branding bot",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "gui": "node gui/gui-server.js",
+    "worker": "node src/worker.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "better-sqlite3": "^9.4.3",
+    "canvas": "^2.11.2",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3"
+  }
 }
