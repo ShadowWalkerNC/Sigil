@@ -3,6 +3,9 @@
     "version": "1.2.0",
     "description": "A Discord bot that generates fully customizable server icons with text, colors, fonts, and glow effects. Forked from NoVa-Gh0ul/Discord-Icon-Gen.",
     "main": "src/index.js",
+    "engines": {
+        "node": ">=18 <19"
+    },
     "scripts": {
         "start": "node src/index.js",
         "dev": "node --watch src/index.js"
