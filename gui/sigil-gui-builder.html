@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sigil GUI Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-5: 1.25rem;
+      --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem; --space-16: 4rem;
+      --radius-sm: 0.375rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
+      --font-display: 'Orbitron', sans-serif; --font-body: 'Inter', sans-serif;
+      --color-bg: #0a0a0f; --color-surface: #13131b; --color-surface-2: #1b1b25; --color-surface-3: #232331;
+      --color-border: rgba(255,255,255,.12); --color-divider: rgba(255,255,255,.08);
+      --color-text: #f5f7fb; --color-text-muted: #a9b1c7; --color-text-faint: #68708b;
+      --color-primary: #8b0000; --color-primary-2: #4b0082; --color-success: #39ff14; --color-warning: #ffbf00;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.25); --shadow-md: 0 8px 24px rgba(0,0,0,.35); --shadow-lg: 0 16px 48px rgba(0,0,0,.45);
+      --transition: 180ms cubic-bezier(.16,1,.3,1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body { font-family: var(--font-body); font-size: var(--text-base); color: var(--color-text); background:
+      radial-gradient(circle at top, rgba(139,0,0,.18), transparent 30%),
+      radial-gradient(circle at right, rgba(75,0,130,.15), transparent 25%),
+      var(--color-bg); line-height: 1.55; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .app { display: grid; grid-template-columns: 360px 1fr; min-height: 100vh; }
+    .sidebar { background: rgba(12,12,18,.9); border-right: 1px solid var(--color-border); padding: var(--space-6); overflow-y: auto; position: sticky; top: 0; height: 100vh; backdrop-filter: blur(18px); }
+    .brand { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-6); }
+    .brand-mark { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #8b0000, #4b0082); display: grid; place-items: center; box-shadow: 0 0 24px rgba(139,0,0,.45); font-family: var(--font-display); font-weight: 900; }
+    .brand h1 { font-family: var(--font-display); font-size: var(--text-lg); letter-spacing: .04em; }
+    .brand p { color: var(--color-text-muted); font-size: var(--text-sm); }
+    .section { margin-bottom: var(--space-6); padding-bottom: var(--space-6); border-bottom: 1px solid var(--color-divider); }
+    .section:last-child { border-bottom: 0; }
+    .section-title { font-size: var(--text-sm); text-transform: uppercase; letter-spacing: .12em; color: var(--color-text-faint); margin-bottom: var(--space-4); }
+    .field { margin-bottom: var(--space-4); }
+    .field label { display: block; font-size: var(--text-sm); font-weight: 600; margin-bottom: var(--space-2); }
+    .input, .select, .textarea { width: 100%; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: .85rem 1rem; }
+    .textarea { min-height: 96px; resize: vertical; }
+    .input:focus, .select:focus, .textarea:focus { outline: 2px solid rgba(255,255,255,.15); border-color: rgba(255,255,255,.25); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    .swatch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .swatch { border: 1px solid var(--color-border); border-radius: 14px; overflow: hidden; background: var(--color-surface-2); transition: transform var(--transition), border-color var(--transition); }
+    .swatch:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.22); }
+    .swatch.active { border-color: white; box-shadow: 0 0 0 1px rgba(255,255,255,.2), 0 0 20px rgba(255,255,255,.08); }
+    .swatch-color { height: 52px; }
+    .swatch-meta { padding: .55rem; }
+    .swatch-name { font-size: .78rem; font-weight: 700; }
+    .swatch-hex { font-size: .7rem; color: var(--color-text-faint); margin-top: 2px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip { padding: .65rem .9rem; border-radius: var(--radius-full); background: var(--color-surface-2); border: 1px solid var(--color-border); font-size: .82rem; font-weight: 700; }
+    .chip.active { background: linear-gradient(135deg, rgba(139,0,0,.35), rgba(75,0,130,.35)); border-color: rgba(255,255,255,.3); }
+    .main { padding: var(--space-6); }
+    .topbar { display: flex; justify-content: space-between; gap: var(--space-4); align-items: center; margin-bottom: var(--space-6); }
+    .title-wrap h2 { font-size: var(--text-xl); font-family: var(--font-display); letter-spacing: .02em; }
+    .title-wrap p { color: var(--color-text-muted); margin-top: 6px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn { border-radius: 14px; padding: .9rem 1.1rem; border: 1px solid var(--color-border); background: var(--color-surface); font-weight: 700; }
+    .btn-primary { background: linear-gradient(135deg, #8b0000, #4b0082); border: 0; box-shadow: 0 10px 28px rgba(139,0,0,.28); }
+    .workspace { display: grid; grid-template-columns: 1.1fr .9fr; gap: var(--space-6); align-items: start; }
+    .panel { background: rgba(19,19,27,.86); border: 1px solid var(--color-border); border-radius: 24px; box-shadow: var(--shadow-md); overflow: hidden; }
+    .panel-head { padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-divider); display: flex; justify-content: space-between; align-items: center; }
+    .panel-head h3 { font-size: var(--text-lg); }
+    .panel-body { padding: var(--space-5); }
+    .preview-stage { display: grid; gap: var(--space-5); }
+    .kit-preview { display: grid; grid-template-columns: 1.3fr .7fr; gap: 16px; }
+    .mock-card { border-radius: 22px; min-height: 300px; position: relative; overflow: hidden; box-shadow: var(--shadow-lg); }
+    .mock-card.inner-pad { padding: 24px; }
+    .logo-mark { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-display); font-size: 5rem; font-weight: 900; text-shadow: 0 0 35px rgba(255,255,255,.14); }
+    .side-stack { display: grid; gap: 16px; }
+    .mini-card { border-radius: 18px; min-height: 142px; overflow: hidden; position: relative; }
+    .mini-card.palette { display: grid; grid-template-columns: 1fr 1fr; background: var(--color-surface-2); }
+    .palette-box { padding: 16px; display: flex; flex-direction: column; justify-content: end; font-weight: 700; }
+    .palette-box span { font-size: .74rem; opacity: .9; }
+    .embed { background: #11131a; border: 1px solid rgba(255,255,255,.08); border-left: 6px solid var(--color-primary); border-radius: 20px; padding: 24px; }
+    .embed h4 { font-size: 2rem; margin-bottom: 12px; }
+    .tagline { color: #dfe5f6; font-style: italic; font-size: 1.15rem; margin-bottom: 20px; }
+    .specs { display: grid; gap: 10px; margin-bottom: 20px; }
+    .specs div { font-size: 1rem; }
+    .specs strong { color: white; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+    .status-list { display: grid; gap: 12px; }
+    .status-item { padding: 14px 16px; border-radius: 16px; background: var(--color-surface-2); border: 1px solid var(--color-border); }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .range-wrap { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+    .range-output { min-width: 42px; text-align: right; font-weight: 800; }
+    input[type='range'] { width: 100%; accent-color: #8b0000; }
+    .footer-note { color: var(--color-text-faint); font-size: var(--text-sm); margin-top: var(--space-4); }
+    .toggle { display: inline-flex; align-items: center; gap: 10px; font-size: var(--text-sm); color: var(--color-text-muted); }
+    .toggle input { width: 18px; height: 18px; }
+    @media (max-width: 1180px) { .workspace { grid-template-columns: 1fr; } .app { grid-template-columns: 1fr; } .sidebar { position: relative; height: auto; } }
+    @media (max-width: 720px) { .main, .sidebar { padding: var(--space-4); } .topbar { flex-direction: column; align-items: stretch; } .kit-preview { grid-template-columns: 1fr; } .swatch-grid { grid-template-columns: repeat(2, 1fr); } .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div><h1>Sigil GUI</h1><p>Visual brand builder and generator</p></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Brand identity</div>
+        <div class="field"><label for="brandName">Brand name</label><input id="brandName" class="input" value="Demonfall" /></div>
+        <div class="field"><label for="tagline">Tagline</label><input id="tagline" class="input" value="Unleash the Darkness. Fight the Demons." /></div>
+        <div class="field"><label for="description">Prompt / description</label><textarea id="description" class="textarea">dark fantasy fighting guild with infernal magic and supernatural atmosphere</textarea></div>
+        <div class="grid-2">
+          <div class="field"><label for="iconText">Icon text</label><input id="iconText" class="input" value="DF" maxlength="4" /></div>
+          <div class="field"><label for="bannerText">Banner text</label><input id="bannerText" class="input" value="Demonfall" /></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Colors <small style="font-weight:400;opacity:.6">(shift+click = secondary)</small></div>
+        <div class="grid-2" style="margin-bottom:14px">
+          <div class="field"><label for="primaryHex">Primary</label><input id="primaryHex" class="input" value="#8B0000" /></div>
+          <div class="field"><label for="secondaryHex">Secondary</label><input id="secondaryHex" class="input" value="#4B0082" /></div>
+        </div>
+        <div id="colorGroups"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">Style</div>
+        <div class="field"><label>Background</label><div class="chip-row" id="backgroundChips"></div></div>
+        <div class="field"><label>Border</label><div class="chip-row" id="borderChips"></div></div>
+        <div class="field"><label>Font</label><div class="chip-row" id="fontChips"></div></div>
+        <div class="field">
+          <label for="glowRange">Glow strength</label>
+          <div class="range-wrap"><input id="glowRange" type="range" min="0" max="25" step="1" value="15" /><div class="range-output" id="glowOutput">15</div></div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="gradientToggle" checked /> Enable gradient blend</label>
+      </div>
+      <div class="section">
+        <div class="section-title">Integration</div>
+        <div class="field"><label for="apiKey">Gemini API key</label><input id="apiKey" class="input" type="password" placeholder="Paste GEMINI_API_KEY for live gen" /></div>
+        <div class="field"><label for="imagePrompt">Image prompt</label><textarea id="imagePrompt" class="textarea">ancient demon sigil hovering over a ruined crimson fortress in a violet storm</textarea></div>
+        <p class="footer-note">Preview works offline. Wire live AI generation through your existing Sigil gemini.js or a local proxy.</p>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div class="title-wrap">
+          <h2>Sigil GUI Builder</h2>
+          <p>Front-end control panel &mdash; live preview, export JSON, integrated AI-branding workflow.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="themeBtn">Toggle theme</button>
+          <button class="btn" id="copyJsonBtn">Copy config JSON</button>
+          <button class="btn btn-primary" id="generateBtn">Generate config</button>
+        </div>
+      </div>
+      <div class="workspace">
+        <section class="panel">
+          <div class="panel-head"><h3>Live preview</h3><span class="pill"><span style="width:10px;height:10px;border-radius:50%;background:var(--color-success);display:inline-block"></span>Synced</span></div>
+          <div class="panel-body preview-stage">
+            <div class="kit-preview">
+              <div class="mock-card inner-pad" id="iconCard"><div class="logo-mark" id="logoMark">DF</div></div>
+              <div class="side-stack">
+                <div class="mini-card inner-pad" id="bannerCard" style="display:flex;align-items:end;font-size:2rem;font-weight:900;padding:24px;">Demonfall</div>
+                <div class="mini-card palette" id="paletteCard">
+                  <div class="palette-box" id="palettePrimary"><strong>#8B0000</strong><span>Primary</span></div>
+                  <div class="palette-box" id="paletteSecondary"><strong>#4B0082</strong><span>Secondary</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="embed" id="embedCard">
+              <h4 id="embedTitle">&#10022; AI Brand Kit &mdash; Demonfall</h4>
+              <div class="tagline" id="embedTagline">"Unleash the Darkness. Fight the Demons."</div>
+              <div class="specs">
+                <div><strong>Icon</strong> &mdash; <span id="specIcon">DF</span> &middot; 400&times;400</div>
+                <div><strong>Banner</strong> &mdash; <span id="specBanner">Demonfall</span> &middot; 1024&times;320</div>
+                <div><strong>Palette</strong> &mdash; <span id="specPalette">#8B0000 &rarr; #4B0082</span></div>
+                <div><strong>Background</strong> &mdash; <span id="specBackground">midnight-gradient</span></div>
+                <div><strong>Border</strong> &mdash; <span id="specBorder">glow</span></div>
+                <div><strong>Glow</strong> &mdash; <span id="specGlow">15</span></div>
+                <div><strong>Font</strong> &mdash; <span id="specFont">Arial Black</span></div>
+              </div>
+              <div class="status-list">
+                <div class="status-item" id="integrationStatus"><strong>Integrated mode:</strong> preview, JSON export, and Gemini-ready payload all stay aligned.</div>
+                <div class="status-item" id="promptStatus"><strong>Current prompt:</strong> dark fantasy fighting guild...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h3>Integrated output</h3><span class="pill">Ready</span></div>
+          <div class="panel-body">
+            <div class="status-list" style="margin-bottom:18px">
+              <div class="status-item"><strong>Front end:</strong> Live preview, visual selectors, range sliders, prompt controls, copy/export.</div>
+              <div class="status-item"><strong>Customization:</strong> 54 color swatches, 12 backgrounds, 6 borders, 6 fonts, glow 0&ndash;25, gradient blend toggle.</div>
+              <div class="status-item"><strong>Integration:</strong> Config JSON drives Discord commands, local desktop, Electron, or web generator &mdash; same payload shape as <code>/brand ai</code>.</div>
+            </div>
+            <div class="field">
+              <label for="jsonOutput">Config JSON</label>
+              <textarea id="jsonOutput" class="textarea" style="min-height:420px;font-family:monospace;font-size:.82rem;" readonly></textarea>
+            </div>
+            <p class="footer-note">Unified payload between GUI and Sigil backend. Compatible with gemini.js and /brand ai.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script>
+    const COLORS={"Reds & Pinks":[{"name":"Crimson","hex":"#DC143C"},{"name":"Scarlet","hex":"#FF2400"},{"name":"Rose","hex":"#FF007F"},{"name":"Hot Pink","hex":"#FF69B4"},{"name":"Deep Pink","hex":"#FF1493"},{"name":"Ruby","hex":"#9B111E"}],"Oranges":[{"name":"Inferno","hex":"#FF4500"},{"name":"Dragon Red","hex":"#C0392B"},{"name":"Ember","hex":"#FF6B35"},{"name":"Sunset","hex":"#FF8C00"},{"name":"Amber","hex":"#FFBF00"},{"name":"Burnt Orange","hex":"#CC5500"}],"Yellows & Golds":[{"name":"Gold","hex":"#FFD700"},{"name":"Yellow","hex":"#FFFF00"},{"name":"Canary","hex":"#FFEF00"},{"name":"Champagne","hex":"#F7E7CE"},{"name":"Honey","hex":"#FFC30B"},{"name":"Marigold","hex":"#EAA221"}],"Greens":[{"name":"Neon Green","hex":"#39FF14"},{"name":"Emerald","hex":"#50C878"},{"name":"Forest","hex":"#228B22"},{"name":"Lime","hex":"#00FF00"},{"name":"Sage","hex":"#9CAF88"},{"name":"Mint","hex":"#98FF98"}],"Blues":[{"name":"Electric Blue","hex":"#7DF9FF"},{"name":"Sapphire","hex":"#0F52BA"},{"name":"Sky Blue","hex":"#87CEEB"},{"name":"Navy","hex":"#001F5B"},{"name":"Cerulean","hex":"#007BA7"},{"name":"Cobalt","hex":"#0047AB"}],"Purples & Violets":[{"name":"Violet","hex":"#EE82EE"},{"name":"Purple","hex":"#800080"},{"name":"Indigo","hex":"#4B0082"},{"name":"Lavender","hex":"#E6E6FA"},{"name":"Amethyst","hex":"#9966CC"},{"name":"Plum","hex":"#DDA0DD"}],"Cyans & Teals":[{"name":"Cyan","hex":"#00FFFF"},{"name":"Teal","hex":"#008080"},{"name":"Aqua","hex":"#00FFFF"},{"name":"Turquoise","hex":"#40E0D0"},{"name":"Seafoam","hex":"#93E9BE"},{"name":"Ice Blue","hex":"#99C5C4"}],"Whites & Silvers":[{"name":"White","hex":"#FFFFFF"},{"name":"Silver","hex":"#C0C0C0"},{"name":"Platinum","hex":"#E5E4E2"},{"name":"Pearl","hex":"#EAE0C8"},{"name":"Ghost White","hex":"#F8F8FF"},{"name":"Ash","hex":"#B2BEB5"}],"Blacks & Darks":[{"name":"Black","hex":"#000000"},{"name":"Void Black","hex":"#0A0A0A"},{"name":"Obsidian","hex":"#1A1A2E"},{"name":"Charcoal","hex":"#36454F"},{"name":"Dark Slate","hex":"#2F4F4F"},{"name":"Midnight","hex":"#191970"}]};
+    const BACKGROUNDS=[{"name":"midnight-gradient","label":"Midnight Gradient","css":"linear-gradient(135deg,#0a0a1a 0%,#1a0a2e 50%,#0a1a2e 100%)"},{"name":"deep-space","label":"Deep Space","css":"linear-gradient(135deg,#000010 0%,#0a0020 50%,#000510 100%)"},{"name":"inferno","label":"Inferno","css":"linear-gradient(135deg,#1a0000 0%,#3d0000 50%,#1a0500 100%)"},{"name":"ocean-depth","label":"Ocean Depth","css":"linear-gradient(135deg,#001020 0%,#002040 50%,#001530 100%)"},{"name":"forest-night","label":"Forest Night","css":"linear-gradient(135deg,#001008 0%,#002010 50%,#001508 100%)"},{"name":"twilight","label":"Twilight","css":"linear-gradient(135deg,#1a0a1a 0%,#2a0a3a 50%,#1a1a2a 100%)"},{"name":"aurora","label":"Aurora","css":"linear-gradient(135deg,#001a10 0%,#001a20 33%,#0a0015 66%,#001510 100%)"},{"name":"storm","label":"Storm","css":"linear-gradient(135deg,#0a0a0a 0%,#1a1a2a 50%,#0a0a1a 100%)"},{"name":"sunset-fade","label":"Sunset Fade","css":"linear-gradient(135deg,#1a0a00 0%,#2a0a0a 50%,#1a0510 100%)"},{"name":"void","label":"Void","css":"linear-gradient(135deg,#000000 0%,#050005 50%,#000000 100%)"},{"name":"neon-city","label":"Neon City","css":"linear-gradient(135deg,#000010 0%,#0a0020 33%,#100005 66%,#000010 100%)"},{"name":"polar","label":"Polar","css":"linear-gradient(135deg,#0a1520 0%,#0a2030 50%,#051525 100%)"}];
+    const BORDERS=[{"name":"none","label":"None"},{"name":"solid","label":"Solid"},{"name":"glow","label":"Glow"},{"name":"gradient","label":"Gradient"},{"name":"double","label":"Double"},{"name":"dashed","label":"Dashed"}];
+    const FONTS=[{"name":"Arial Black","label":"Arial Black"},{"name":"Impact","label":"Impact"},{"name":"Georgia","label":"Georgia"},{"name":"Courier New","label":"Courier New"},{"name":"Verdana","label":"Verdana"},{"name":"Trebuchet MS","label":"Trebuchet MS"}];
+    const state={brandName:'Demonfall',tagline:'Unleash the Darkness. Fight the Demons.',description:'dark fantasy fighting guild with infernal magic and supernatural atmosphere',iconText:'DF',bannerText:'Demonfall',primaryHex:'#8B0000',secondaryHex:'#4B0082',background:'midnight-gradient',border:'glow',glow:15,font:'Arial Black',gradient:true,imagePrompt:'ancient demon sigil hovering over a ruined crimson fortress in a violet storm',apiKey:''};
+    const $=id=>document.getElementById(id);
+    const els={brandName:$('brandName'),tagline:$('tagline'),description:$('description'),iconText:$('iconText'),bannerText:$('bannerText'),primaryHex:$('primaryHex'),secondaryHex:$('secondaryHex'),glowRange:$('glowRange'),glowOutput:$('glowOutput'),gradientToggle:$('gradientToggle'),apiKey:$('apiKey'),imagePrompt:$('imagePrompt'),colorGroups:$('colorGroups'),backgroundChips:$('backgroundChips'),borderChips:$('borderChips'),fontChips:$('fontChips'),iconCard:$('iconCard'),bannerCard:$('bannerCard'),palettePrimary:$('palettePrimary'),paletteSecondary:$('paletteSecondary'),logoMark:$('logoMark'),embedCard:$('embedCard'),embedTitle:$('embedTitle'),embedTagline:$('embedTagline'),specIcon:$('specIcon'),specBanner:$('specBanner'),specPalette:$('specPalette'),specBackground:$('specBackground'),specBorder:$('specBorder'),specGlow:$('specGlow'),specFont:$('specFont'),integrationStatus:$('integrationStatus'),promptStatus:$('promptStatus'),jsonOutput:$('jsonOutput'),copyJsonBtn:$('copyJsonBtn'),generateBtn:$('generateBtn'),themeBtn:$('themeBtn')};
+    function byName(list,name){return list.find(x=>x.name===name)||list[0];}
+    function hexToRgba(hex,alpha){const c=hex.replace('#','');const b=parseInt(c.length===3?c.split('').map(x=>x+x).join(''):c,16);return `rgba(${(b>>16)&255},${(b>>8)&255},${b&255},${alpha})`;}
+    function renderColorGroups(){
+      els.colorGroups.innerHTML='';
+      Object.entries(COLORS).forEach(([group,items])=>{
+        const wrap=document.createElement('div');wrap.style.marginBottom='18px';
+        wrap.innerHTML=`<div style="font-size:.82rem;font-weight:800;color:var(--color-text-muted);margin-bottom:10px;">${group}</div>`;
+        const grid=document.createElement('div');grid.className='swatch-grid';
+        items.forEach(item=>{
+          const btn=document.createElement('button');btn.className='swatch';
+          if(item.hex===state.primaryHex)btn.classList.add('active');
+          btn.innerHTML=`<div class="swatch-color" style="background:${item.hex}"></div><div class="swatch-meta"><div class="swatch-name">${item.name}</div><div class="swatch-hex">${item.hex}</div></div>`;
+          btn.addEventListener('click',e=>{if(e.shiftKey){state.secondaryHex=item.hex;els.secondaryHex.value=item.hex;}else{state.primaryHex=item.hex;els.primaryHex.value=item.hex;}update();});
+          grid.appendChild(btn);
+        });
+        wrap.appendChild(grid);els.colorGroups.appendChild(wrap);
+      });
+    }
+    function renderChips(){
+      const render=(target,list,key)=>{target.innerHTML='';list.forEach(item=>{const btn=document.createElement('button');btn.className='chip';if(state[key]===item.name)btn.classList.add('active');btn.textContent=item.label||item.name;if(key==='font')btn.style.fontFamily=item.name;btn.addEventListener('click',()=>{state[key]=item.name;update();});target.appendChild(btn);});};
+      render(els.backgroundChips,BACKGROUNDS,'background');render(els.borderChips,BORDERS,'border');render(els.fontChips,FONTS,'font');
+    }
+    function applyBorder(card){card.style.outline='none';card.style.boxShadow='var(--shadow-lg)';const p=state.primaryHex;if(state.border==='solid')card.style.outline=`3px solid ${p}`;else if(state.border==='glow')card.style.boxShadow=`0 0 ${10+state.glow*1.6}px ${hexToRgba(p,.65)}, 0 16px 48px rgba(0,0,0,.45)`;else if(state.border==='double')card.style.outline=`4px double ${p}`;else if(state.border==='dashed')card.style.outline=`3px dashed ${p}`;else if(state.border==='none')card.style.outline='1px solid rgba(255,255,255,.08)';}
+    function buildBg(){const bg=byName(BACKGROUNDS,state.background);return state.gradient?`linear-gradient(135deg,${state.primaryHex}22,${state.secondaryHex}18),${bg.css}`:bg.css;}
+    function getConfig(){return {app:'Sigil GUI Builder',mode:'integrated-brand-builder',brand:{name:state.brandName,tagline:state.tagline,description:state.description,image_prompt:state.imagePrompt},visuals:{icon_text:state.iconText,banner_text:state.bannerText,primary_color:state.primaryHex,secondary_color:state.secondaryHex,background:state.background,border:state.border,glow:state.glow,font:state.font,gradient_enabled:state.gradient},integration:{gemini_ready:true,has_api_key:Boolean(state.apiKey),recommended_backend:'proxy Sigil gemini.js or Electron/Express wrapper',payload_shape:'compatible with /brand ai + custom frontend presets'},ui:{live_preview:true,color_library:Object.values(COLORS).flat().length,backgrounds:BACKGROUNDS.length,borders:BORDERS.length,fonts:FONTS.length}};}
+    function update(){
+      state.brandName=els.brandName.value.trim()||'Untitled';state.tagline=els.tagline.value.trim();state.description=els.description.value.trim();
+      state.iconText=(els.iconText.value.trim()||'SG').slice(0,4).toUpperCase();state.bannerText=els.bannerText.value.trim()||state.brandName;
+      state.primaryHex=els.primaryHex.value.trim()||'#8B0000';state.secondaryHex=els.secondaryHex.value.trim()||'#4B0082';
+      state.glow=Number(els.glowRange.value);state.gradient=els.gradientToggle.checked;state.apiKey=els.apiKey.value.trim();state.imagePrompt=els.imagePrompt.value.trim();
+      els.glowOutput.textContent=state.glow;renderChips();
+      document.documentElement.style.setProperty('--color-primary',state.primaryHex);document.documentElement.style.setProperty('--color-primary-2',state.secondaryHex);
+      const bg=buildBg();
+      els.iconCard.style.background=bg;applyBorder(els.iconCard);
+      els.logoMark.textContent=state.iconText;els.logoMark.style.cssText=`color:${state.primaryHex};font-family:'${state.font}',sans-serif`;
+      els.bannerCard.textContent=state.bannerText;els.bannerCard.style.cssText=`display:flex;align-items:end;font-size:2rem;font-family:'${state.font}',sans-serif;font-weight:900;padding:24px;color:${state.primaryHex};background:${bg}`;applyBorder(els.bannerCard);
+      els.palettePrimary.style.background=state.primaryHex;els.paletteSecondary.style.background=state.secondaryHex;
+      els.palettePrimary.querySelector('strong').textContent=state.primaryHex;els.paletteSecondary.querySelector('strong').textContent=state.secondaryHex;
+      els.palettePrimary.style.color='#fff';els.paletteSecondary.style.color='#fff';
+      els.embedCard.style.borderLeftColor=state.primaryHex;
+      els.embedTitle.textContent=`\u2726 AI Brand Kit \u2014 ${state.brandName}`;els.embedTagline.textContent=`"${state.tagline}"`;
+      els.specIcon.textContent=state.iconText;els.specBanner.textContent=state.bannerText;els.specPalette.textContent=`${state.primaryHex} \u2192 ${state.secondaryHex}`;
+      els.specBackground.textContent=state.background;els.specBorder.textContent=state.border;els.specGlow.textContent=String(state.glow);els.specFont.textContent=state.font;
+      els.promptStatus.innerHTML=`<strong>Current prompt:</strong> ${state.description}`;
+      els.integrationStatus.innerHTML=`<strong>Integrated mode:</strong> GUI, exported config, and backend payload stay in sync${state.apiKey?' \u2014 API key attached.':' \u2014 no API key yet.'}`;
+      els.jsonOutput.value=JSON.stringify(getConfig(),null,2);
+    }
+    ['brandName','tagline','description','iconText','bannerText','primaryHex','secondaryHex','apiKey','imagePrompt'].forEach(id=>els[id].addEventListener('input',update));
+    els.glowRange.addEventListener('input',update);els.gradientToggle.addEventListener('change',update);
+    els.copyJsonBtn.addEventListener('click',async()=>{await navigator.clipboard.writeText(els.jsonOutput.value);els.copyJsonBtn.textContent='Copied!';setTimeout(()=>els.copyJsonBtn.textContent='Copy config JSON',1400);});
+    els.generateBtn.addEventListener('click',()=>{update();els.generateBtn.textContent='Config refreshed \u2713';setTimeout(()=>els.generateBtn.textContent='Generate config',1400);});
+    els.themeBtn.addEventListener('click',()=>{const root=document.documentElement;const isDark=root.getAttribute('data-theme')==='dark';root.setAttribute('data-theme',isDark?'light':'dark');if(isDark){root.style.setProperty('--color-bg','#f5f5f8');root.style.setProperty('--color-surface','#ffffff');root.style.setProperty('--color-surface-2','#ececf3');root.style.setProperty('--color-text','#13131b');root.style.setProperty('--color-text-muted','#4f5568');root.style.setProperty('--color-text-faint','#7b8198');}else{root.style.setProperty('--color-bg','#0a0a0f');root.style.setProperty('--color-surface','#13131b');root.style.setProperty('--color-surface-2','#1b1b25');root.style.setProperty('--color-text','#f5f7fb');root.style.setProperty('--color-text-muted','#a9b1c7');root.style.setProperty('--color-text-faint','#68708b');}});
+    renderColorGroups();update();
+  </script>
+</body>
+</html>
