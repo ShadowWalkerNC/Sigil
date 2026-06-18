@@ -100,10 +100,6 @@ module.exports = {
                     value: 'View recent command history with copy-paste commands',
                 },
                 {
-                    name: '\u26F3 `/minecraft`',
-                    value: 'DiscordSRV setup guide \u2014 link Discord to a Minecraft server; `step` option to jump to any of the 5 steps',
-                },
-                {
                     name: '\uD83D\uDDA5\uFE0F `/gui open`',
                     value: 'Get the link to the Visual Brand Builder \u2014 full GUI with live preview, templates, and AI Generate',
                 },
@@ -116,7 +112,7 @@ module.exports = {
                     value: 'Show bot uptime and version',
                 },
             )
-            .setFooter({ text: 'Sigil v1.12.0 \u2022 /help \u2014 use /template for instant kits \u2022 /brand share for the GUI link \u2022 /minecraft for DiscordSRV setup' });
+            .setFooter({ text: 'Sigil v1.11.0 \u2022 /help \u2014 use /template for instant kits \u2022 /brand share for the GUI link \u2022 /palette export for dev assets' });
 
         await interaction.reply({ embeds: [embed], ephemeral: true });
     },

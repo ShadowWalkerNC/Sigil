@@ -6,19 +6,10 @@ Format: [Semantic Versioning](https://semver.org/) — `[version] — YYYY-MM-DD
 
 ---
 
-## [1.12.0] — 2026-06-18
+## [1.11.1] — 2026-06-18
 
-### Added
-- **`/minecraft`** slash command — DiscordSRV setup guide for linking Discord to a Minecraft Java server
-  - `step` option: jump directly to any of the 5 steps (Install, Create Bot, Configure, Link Roles, Verify)
-  - Without `step`: returns full 5-step guide in a single ephemeral embed
-  - Links to `docs/MINECRAFT.md` for the full written guide
-  - Color-coded green (`#39FF14`) matching the Emerald Fang template palette
-- **`docs/MINECRAFT.md`** — full written DiscordSRV setup guide:
-  - Prerequisites, step-by-step instructions with copy-paste config snippets
-  - Role sync, account linking, troubleshooting table, and resource links
-  - Covers DiscordSRV v1.27+ on Paper/Spigot 1.17–1.21
-- `src/commands/minecraft.js` — new command file, auto-registered by `src/index.js` glob
+### Removed
+- **`/minecraft`** command and `docs/MINECRAFT.md` — removed from bot; guide available separately if needed
 
 ---
 
