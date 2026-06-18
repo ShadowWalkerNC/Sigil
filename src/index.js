@@ -3,9 +3,11 @@ const { readdirSync } = require('fs');
 const { join } = require('path');
 require('dotenv').config();
 
-const { TOKEN, CLIENT_ID } = process.env;
+const TOKEN     = process.env.DISCORD_TOKEN || process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+
 if (!TOKEN || !CLIENT_ID) {
-    console.error('\x1b[31m\x1b[1m[FATAL] TOKEN and CLIENT_ID must be set in your .env file. Exiting.\x1b[0m');
+    console.error('\x1b[31m\x1b[1m[FATAL] DISCORD_TOKEN (or TOKEN) and CLIENT_ID must be set. Exiting.\x1b[0m');
     process.exit(1);
 }
 
