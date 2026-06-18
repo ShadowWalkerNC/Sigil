@@ -1,6 +1,6 @@
 {
   "name": "sigil",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "Discord branding bot",
   "main": "src/index.js",
   "scripts": {

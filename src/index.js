@@ -5,7 +5,7 @@ const path = require('path');
 const { initDatabase } = require('./utils/database.js');
 const express = require('express');
 
-// ── GUI Web Server ──────────────────────────────────
+// ── GUI Web Server ──────────────────────────────────────────────────
 const app  = express();
 const PORT = Number(process.env.PORT) || 3420;
 
@@ -29,7 +29,7 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`[GUI] Web server running on port ${PORT}`);
 });
 
-// ── Discord Bot ──────────────────────────────────
+// ── Discord Bot ─────────────────────────────────────────────────────
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
