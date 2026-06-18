@@ -1,47 +1,73 @@
-# Sigil
+# Sigil — Discord Server Branding Bot
 
-Discord branding bot — 17 slash commands, AI brand generation, emoji/sticker packs, clan system, leaderboard, tournaments, seasonal themes.
+**Sigil** is an AI-powered Discord bot that generates custom server icons, banners, logos, and full brand kits — all from slash commands.
 
-## Quick Start
+---
+
+## Features
+
+| Command | Description |
+|---|---|
+| `/icon` | Generate a server icon |
+| `/banner` | Generate a wide server banner |
+| `/logo` | Generate a logo-style icon |
+| `/avatar` | Generate a server avatar with optional overlay |
+| `/brand kit` | Build a full brand kit (icon + banner + palette) |
+| `/brand ai` | AI-designed brand kit from a description |
+| `/mood` | AI color palette from a mood description |
+| `/compare` | Side-by-side icon comparison |
+| `/random` | Fully random icon generation |
+| `/preview` | Grid preview of all backgrounds |
+| `/saveme` | Save your most recent design |
+| `/history` | View recent command history |
+| `/gui open` | Get the link to the visual GUI builder |
+| `/gui status` | Check if the GUI server is online |
+| `/help` | Full command reference |
+
+---
+
+## Setup
+
+### Prerequisites
+- Node.js 18+
+- A Discord bot token ([Discord Developer Portal](https://discord.com/developers/applications))
+- A Google Gemini API key ([Google AI Studio](https://aistudio.google.com/app/apikey))
+
+### Installation
 
 ```bash
+git clone https://github.com/ShadowWalkerNC/Sigil.git
+cd Sigil
 npm install
 cp .env.example .env
-# Fill in TOKEN, CLIENT_ID, GEMINI_API_KEY
-npm run deploy
-npm start
+# Fill in .env with your tokens
+node src/deploy-commands.js   # Register slash commands
+node src/index.js              # Start the bot
 ```
 
-See [SETUP.md](SETUP.md) for full instructions.
+### GUI Server (optional)
 
-## Full Command Reference
+The GUI provides a browser-based visual brand builder.
 
-| Command | Subcommands | Notes |
-|---|---|---|
-| `/brand` | `ai` `manual` `apply` `health` | Core brand engine |
-| `/profile` | `manual` `show` `reset` | Per-user visual profile |
-| `/theme` | `apply` `list` | 12 preset themes |
-| `/emoji` | `pack` `apply` | Boost-tier gated slots |
-| `/sticker` | `pack` `apply` | Worker-queued upload |
-| `/role` | `badge` | Boost-tier gated icons |
-| `/server` | `setup` `preflight` | Branding wizard |
-| `/automation` | `enable` `disable` `status` | Welcome/goodbye cards |
-| `/tournament` | `create` `end` | Resource-checked |
-| `/leaderboard` | `show` `add` `remove` `reset` | Points system |
-| `/clan` | `create` `join` `leave` `list` `info` | Private channels |
-| `/rank` | `setup` `add` `show` | Boost-gated icons |
-| `/event` | `create` `auto` `list` | Voice/external fallback |
-| `/anime` | `season` `list` | Seasonal palette swap |
-| `/status` | — | Live bot diagnostics |
-| `/help` | — | Grouped command reference |
-| `/gui` | — | Visual builder link |
+```bash
+node gui/gui-server.js
+# Open http://localhost:3420
+```
 
-## Deployment Matrix
+Set `GUI_URL` in `.env` to your public URL if hosting remotely.
 
-| Platform | Command | Notes |
-|---|---|---|
-| Local | `npm start` | Bot process |
-| GUI | `npm run gui` | Port 3420 |
-| Docker | `docker compose up -d` | Bot + GUI services |
-| Railway | `node src/index.js` | `railway.toml` included |
-| Replit | `npm start` | `replit.nix` included |
+---
+
+## Deployment (Railway)
+
+1. Push to GitHub.
+2. Create a new Railway project from your repo.
+3. Add environment variables (`DISCORD_TOKEN`, `CLIENT_ID`, `GEMINI_API_KEY`).
+4. Railway will auto-detect `railpack.json` and build with canvas native deps.
+5. Start command: `node src/index.js`
+
+---
+
+## License
+
+MIT

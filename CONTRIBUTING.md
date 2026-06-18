@@ -1,57 +1,54 @@
 # Contributing to Sigil
 
-Thanks for contributing. Here is the short version of the rules.
+Thanks for your interest in contributing! Here’s how to get involved.
 
 ---
 
-## Setup
+## Getting Started
 
-```bash
-git clone https://github.com/ShadowWalkerNC/sigil
-cd sigil
-npm install
-cp .env.example .env
-# Fill in TOKEN, CLIENT_ID, GEMINI_API_KEY
-npm run deploy
-npm start
-```
+1. Fork the repository and clone your fork.
+2. Install dependencies: `npm install`
+3. Copy `.env.example` to `.env` and fill in your credentials.
+4. Run the bot: `node src/index.js`
 
 ---
 
-## Branch naming
+## Development Workflow
 
-- `feat/short-description` — new feature
-- `fix/short-description`  — bug fix
-- `docs/short-description` — documentation only
+- **Commands** live in `src/commands/`. Each command is a self-contained module exporting `data` (SlashCommandBuilder) and `execute`.
+- **Utilities** live in `src/utils/`. Shared canvas/AI logic lives here.
+- **Events** live in `src/events/`. Each event exports `name`, `once`, and `execute`.
+- **GUI** lives in `gui/`. The Express server and HTML builder are here.
 
----
+### Adding a new command
 
-## Commit style
-
-```
-type: short description (under 72 chars)
-```
-
-Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
+1. Create `src/commands/yourcommand.js`.
+2. Export `{ data, execute }` (and optionally `autocomplete`).
+3. The bot auto-loads all `.js` files in `src/commands/`.
+4. Deploy commands: `node src/deploy-commands.js`
 
 ---
 
-## Pull request checklist
+## Code Style
 
-- [ ] Passes `npm run deploy` without errors
-- [ ] Bot starts without crashing
-- [ ] Command tested manually in a Discord server
-- [ ] No Discord ToS violations
-- [ ] Image uploads go through `validateIconBuffer` / `validateBannerBuffer`
-- [ ] Emoji/sticker uploads go through the worker queue
-- [ ] Resource pre-checks before creating channels or roles
-- [ ] Boost tier gated features degrade gracefully
+- Use `const`/`let`, never `var`.
+- Async/await over raw promises.
+- Keep commands focused — heavy logic belongs in `src/utils/`.
+- Log errors with `console.error('[module]', err)` so they’re easy to grep.
 
 ---
 
-## Adding a new command
+## Pull Requests
 
-1. Create `src/commands/your-command.js`
-2. Export `{ data, execute }` where `data` is a `SlashCommandBuilder`
-3. Run `npm run deploy` to register it
-4. Add it to the command reference table in `README.md`
+- Keep PRs small and focused on a single feature or fix.
+- Write a clear description of what changed and why.
+- Ensure the bot starts without errors before submitting.
+
+---
+
+## Reporting Issues
+
+Open a GitHub Issue with:
+- What you expected to happen
+- What actually happened
+- Relevant error output from the console
