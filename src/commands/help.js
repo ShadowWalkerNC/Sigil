@@ -8,9 +8,18 @@ module.exports = {
     async execute(interaction) {
         const embed = new EmbedBuilder()
             .setTitle('📖 Sigil — Command Reference')
-            .setDescription('**Sigil** is your AI-powered Discord server branding bot. Here\'s everything you can do:')
+            .setDescription('**Sigil** is your AI-powered Discord server branding bot. Use slash commands or the **Visual Brand Builder** GUI to create icons, banners, logos, and full brand kits.')
             .setColor('#6a0dad')
             .addFields(
+                {
+                    name: '🖥️ /gui — Visual Brand Builder',
+                    value: [
+                        '`/gui open` — Get the link to the browser-based brand builder.',
+                        '`/gui status` — Check if the GUI server is online.',
+                        '',
+                        'The GUI includes **8 brand templates** (Dark Fantasy, Cyberpunk, Fantasy RPG, Community, Racing, Tactical FPS, Survival RPG, Sci-Fi), live preview, 7 platform size presets, shareable links, randomize, and optional AI generation.',
+                    ].join('\n'),
+                },
                 {
                     name: '🎨 /brand',
                     value: [
@@ -61,11 +70,19 @@ module.exports = {
                     value: 'View your recent command history with copy-paste commands.',
                 },
                 {
-                    name: '🖥️ /gui',
-                    value: '`/gui open` — Get the link to the visual brand builder.\n`/gui status` — Check if the GUI server is online.',
+                    name: '📐 Output Size Presets (GUI)',
+                    value: [
+                        'Discord Icon — 512×512',
+                        'Discord Banner — 960×540',
+                        'Twitch Panel — 320×160',
+                        'Twitch Banner — 1200×480',
+                        'YouTube Channel Art — 2560×1440',
+                        'Reddit Banner — 1920×384',
+                        'Square — 1024×1024',
+                    ].join('\n'),
                 },
             )
-            .setFooter({ text: 'Sigil v2.0.0 • Your server\'s mark. Crafted by AI.' });
+            .setFooter({ text: 'Sigil v1.4.0 • Your server\'s mark. Crafted by AI.' });
 
         await interaction.reply({ embeds: [embed], ephemeral: true });
     },
