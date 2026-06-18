@@ -4,9 +4,10 @@ const { getBackgroundById } = require('./backgrounds.js');
 const { getBorderById } = require('./borders.js');
 const { registerAllFonts: _regFonts, getAllFontFamilies } = require('./fonts.js');
 
-const ICON_SIZE   = 512;
-const BANNER_W    = 1200;
-const BANNER_H    = 400;
+// Default dimensions (used as fallbacks)
+const ICON_SIZE_DEFAULT   = 512;
+const BANNER_W_DEFAULT    = 1200;
+const BANNER_H_DEFAULT    = 400;
 const PALETTE_W   = 600;
 const PALETTE_H   = 100;
 
@@ -28,7 +29,7 @@ function autoFontSize(ctx, text, maxWidth, startSize) {
 }
 
 /**
- * Render a square icon and return a PNG Buffer.
+ * Render a square (or custom-size) icon and return a PNG Buffer.
  */
 async function renderIcon(opts = {}) {
     const {
@@ -40,40 +41,43 @@ async function renderIcon(opts = {}) {
         font       = getAllFontFamilies()[0] ?? 'Arial',
         glow       = 0,
         opacity    = 1.0,
+        width,
+        height,
     } = opts;
 
-    const canvas = createCanvas(ICON_SIZE, ICON_SIZE);
+    // If a preset is square or smaller than banner, treat it as an icon canvas.
+    // Fall back to default 512×512 if not supplied.
+    const W = Number(width)  || ICON_SIZE_DEFAULT;
+    const H = Number(height) || ICON_SIZE_DEFAULT;
+
+    const canvas = createCanvas(W, H);
     const ctx    = canvas.getContext('2d');
     ctx.__fontFamily = font;
 
-    // Background
     ctx.globalAlpha = opacity;
-    try { getBackgroundById(background).draw(ctx, ICON_SIZE, ICON_SIZE); } catch { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, ICON_SIZE, ICON_SIZE); }
+    try { getBackgroundById(background).draw(ctx, W, H); } catch { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
     ctx.globalAlpha = 1.0;
 
-    // Glow text shadow
     if (glow > 0) { ctx.shadowColor = primary; ctx.shadowBlur = glow * 2; }
 
-    // Text
-    const fontSize = autoFontSize(ctx, text, ICON_SIZE * 0.85, 120);
+    const fontSize = autoFontSize(ctx, text, W * 0.85, Math.round(W * 0.23));
     ctx.font = `bold ${fontSize}px "${font}"`;
     ctx.textAlign    = 'center';
     ctx.textBaseline = 'middle';
-    const grad = ctx.createLinearGradient(0, ICON_SIZE * 0.3, 0, ICON_SIZE * 0.7);
+    const grad = ctx.createLinearGradient(0, H * 0.3, 0, H * 0.7);
     grad.addColorStop(0, primary);
     grad.addColorStop(1, secondary);
     ctx.fillStyle = grad;
-    ctx.fillText(text, ICON_SIZE / 2, ICON_SIZE / 2);
+    ctx.fillText(text, W / 2, H / 2);
     ctx.shadowBlur = 0;
 
-    // Border
-    try { getBorderById(border).draw(ctx, ICON_SIZE, ICON_SIZE, primary, secondary, glow); } catch {}
+    try { getBorderById(border).draw(ctx, W, H, primary, secondary, glow); } catch {}
 
     return canvas.toBuffer('image/png');
 }
 
 /**
- * Render a wide banner and return a PNG Buffer.
+ * Render a banner at the requested dimensions and return a PNG Buffer.
  */
 async function renderBanner(opts = {}) {
     const {
@@ -87,38 +91,44 @@ async function renderBanner(opts = {}) {
         align      = 'center',
         glow       = 0,
         opacity    = 1.0,
+        width,
+        height,
     } = opts;
 
-    const canvas = createCanvas(BANNER_W, BANNER_H);
+    // Use preset dimensions when available; fall back to classic 1200×400.
+    const W = Number(width)  || BANNER_W_DEFAULT;
+    const H = Number(height) || BANNER_H_DEFAULT;
+
+    const canvas = createCanvas(W, H);
     const ctx    = canvas.getContext('2d');
     ctx.__fontFamily = font;
 
     ctx.globalAlpha = opacity;
-    try { getBackgroundById(background).draw(ctx, BANNER_W, BANNER_H); } catch { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, BANNER_W, BANNER_H); }
+    try { getBackgroundById(background).draw(ctx, W, H); } catch { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
     ctx.globalAlpha = 1.0;
 
     if (glow > 0) { ctx.shadowColor = primary; ctx.shadowBlur = glow * 2; }
 
-    const fontSize = autoFontSize(ctx, text, BANNER_W * 0.85, 100);
+    const fontSize = autoFontSize(ctx, text, W * 0.85, Math.round(H * 0.25));
     ctx.font = `bold ${fontSize}px "${font}"`;
     ctx.textAlign    = align;
     ctx.textBaseline = 'middle';
-    const x = align === 'center' ? BANNER_W / 2 : align === 'left' ? 60 : BANNER_W - 60;
-    const grad = ctx.createLinearGradient(0, BANNER_H * 0.3, 0, BANNER_H * 0.7);
+    const x = align === 'center' ? W / 2 : align === 'left' ? 60 : W - 60;
+    const grad = ctx.createLinearGradient(0, H * 0.3, 0, H * 0.7);
     grad.addColorStop(0, primary);
     grad.addColorStop(1, secondary);
     ctx.fillStyle = grad;
-    ctx.fillText(text, x, subtitle ? BANNER_H * 0.42 : BANNER_H / 2);
+    ctx.fillText(text, x, subtitle ? H * 0.42 : H / 2);
     ctx.shadowBlur = 0;
 
     if (subtitle) {
         const subSize = Math.max(18, Math.floor(fontSize * 0.38));
         ctx.font = `${subSize}px "${font}"`;
         ctx.fillStyle = secondary;
-        ctx.fillText(subtitle, x, BANNER_H * 0.65);
+        ctx.fillText(subtitle, x, H * 0.65);
     }
 
-    try { getBorderById(border).draw(ctx, BANNER_W, BANNER_H, primary, secondary, glow); } catch {}
+    try { getBorderById(border).draw(ctx, W, H, primary, secondary, glow); } catch {}
 
     return canvas.toBuffer('image/png');
 }
@@ -144,6 +154,7 @@ async function renderPalette(colors = []) {
 
 /**
  * Convenience: render icon + banner + palette in parallel.
+ * opts.width / opts.height are forwarded to both renderIcon and renderBanner.
  */
 async function renderKit(opts = {}) {
     const [iconBuf, bannerBuf, paletteBuf] = await Promise.all([

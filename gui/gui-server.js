@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
 
 /** Health check */
 app.get('/health', (req, res) => {
-    res.json({ ok: true, version: '1.4.0' });
+    res.json({ ok: true, version: '1.5.0' });
 });
 
 /** Clamp a number to [min, max] */
@@ -35,6 +35,16 @@ function clamp(n, min, max) {
 /** Basic hex validation — returns fallback if invalid */
 function safeHex(hex, fallback = '#ffffff') {
     return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(hex).trim()) ? String(hex).trim() : fallback;
+}
+
+/**
+ * Parse width/height from body.
+ * Accepts numeric values; clamps to sane range to avoid OOM on huge canvases.
+ */
+function parseDimensions(b) {
+    const w = clamp(b.width,  64, 3840);
+    const h = clamp(b.height, 64, 2160);
+    return { width: w || undefined, height: h || undefined };
 }
 
 /** Turn raw errors into short user-friendly strings */
@@ -61,7 +71,6 @@ app.post('/preview', async (req, res) => {
     try {
         const b = req.body || {};
 
-        // Accept both GUI field names (icon_text, primary_color) and legacy names (text, primary)
         const text       = String(b.icon_text    || b.text       || 'SIGIL').slice(0, 8).toUpperCase();
         const bannerText = String(b.banner_text  || b.text       || text);
         const primary    = safeHex(b.primary_color   || b.primary,   '#8B0000');
@@ -72,10 +81,12 @@ app.post('/preview', async (req, res) => {
         const glow       = clamp(b.glow,    0,  25);
         const opacity    = clamp(b.opacity,  0,   1);
         const palette    = Array.isArray(b.palette) ? b.palette.map(h => safeHex(h, primary)) : [];
+        const { width, height } = parseDimensions(b);
 
         const { iconBuf, bannerBuf, paletteBuf } = await renderKit({
             text, bannerText, background, border, primary, secondary,
             font, glow, opacity, palette,
+            width, height,
         });
 
         res.json({
@@ -99,12 +110,12 @@ app.post('/generate', async (req, res) => {
     const image_prompt = String(b.image_prompt || '').trim();
     const model        = String(b.model || 'gemini-2.0-flash').trim();
     const temperature  = clamp(b.temperature, 0, 2);
+    const { width, height } = parseDimensions(b);
 
     if (!gemini_key && !process.env.GEMINI_API_KEY) {
         return res.status(400).json({ ok: false, error: '\u26a0\ufe0f Enter your Gemini API key in Step 4 first.' });
     }
 
-    // Swap in the GUI-supplied key for this request, restore in a finally block
     const originalKey = process.env.GEMINI_API_KEY;
     if (gemini_key) process.env.GEMINI_API_KEY = gemini_key;
 
@@ -137,7 +148,6 @@ Respond with ONLY valid JSON (no markdown, no explanation):
             return res.status(500).json({ ok: false, error: classifyError(err) });
         }
 
-        // Sanitise AI-returned values before passing to canvas
         const primary    = safeHex(brand.primary_color,   '#8B0000');
         const secondary  = safeHex(brand.secondary_color, '#4B0082');
         const glow       = clamp(brand.glow, 0, 25);
@@ -152,9 +162,9 @@ Respond with ONLY valid JSON (no markdown, no explanation):
             subtitle:   brand.tagline  || '',
             background, border, primary, secondary,
             font, glow, palette,
+            width, height,
         });
 
-        // AI image — silent fail, never blocks the response
         const finalPrompt = image_prompt || brand.image_prompt || `Minimalist logo for: ${brand.name}`;
         let ai_image_b64 = null;
         try {
@@ -173,11 +183,10 @@ Respond with ONLY valid JSON (no markdown, no explanation):
         console.error('[/generate]', err);
         res.status(500).json({ ok: false, error: classifyError(err) });
     } finally {
-        // Always restore the original key — even on crash
         if (gemini_key) process.env.GEMINI_API_KEY = originalKey;
     }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[GUI] Sigil GUI server v1.4.0 on http://localhost:${PORT}`);
+    console.log(`[GUI] Sigil GUI server v1.5.0 on http://localhost:${PORT}`);
 });
