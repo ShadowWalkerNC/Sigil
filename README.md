@@ -2,7 +2,7 @@
 
 **Sigil** is an AI-powered Discord bot that generates custom server icons, banners, logos, and full brand kits — all from slash commands. It also includes a browser-based **Visual Brand Builder** GUI with live preview, 8 brand templates, shape selector, and optional AI generation.
 
-> **Current version: v1.7.0**
+> **Current version: v1.9.0**
 
 ---
 
@@ -19,6 +19,7 @@
 | `/mood` | AI color palette from a mood description |
 | `/compare` | Side-by-side comparison of two icon designs |
 | `/random` | Fully randomized icon (random shape, colors, background, font…) |
+| `/template` | Load a built-in brand template and instantly render its full kit |
 | `/preview` | Grid preview of all available backgrounds |
 | `/saveme` | Save your most recent design as a named kit |
 | `/history` | View recent command history with copy-paste commands |
@@ -29,9 +30,31 @@
 
 ---
 
+## Built-in Brand Templates
+
+Use `/template name:<template>` to instantly generate a full kit from any of the 8 built-in templates. Each template includes a pre-tuned color palette, background, border, font, glow, and icon shape.
+
+| Template | Genre | Shape | Primary |
+|---|---|---|---|
+| Demonfall | Dark Fantasy | Circle | `#8B0000` |
+| Cyber Nexus | Cyberpunk | Square | `#00FFFF` |
+| Arcane Order | Fantasy RPG | Hexagon | `#9966CC` |
+| Cozy Den | Community | Rounded | `#FF6B35` |
+| Neon Drift | Racing / Sports | Diamond | `#FF4500` |
+| Polar Ops | Tactical FPS | Square | `#7DF9FF` |
+| Emerald Fang | Survival / RPG | Hexagon | `#39FF14` |
+| Void Protocol | Sci-Fi | Circle | `#C0C0C0` |
+
+```
+/template name:Demonfall
+/template name:Cyber Nexus icon_text:YO brand_name:YourServer
+```
+
+---
+
 ## Icon Shape Option
 
-All icon-generating commands (`/icon`, `/logo`, `/avatar`, `/compare`, `/random`) support a **`shape`** option:
+All icon-generating commands (`/icon`, `/logo`, `/avatar`, `/compare`, `/random`, `/template`) support a **`shape`** option:
 
 | Shape | Effect |
 |---|---|
@@ -77,7 +100,7 @@ The GUI (`gui/sigil-gui-builder.html`) is a browser-based 4-step wizard for buil
 - **Icon Shape Selector** — Circle, Rounded, Square, Hexagon, Diamond with live preview thumbnails
 - **Live preview** — icon, banner, and palette re-render in real time
 - **32 background presets** available in the background picker
-- **6 border styles** — None, Solid, Glow, Gradient, Double, Dashed
+- **8 border styles** — None, Solid, Glow, Gradient, Double, Dashed, Neon, Rainbow
 - **7 output size presets** — Discord Icon (512×512), Discord Banner (960×540), Twitch Panel, Twitch Banner, YouTube Art, Reddit Banner, Square
 - **Shareable links** — full brand state (including shape) encoded in URL hash
 - **Randomize** — randomizes shape, colors, background, border, and font
@@ -142,7 +165,7 @@ Sigil/
 │   ├── fonts/                 # Bundled font files
 │   ├── utils/
 │   │   ├── backgrounds.js     # 32 background presets
-│   │   ├── borders.js         # 6 border styles
+│   │   ├── borders.js         # 8 border styles
 │   │   ├── canvas.js          # renderIcon, renderBanner, renderKit, applyShapeClip
 │   │   ├── fonts.js           # Font registration
 │   │   ├── gemini.js          # Gemini API helpers
@@ -150,6 +173,10 @@ Sigil/
 │   │   └── colors.js          # Color autocomplete
 │   ├── deploy-commands.js     # Register slash commands
 │   └── index.js               # Bot entry point
+├── docs/
+│   ├── CONTEXT.md
+│   ├── ROADMAP.md
+│   └── FONTS.md
 ├── .env.example
 ├── railpack.json
 ├── railway.toml

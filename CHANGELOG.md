@@ -6,6 +6,34 @@ Format: [Semantic Versioning](https://semver.org/) — `[version] — YYYY-MM-DD
 
 ---
 
+## [1.9.0] — 2026-06-18
+
+### Added
+- **`/template`** slash command — load any of the 8 built-in brand templates directly from Discord and instantly receive a full rendered kit (icon + banner + palette)
+  - `name` option: dropdown of all 8 templates with genre label (e.g. `Demonfall — Dark Fantasy`)
+  - `icon_text` option: optional override for the icon initials (default: template default, max 4 chars)
+  - `brand_name` option: optional override for the brand name shown in the embed title
+  - Templates mirror the GUI exactly: same colors, background, border, font, glow, opacity, and shape per template
+  - Result saved to per-user command history via `saveEntry`
+  - Embed footer hints at `/gui open` for further customisation in the Visual Builder
+- `src/commands/template.js` — new command file, auto-registered by `src/index.js` glob
+
+---
+
+## [1.8.0] — 2026-06-18
+
+### Added
+- **Shape-aware borders** — all border styles in `src/utils/borders.js` now receive the active `shape` and trace the correct silhouette path (circle, rounded, hexagon, diamond, square) instead of always drawing a rectangle
+- **`neon` border style** — animated-look multi-layer neon glow that pulses outward along the shape edge
+- **`rainbow` border style** — conic-gradient rainbow stroke traced along the shape path
+- Total border styles: **8** (was 6)
+
+### Changed
+- `renderIcon` in `canvas.js` passes `shape` through to `getBorderById().draw()` for all border types
+- GUI border chip list and `/help` updated to include `neon` and `rainbow`
+
+---
+
 ## [1.7.0] — 2026-06-18
 
 ### Added
