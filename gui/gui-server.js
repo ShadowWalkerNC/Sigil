@@ -12,7 +12,7 @@ require('dotenv').config();
 registerAllFonts();
 
 const app  = express();
-const PORT = Number(process.env.PORT) || 3420;
+const PORT = Number(process.env.PORT) || 8080;
 
 app.use(express.json({ limit: '2mb' }));
 
