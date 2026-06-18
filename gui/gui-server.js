@@ -5,7 +5,6 @@ const express = require('express');
 const path    = require('path');
 const { createCanvas, loadImage } = require('canvas');
 const { renderKit, registerAllFonts } = require('../src/utils/canvas.js');
-const { geminiRequest, geminiImageRequest, extractJson } = require('../src/utils/gemini.js');
 const { getBackgroundById } = require('../src/utils/backgrounds.js');
 require('dotenv').config();
 
@@ -14,13 +13,17 @@ registerAllFonts();
 const app  = express();
 const PORT = Number(process.env.PORT) || 8080;
 
+// AI generation is disabled until further notice
+const AI_ENABLED = false;
+
 app.use(express.json({ limit: '4mb' }));
 
 // ── Static pages ────────────────────────────────────────────────────────────
-app.get('/',          (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/brand',     (req, res) => res.sendFile(path.join(__dirname, 'sigil-gui-builder.html')));
-app.get('/community', (req, res) => res.sendFile(path.join(__dirname, 'sigil-community.html')));
-app.get('/health',    (req, res) => res.json({ ok: true, version: '2.0.0' }));
+app.get('/',            (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/brand',       (req, res) => res.sendFile(path.join(__dirname, 'sigil-gui-builder.html')));
+app.get('/community',   (req, res) => res.sendFile(path.join(__dirname, 'sigil-community.html')));
+app.get('/developers',  (req, res) => res.sendFile(path.join(__dirname, 'developers.html')));
+app.get('/health',      (req, res) => res.json({ ok: true, version: '2.0.0', ai_enabled: AI_ENABLED }));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function clamp(n, min, max) { const v = Number(n); return isNaN(v) ? min : Math.min(max, Math.max(min, v)); }
@@ -33,10 +36,7 @@ function safeShape(s) { const v = String(s || 'square').toLowerCase().trim(); re
 
 function classifyError(err) {
     const msg = String(err?.message || err);
-    if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) return '⚠️ Gemini quota exceeded. Wait a minute and try again.';
-    if (msg.includes('API_KEY_INVALID') || (msg.includes('400') && msg.includes('key'))) return '⚠️ Invalid Gemini API key.';
-    if (msg.includes('403') || msg.includes('PERMISSION_DENIED')) return '⚠️ Gemini key lacks permission.';
-    if (msg.includes('503') || msg.includes('UNAVAILABLE')) return '⚠️ Gemini temporarily unavailable.';
+    if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) return '⚠️ Quota exceeded. Wait a moment and try again.';
     if (msg.includes('fetch') || msg.includes('ENOTFOUND')) return '⚠️ Network error — check your connection.';
     return '⚠️ ' + msg.split('\n')[0].slice(0, 120);
 }
@@ -221,75 +221,9 @@ app.post('/preview/serverstats', async (req, res) => {
     } catch (err) { console.error('[/preview/serverstats]', err); res.status(500).json({ ok: false, error: classifyError(err) }); }
 });
 
-// ── POST /generate — AI brand kit ─────────────────────────────────────────
-app.post('/generate', async (req, res) => {
-    const b = req.body || {};
-    const gemini_key   = String(b.gemini_key   || '').trim();
-    const description  = String(b.description  || '').trim();
-    const image_prompt = String(b.image_prompt || '').trim();
-    const model        = String(b.model || 'gemini-2.0-flash').trim();
-    const temperature  = clamp(b.temperature, 0, 2);
-    const { width, height } = parseDimensions(b);
-
-    if (!gemini_key && !process.env.GEMINI_API_KEY)
-        return res.status(400).json({ ok: false, error: '⚠️ Enter your Gemini API key in Step 4 first.' });
-
-    const originalKey = process.env.GEMINI_API_KEY;
-    if (gemini_key) process.env.GEMINI_API_KEY = gemini_key;
-
-    try {
-        const prompt = `You are a professional brand designer. Based on this server description, design a complete Discord server brand kit.
-
-Description: "${description}"
-
-Respond with ONLY valid JSON (no markdown, no explanation):
-{
-  "name": "<short brand name>",
-  "tagline": "<catchy tagline under 60 chars>",
-  "primary_color": "<hex>",
-  "secondary_color": "<hex>",
-  "background": "<one of: midnight-gradient, deep-space, inferno, ocean-depth, twilight, aurora, storm, void, neon-city, sunset-fade, forest-night, polar>",
-  "border": "<one of: none, solid, glow, gradient, double, dashed>",
-  "font": "<one of: Arial Black, Impact, Bebas Neue, Oswald, Playfair Display, Source Code Pro, Dancing Script>",
-  "shape": "<one of: circle, rounded, square, hexagon, diamond>",
-  "glow": <number 0-25>,
-  "palette": ["<hex1>", "<hex2>", "<hex3>", "<hex4>", "<hex5>"],
-  "image_prompt": "<concise visual prompt for an icon/logo image>"
-}`;
-
-        let brand;
-        try { const raw = await geminiRequest(prompt, { model, temperature }); brand = extractJson(raw); }
-        catch (err) { return res.status(500).json({ ok: false, error: classifyError(err) }); }
-
-        const primary    = safeHex(brand.primary_color,   '#8B0000');
-        const secondary  = safeHex(brand.secondary_color, '#4B0082');
-        const glow       = clamp(brand.glow, 0, 25);
-        const shape      = safeShape(brand.shape);
-        const palette    = Array.isArray(brand.palette) ? brand.palette.map(h => safeHex(h, primary)) : [];
-        const background = String(brand.background || 'midnight-gradient');
-        const border     = String(brand.border     || 'none');
-        const font       = String(brand.font       || 'Arial Black');
-
-        const { iconBuf, bannerBuf, paletteBuf } = await renderKit({
-            text: brand.name || 'SIGIL', bannerText: brand.name || 'SIGIL',
-            subtitle: brand.tagline || '', background, border, primary, secondary,
-            font, glow, shape, palette, width, height,
-        });
-
-        const finalPrompt = image_prompt || brand.image_prompt || `Minimalist logo for: ${brand.name}`;
-        let ai_image_b64 = null;
-        try { ai_image_b64 = await geminiImageRequest(finalPrompt); } catch { /* silent */ }
-
-        res.json({
-            ok: true,
-            brand: { ...brand, primary_color: primary, secondary_color: secondary, glow, shape, palette },
-            icon_b64:    iconBuf.toString('base64'),
-            banner_b64:  bannerBuf.toString('base64'),
-            palette_b64: paletteBuf.toString('base64'),
-            ai_image_b64,
-        });
-    } catch (err) { console.error('[/generate]', err); res.status(500).json({ ok: false, error: classifyError(err) }); }
-    finally { if (gemini_key) process.env.GEMINI_API_KEY = originalKey; }
+// ── POST /generate — AI brand kit (DISABLED — coming soon) ────────────────
+app.post('/generate', (req, res) => {
+    res.status(503).json({ ok: false, coming_soon: true, error: '✨ AI Generate is coming soon. Stay tuned!' });
 });
 
 app.listen(PORT, '0.0.0.0', () => console.log(`[GUI] Sigil GUI server v2.0.0 on http://localhost:${PORT}`));

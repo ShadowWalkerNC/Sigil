@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sigil — Developers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#08080f;--surface:#111118;--surface2:#18181f;--surface3:#202028;
+      --border:rgba(255,255,255,.1);--text:#f0f2f8;--muted:#9299b0;--faint:#555d78;
+      --primary:#8b0000;--secondary:#4b0082;--success:#39ff14;
+      --radius:.75rem;--radiuslg:1.25rem;
+      --font:'Inter',sans-serif;--fontd:'Orbitron',sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.65;}
+    a{color:var(--text);}
+    code{font-family:'Courier New',monospace;font-size:.85em;background:var(--surface2);padding:.1rem .4rem;border-radius:.3rem;border:1px solid var(--border);}
+    pre{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem 1.25rem;overflow-x:auto;font-size:.82rem;line-height:1.65;margin:.75rem 0;}
+    pre code{background:none;border:none;padding:0;font-size:inherit;}
+
+    nav{position:sticky;top:0;z-index:100;background:rgba(8,8,15,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;padding:.65rem 1.5rem;}
+    .nav-logo{font-family:var(--fontd);font-weight:900;font-size:1.1rem;background:linear-gradient(135deg,#ff4444,#8b0000,#4b0082);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+    .nav-links{display:flex;gap:.25rem;margin-left:auto;}
+    .nav-a{padding:.35rem .8rem;border-radius:.5rem;font-size:.82rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all 150ms;}
+    .nav-a:hover,.nav-a.active{color:var(--text);background:var(--surface2);}
+
+    .layout{display:flex;max-width:1100px;margin:0 auto;padding:2.5rem 1.5rem;gap:2.5rem;}
+    .sidebar{width:220px;flex-shrink:0;position:sticky;top:72px;height:fit-content;}
+    .sidebar ul{list-style:none;display:flex;flex-direction:column;gap:.15rem;}
+    .sidebar li a{display:block;padding:.35rem .65rem;border-radius:.4rem;font-size:.82rem;color:var(--muted);text-decoration:none;transition:all 130ms;}
+    .sidebar li a:hover{color:var(--text);background:var(--surface2);}
+    .sidebar-title{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);padding:.35rem .65rem;margin-top:.75rem;}
+    .sidebar-title:first-child{margin-top:0;}
+    .content{flex:1;min-width:0;}
+    h1{font-family:var(--fontd);font-size:2rem;font-weight:900;margin-bottom:.5rem;}
+    h2{font-family:var(--fontd);font-size:1.2rem;font-weight:800;margin:2.5rem 0 .75rem;padding-top:2.5rem;border-top:1px solid var(--border);}
+    h2:first-of-type{border-top:none;padding-top:0;margin-top:1rem;}
+    h3{font-size:1rem;font-weight:800;margin:1.5rem 0 .5rem;color:var(--muted);}
+    p{margin-bottom:.85rem;font-size:.92rem;color:var(--muted);}
+    ul,ol{padding-left:1.25rem;margin-bottom:.85rem;}
+    li{font-size:.9rem;color:var(--muted);margin-bottom:.3rem;line-height:1.6;}
+    .badge{display:inline-block;padding:.18rem .55rem;border-radius:999px;font-size:.68rem;font-weight:700;margin-left:.4rem;vertical-align:middle;}
+    .badge-green{background:rgba(57,255,20,.12);border:1px solid rgba(57,255,20,.25);color:var(--success);}
+    .badge-yellow{background:rgba(255,191,0,.1);border:1px solid rgba(255,191,0,.25);color:#ffbf00;}
+    .env-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.75rem 0;}
+    .env-table th{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--border);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);}
+    .env-table td{padding:.55rem .75rem;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top;}
+    .env-table td:first-child{font-family:monospace;font-size:.82rem;color:#f0f2f8;white-space:nowrap;}
+    .env-table td:nth-child(2){color:var(--muted);}
+    .req-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;}
+    .req{background:#ff4444;}
+    .opt{background:#ffbf00;}
+    .route-table{width:100%;border-collapse:collapse;font-size:.82rem;margin:.75rem 0;}
+    .route-table th{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--border);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);}
+    .route-table td{padding:.5rem .75rem;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:top;color:var(--muted);}
+    .route-table td:first-child{font-family:monospace;font-size:.82rem;color:#f0f2f8;}
+    .route-table td:nth-child(2){color:var(--faint);font-weight:700;}
+    @media(max-width:768px){.sidebar{display:none;}.layout{padding:1.5rem 1rem;}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/">SIGIL</a>
+  <div class="nav-links">
+    <a class="nav-a" href="/brand">&#127912; Brand Builder</a>
+    <a class="nav-a" href="/community">&#127942; Community Tools</a>
+    <a class="nav-a active" href="/developers">&#128196; Developers</a>
+  </div>
+</nav>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-title">Getting Started</div>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#requirements">Requirements</a></li>
+      <li><a href="#quickstart">Quick Start</a></li>
+    </ul>
+    <div class="sidebar-title">Environments</div>
+    <ul>
+      <li><a href="#railway">Railway (recommended)</a></li>
+      <li><a href="#self-hosted">Self-Hosted</a></li>
+      <li><a href="#docker">Docker</a></li>
+    </ul>
+    <div class="sidebar-title">Reference</div>
+    <ul>
+      <li><a href="#env">Environment Variables</a></li>
+      <li><a href="#routes">API Routes</a></li>
+      <li><a href="#commands">Bot Commands</a></li>
+    </ul>
+  </aside>
+
+  <main class="content">
+    <div style="margin-bottom:1.5rem;">
+      <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);margin-bottom:.4rem;">Documentation</div>
+      <h1>Developer Guide</h1>
+      <p style="font-size:1rem;color:var(--muted);">Everything you need to self-host Sigil, connect it to your Discord server, and extend it.</p>
+      <a href="https://github.com/ShadowWalkerNC/Sigil" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem;border-radius:.5rem;background:var(--surface2);border:1px solid var(--border);font-size:.82rem;font-weight:700;text-decoration:none;color:var(--text);margin-top:.5rem;">&#128279; github.com/ShadowWalkerNC/Sigil</a>
+    </div>
+
+    <h2 id="overview">Overview</h2>
+    <p>Sigil is a Node.js monorepo. <code>start.js</code> spawns two child processes — the Discord bot (<code>src/index.js</code>) and the GUI web server (<code>gui/gui-server.js</code>). Both run in the same Railway deployment.</p>
+    <ul>
+      <li><strong>Bot</strong> — discord.js v14, slash commands, automation events (welcome, goodbye, milestone, boost)</li>
+      <li><strong>GUI server</strong> — Express.js, canvas image rendering via <code>node-canvas</code>, serves HTML pages</li>
+      <li><strong>Database</strong> — SQLite via <code>better-sqlite3</code> for per-guild automation config</li>
+    </ul>
+
+    <h2 id="requirements">Requirements</h2>
+    <ul>
+      <li>Node.js <strong>18+</strong></li>
+      <li>npm <strong>9+</strong></li>
+      <li>A Discord application with a bot token — <a href="https://discord.com/developers/applications" target="_blank">discord.com/developers/applications</a></li>
+      <li>Bot scopes: <code>bot</code>, <code>applications.commands</code></li>
+      <li>Bot permissions: <code>Send Messages</code>, <code>Attach Files</code>, <code>Embed Links</code>, <code>Read Message History</code>, <code>View Channels</code></li>
+      <li>Privileged intents enabled in the dev portal: <strong>Server Members Intent</strong>, <strong>Presence Intent</strong></li>
+    </ul>
+
+    <h2 id="quickstart">Quick Start</h2>
+    <h3>1. Clone the repo</h3>
+    <pre><code>git clone https://github.com/ShadowWalkerNC/Sigil.git
+cd Sigil</code></pre>
+
+    <h3>2. Install dependencies</h3>
+    <pre><code>npm install</code></pre>
+
+    <h3>3. Configure environment</h3>
+    <pre><code>cp .env.example .env
+# Edit .env with your values (see Environment Variables below)</code></pre>
+
+    <h3>4. Register slash commands</h3>
+    <pre><code>node src/deploy-commands.js</code></pre>
+    <p>This registers all slash commands globally. Allow up to 1 hour for Discord to propagate them.</p>
+
+    <h3>5. Start Sigil</h3>
+    <pre><code>npm start
+# or
+node start.js</code></pre>
+    <p>This starts both the bot and the GUI server. The GUI is available at <code>http://localhost:8080</code> by default.</p>
+
+    <h2 id="railway">Railway <span class="badge badge-green">Recommended</span></h2>
+    <p>Railway is the easiest way to deploy Sigil. One-click deploy from GitHub, free tier available.</p>
+    <ol>
+      <li>Fork <a href="https://github.com/ShadowWalkerNC/Sigil" target="_blank">github.com/ShadowWalkerNC/Sigil</a></li>
+      <li>Create a new Railway project → <strong>Deploy from GitHub repo</strong> → select your fork</li>
+      <li>Go to <strong>Variables</strong> and add all required env vars (see below)</li>
+      <li>Railway auto-detects Node.js and runs <code>npm start</code></li>
+      <li>Your GUI will be live at the Railway-provided URL immediately after deploy</li>
+    </ol>
+    <p>The <code>PORT</code> variable is automatically set by Railway — no need to configure it manually.</p>
+
+    <h2 id="self-hosted">Self-Hosted (VPS / Local)</h2>
+    <h3>Using PM2 (recommended for production)</h3>
+    <pre><code>npm install -g pm2
+pm2 start start.js --name sigil
+pm2 save
+pm2 startup</code></pre>
+
+    <h3>Using a reverse proxy (nginx)</h3>
+    <pre><code>server {
+    listen 80;
+    server_name yourdomain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}</code></pre>
+
+    <h2 id="docker">Docker <span class="badge badge-yellow">Community</span></h2>
+    <p>A Dockerfile is not included in the repo yet, but you can create one:</p>
+    <pre><code>FROM node:20-slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y \
+    libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+EXPOSE 8080
+CMD ["node", "start.js"]</code></pre>
+    <pre><code>docker build -t sigil .
+docker run -d --env-file .env -p 8080:8080 sigil</code></pre>
+
+    <h2 id="env">Environment Variables</h2>
+    <p><span class="req-dot req"></span> Required &nbsp; <span class="req-dot opt"></span> Optional</p>
+    <table class="env-table">
+      <thead><tr><th>Variable</th><th>Description</th><th>Required</th></tr></thead>
+      <tbody>
+        <tr><td>DISCORD_TOKEN</td><td>Your bot's token from the Discord developer portal</td><td><span class="req-dot req"></span></td></tr>
+        <tr><td>CLIENT_ID</td><td>Your Discord application's client ID</td><td><span class="req-dot req"></span></td></tr>
+        <tr><td>GUILD_ID</td><td>Guild ID for guild-scoped command registration (dev only)</td><td><span class="req-dot opt"></span></td></tr>
+        <tr><td>PORT</td><td>Port for the GUI server (default: 8080). Set automatically by Railway.</td><td><span class="req-dot opt"></span></td></tr>
+        <tr><td>GEMINI_API_KEY</td><td>Google Gemini API key — required for AI Generate (currently disabled)</td><td><span class="req-dot opt"></span></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="routes">API Routes</h2>
+    <table class="route-table">
+      <thead><tr><th>Route</th><th>Method</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>/</td><td>GET</td><td>Landing / hero page</td></tr>
+        <tr><td>/brand</td><td>GET</td><td>Brand Builder GUI</td></tr>
+        <tr><td>/community</td><td>GET</td><td>Community Tools GUI</td></tr>
+        <tr><td>/developers</td><td>GET</td><td>This page</td></tr>
+        <tr><td>/health</td><td>GET</td><td>Returns <code>{ok:true, version}</code> — used by the online pill</td></tr>
+        <tr><td>/preview</td><td>POST</td><td>Render brand icon + banner (JSON body)</td></tr>
+        <tr><td>/preview/welcome</td><td>POST</td><td>Render welcome card image</td></tr>
+        <tr><td>/preview/rankcard</td><td>POST</td><td>Render rank card image</td></tr>
+        <tr><td>/preview/serverstats</td><td>POST</td><td>Render server stats card</td></tr>
+        <tr><td>/generate</td><td>POST</td><td>AI brand generation — <strong>disabled (coming soon)</strong></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Bot Commands</h2>
+    <p>All commands are Discord slash commands. Register them with <code>node src/deploy-commands.js</code> before first use.</p>
+    <table class="route-table">
+      <thead><tr><th>Command</th><th>Category</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>/welcomecard</td><td>Community</td><td>Generate a styled welcome card image</td></tr>
+        <tr><td>/rankcard</td><td>Community</td><td>Generate a rank/XP card image</td></tr>
+        <tr><td>/serverstats</td><td>Community</td><td>Generate a server statistics card</td></tr>
+        <tr><td>/eventbanner</td><td>Brand</td><td>Generate an event announcement banner</td></tr>
+        <tr><td>/announcebanner</td><td>Brand</td><td>Generate a general announcement banner</td></tr>
+        <tr><td>/certificate</td><td>Brand</td><td>Generate a member certificate image</td></tr>
+        <tr><td>/sigilconfig</td><td>Config</td><td>Configure automation per-guild</td></tr>
+        <tr><td>/gui</td><td>Utility</td><td>Post a link to the GUI web tools</td></tr>
+        <tr><td>/help</td><td>Utility</td><td>List all commands with descriptions</td></tr>
+      </tbody>
+    </table>
+  </main>
+</div>
+
+<footer style="border-top:1px solid var(--border);padding:1.5rem;text-align:center;color:var(--faint);font-size:.8rem;">
+  <a href="https://github.com/ShadowWalkerNC/Sigil" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;">github.com/ShadowWalkerNC/Sigil</a> &mdash; Sigil is open source.
+</footer>
+
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sigil — Discord Brand & Community Tools</title>
+  <title>Sigil — Discord Branding & Community Tools</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,248 +11,276 @@
     :root {
       --bg:#08080f; --surface:#111118; --surface2:#18181f; --surface3:#202028;
       --border:rgba(255,255,255,.1); --text:#f0f2f8; --muted:#9299b0; --faint:#555d78;
-      --primary:#8b0000; --secondary:#4b0082;
-      --brand-grad:linear-gradient(135deg,#ff4444,#8b0000,#4b0082);
-      --comm-grad:linear-gradient(135deg,#5865F2,#eb459e);
-      --radius:.85rem; --radiuslg:1.5rem;
+      --primary:#8b0000; --secondary:#4b0082; --discord:#5865F2;
+      --success:#39ff14; --radius:.75rem; --radiuslg:1.25rem;
       --font:'Inter',sans-serif; --fontd:'Orbitron',sans-serif;
       --ease:cubic-bezier(.16,1,.3,1);
     }
-    [data-theme="light"] {
-      --bg:#f0f2f8; --surface:#fff; --surface2:#e8eaf2; --surface3:#dde0ee;
-      --border:rgba(0,0,0,.1); --text:#0e0e1a; --muted:#555d78; --faint:#9299b0;
-    }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}
-    body{
-      font-family:var(--font);color:var(--text);background:var(--bg);
-      min-height:100dvh;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;padding:1.5rem;
-    }
-    button{cursor:pointer;border:none;background:none;font:inherit;color:inherit;}
+    body{font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.6;}
 
-    /* ── Noise overlay ── */
-    body::before{
-      content:'';position:fixed;inset:0;
-      background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-      pointer-events:none;z-index:0;
-    }
+    /* ── Navbar ── */
+    nav{position:sticky;top:0;z-index:100;background:rgba(8,8,15,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;padding:.65rem 1.5rem;}
+    .nav-logo{font-family:var(--fontd);font-weight:900;font-size:1.15rem;background:linear-gradient(135deg,#ff4444,#8b0000,#4b0082);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
+    .nav-links{display:flex;gap:.25rem;margin-left:auto;}
+    .nav-a{padding:.35rem .8rem;border-radius:.5rem;font-size:.82rem;font-weight:600;color:var(--muted);text-decoration:none;transition:all 150ms;}
+    .nav-a:hover{color:var(--text);background:var(--surface2);}
+    .nav-cta{padding:.38rem .9rem;border-radius:.5rem;font-size:.82rem;font-weight:700;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;text-decoration:none;transition:opacity 150ms;}
+    .nav-cta:hover{opacity:.88;}
 
-    /* ── Glow blobs ── */
-    .blob{
-      position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;opacity:.18;
-    }
-    .blob-1{width:600px;height:600px;background:#8b0000;top:-180px;left:-180px;}
-    .blob-2{width:500px;height:500px;background:#4b0082;bottom:-150px;right:-150px;}
-    .blob-3{width:400px;height:400px;background:#5865F2;top:50%;left:50%;transform:translate(-50%,-50%);opacity:.08;}
+    /* ── Hero ── */
+    .hero{min-height:92vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4rem 1.5rem 3rem;position:relative;overflow:hidden;}
+    .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(139,0,0,.22),transparent 70%),radial-gradient(ellipse 60% 50% at 80% 80%,rgba(75,0,130,.18),transparent 60%);pointer-events:none;}
+    .hero-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .85rem;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:1.5rem;letter-spacing:.05em;}
+    .hero-badge span{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);flex-shrink:0;}
+    h1{font-family:var(--fontd);font-size:clamp(2.4rem,7vw,5rem);font-weight:900;line-height:1.08;margin-bottom:1.25rem;}
+    h1 .grad{background:linear-gradient(135deg,#ff6666,#8b0000,#4b0082,#7b5ea7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .hero-sub{font-size:clamp(1rem,2.5vw,1.25rem);color:var(--muted);max-width:600px;margin:0 auto 2.5rem;font-weight:400;}
+    .hero-btns{display:flex;flex-wrap:wrap;gap:.75rem;justify-content:center;}
+    .btn{padding:.7rem 1.6rem;border-radius:.65rem;font-size:.95rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.45rem;transition:all 180ms var(--ease);border:none;cursor:pointer;}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(139,0,0,.4);}
+    .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+    .btn-ghost:hover{background:var(--surface2);transform:translateY(-2px);}
+    .btn-discord{background:#5865F2;color:#fff;}
+    .btn-discord:hover{background:#4752c4;transform:translateY(-2px);}
 
-    /* ── Layout ── */
-    .wrap{position:relative;z-index:1;width:100%;max-width:860px;}
+    /* ── What is Sigil ── */
+    .section{padding:5rem 1.5rem;max-width:1100px;margin:0 auto;}
+    .section-label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--faint);margin-bottom:.6rem;}
+    .section-title{font-family:var(--fontd);font-size:clamp(1.6rem,4vw,2.4rem);font-weight:900;margin-bottom:1rem;}
+    .section-sub{color:var(--muted);font-size:1rem;max-width:580px;margin-bottom:3rem;line-height:1.7;}
 
-    /* ── Header ── */
-    .header{text-align:center;margin-bottom:3rem;}
-    .logo{
-      font-family:var(--fontd);font-weight:900;font-size:clamp(2.4rem,8vw,4rem);
-      background:var(--brand-grad);-webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;background-clip:text;
-      letter-spacing:.08em;line-height:1;
-    }
-    .tagline{
-      margin-top:.75rem;font-size:clamp(.9rem,2.5vw,1.1rem);
-      color:var(--muted);font-weight:500;letter-spacing:.02em;
-    }
-    .version{
-      display:inline-flex;align-items:center;gap:6px;
-      margin-top:1rem;padding:.3rem .8rem;border-radius:999px;
-      background:var(--surface);border:1px solid var(--border);
-      font-size:.72rem;font-weight:700;color:var(--faint);
-    }
-    .version .dot{width:7px;height:7px;border-radius:50%;background:#39ff14;box-shadow:0 0 7px #39ff14;}
+    /* ── Feature cards ── */
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem;}
+    .feat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radiuslg);padding:1.75rem;transition:border-color 200ms,transform 200ms;}
+    .feat-card:hover{border-color:rgba(255,255,255,.2);transform:translateY(-3px);}
+    .feat-icon{font-size:2rem;margin-bottom:1rem;}
+    .feat-card h3{font-size:1rem;font-weight:800;margin-bottom:.4rem;}
+    .feat-card p{font-size:.875rem;color:var(--muted);line-height:1.65;}
+    .feat-tag{display:inline-block;margin-top:.75rem;padding:.2rem .6rem;border-radius:999px;font-size:.68rem;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--faint);}
 
-    /* ── Cards ── */
-    .cards{
-      display:grid;grid-template-columns:1fr;
-      gap:1rem;
-    }
-    @media(min-width:600px){.cards{grid-template-columns:1fr 1fr;gap:1.25rem;}}
+    /* ── How it works ── */
+    .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;counter-reset:step;}
+    .step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radiuslg);padding:1.5rem;position:relative;}
+    .step-num{font-family:var(--fontd);font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.5rem;}
+    .step-card h3{font-size:.95rem;font-weight:800;margin-bottom:.35rem;}
+    .step-card p{font-size:.83rem;color:var(--muted);line-height:1.6;}
 
-    .card{
-      position:relative;border-radius:var(--radiuslg);overflow:hidden;
-      border:1px solid var(--border);background:var(--surface);
-      text-decoration:none;color:var(--text);
-      display:flex;flex-direction:column;
-      transition:transform 220ms var(--ease),box-shadow 220ms var(--ease),border-color 220ms;
-      cursor:pointer;
-    }
-    .card:hover{
-      transform:translateY(-4px);
-      box-shadow:0 20px 60px rgba(0,0,0,.5);
-    }
-    .card.brand:hover{border-color:rgba(139,0,0,.6);}
-    .card.comm:hover{border-color:rgba(88,101,242,.6);}
+    /* ── Tools showcase ── */
+    .tools-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem;}
+    .tool-card{border-radius:var(--radiuslg);overflow:hidden;border:1px solid var(--border);background:var(--surface);}
+    .tool-card-header{padding:1.75rem 1.75rem 1.25rem;}
+    .tool-card-header h3{font-size:1.15rem;font-weight:800;margin-bottom:.35rem;display:flex;align-items:center;gap:.5rem;}
+    .tool-card-header p{font-size:.875rem;color:var(--muted);line-height:1.6;}
+    .tool-card-footer{padding:1rem 1.75rem;border-top:1px solid var(--border);background:var(--surface2);display:flex;justify-content:space-between;align-items:center;}
+    .tool-pill{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:999px;font-size:.72rem;font-weight:700;background:var(--surface3);border:1px solid var(--border);color:var(--muted);}
+    .brand-accent .tool-card-header h3{background:linear-gradient(135deg,#ff4444,#8b0000,#4b0082);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .community-accent .tool-card-header h3{background:linear-gradient(135deg,#5865F2,#eb459e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 
-    .card-hero{
-      height:140px;position:relative;overflow:hidden;
-      display:flex;align-items:center;justify-content:center;
-    }
-    .card.brand .card-hero{background:linear-gradient(135deg,#1a0000,#2e0000,#1a0020);}
-    .card.comm  .card-hero{background:linear-gradient(135deg,#000318,#0a0030,#180010);}
-
-    .card-hero-icon{
-      font-size:3.5rem;z-index:1;
-      filter:drop-shadow(0 0 20px currentColor);
-    }
-    .card.brand .card-hero-icon{color:#ff4444;}
-    .card.comm  .card-hero-icon{color:#5865F2;}
-
-    /* animated shimmer on hover */
-    .card-hero::after{
-      content:'';position:absolute;inset:0;
-      background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,.04) 50%,transparent 60%);
-      background-size:200% 200%;background-position:100% 0;
-      transition:background-position 500ms var(--ease);
-    }
-    .card:hover .card-hero::after{background-position:0 100%;}
-
-    /* top accent bar */
-    .card-bar{height:3px;width:100%;}
-    .card.brand .card-bar{background:var(--brand-grad);}
-    .card.comm  .card-bar{background:var(--comm-grad);}
-
-    .card-body{padding:1.4rem 1.5rem 1.6rem;flex:1;display:flex;flex-direction:column;gap:.5rem;}
-    .card-title{
-      font-family:var(--fontd);font-size:1rem;font-weight:700;
-      letter-spacing:.06em;
-    }
-    .card.brand .card-title{background:var(--brand-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-    .card.comm  .card-title{background:var(--comm-grad); -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-    .card-desc{font-size:.85rem;color:var(--muted);line-height:1.6;}
-
-    .card-features{
-      display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem;
-    }
-    .feat{
-      padding:.22rem .6rem;border-radius:999px;font-size:.7rem;font-weight:700;
-      background:var(--surface2);border:1px solid var(--border);color:var(--faint);
-    }
-
-    .card-cta{
-      margin-top:auto;padding-top:1rem;
-      display:flex;align-items:center;justify-content:space-between;
-    }
-    .cta-btn{
-      padding:.5rem 1.1rem;border-radius:.55rem;font-size:.82rem;font-weight:700;
-      border:none;color:#fff;transition:opacity 160ms;
-    }
-    .cta-btn:hover{opacity:.88;}
-    .card.brand .cta-btn{background:var(--brand-grad);}
-    .card.comm  .cta-btn{background:var(--comm-grad);}
-    .cta-arrow{font-size:1.1rem;color:var(--faint);transition:transform 200ms var(--ease);}
-    .card:hover .cta-arrow{transform:translateX(4px);color:var(--muted);}
+    /* ── Demo server CTA ── */
+    .demo-banner{background:linear-gradient(135deg,rgba(88,101,242,.15),rgba(235,69,158,.1));border:1px solid rgba(88,101,242,.3);border-radius:var(--radiuslg);padding:2.5rem;text-align:center;margin:0 1.5rem;max-width:800px;margin:0 auto;}
+    .demo-banner h2{font-family:var(--fontd);font-size:1.6rem;font-weight:900;margin-bottom:.6rem;}
+    .demo-banner p{color:var(--muted);margin-bottom:1.5rem;font-size:.95rem;}
 
     /* ── Footer ── */
-    .footer{
-      margin-top:2.5rem;text-align:center;
-      font-size:.75rem;color:var(--faint);
-      display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;align-items:center;
-    }
-    .footer a{color:var(--faint);text-decoration:none;}
-    .footer a:hover{color:var(--muted);}
-    .footer-sep{opacity:.3;}
+    footer{border-top:1px solid var(--border);padding:2rem 1.5rem;text-align:center;color:var(--faint);font-size:.82rem;}
+    footer a{color:var(--muted);text-decoration:none;}
+    footer a:hover{color:var(--text);}
+    .footer-links{display:flex;justify-content:center;gap:1.5rem;margin-bottom:.75rem;flex-wrap:wrap;}
 
-    /* ── Theme btn ── */
-    .theme-btn{
-      position:fixed;top:1rem;right:1rem;z-index:10;
-      width:36px;height:36px;border-radius:.5rem;
-      background:var(--surface);border:1px solid var(--border);
-      display:grid;place-items:center;font-size:1rem;
-      transition:background 150ms;
+    /* ── Divider ── */
+    .divider{height:1px;background:var(--border);margin:0;}
+
+    @media(max-width:640px){
+      .nav-links .nav-a:not(.nav-cta){display:none;}
     }
-    .theme-btn:hover{background:var(--surface2);}
   </style>
 </head>
 <body>
 
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
-<div class="blob blob-3"></div>
-
-<button class="theme-btn" id="themeBtn" title="Toggle theme">&#9680;</button>
-
-<div class="wrap">
-
-  <header class="header">
-    <div class="logo">SIGIL</div>
-    <p class="tagline">Professional Discord brand & community image tools</p>
-    <div class="version"><span class="dot"></span> v2.0.0 &nbsp;&bull;&nbsp; Online</div>
-  </header>
-
-  <div class="cards">
-
-    <a class="card brand" href="/brand">
-      <div class="card-bar"></div>
-      <div class="card-hero">
-        <span class="card-hero-icon">&#127912;</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">BRAND BUILDER</div>
-        <p class="card-desc">Design your server's complete visual identity — icons, banners, palettes, and AI-generated brand kits in one wizard.</p>
-        <div class="card-features">
-          <span class="feat">Icons</span>
-          <span class="feat">Banners</span>
-          <span class="feat">Palettes</span>
-          <span class="feat">AI Generate</span>
-          <span class="feat">8 Templates</span>
-          <span class="feat">Share Link</span>
-        </div>
-        <div class="card-cta">
-          <button class="cta-btn">Open Builder</button>
-          <span class="cta-arrow">&#8594;</span>
-        </div>
-      </div>
-    </a>
-
-    <a class="card comm" href="/community">
-      <div class="card-bar"></div>
-      <div class="card-hero">
-        <span class="card-hero-icon">&#127942;</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title">COMMUNITY TOOLS</div>
-        <p class="card-desc">Generate welcome cards, rank cards, and server stat images with live previews and one-click Discord commands.</p>
-        <div class="card-features">
-          <span class="feat">Welcome Card</span>
-          <span class="feat">Rank Card</span>
-          <span class="feat">Server Stats</span>
-          <span class="feat">Live Preview</span>
-          <span class="feat">Copy Command</span>
-        </div>
-        <div class="card-cta">
-          <button class="cta-btn">Open Tools</button>
-          <span class="cta-arrow">&#8594;</span>
-        </div>
-      </div>
-    </a>
-
+<nav>
+  <a class="nav-logo" href="/">SIGIL</a>
+  <div class="nav-links">
+    <a class="nav-a" href="/brand">&#127912; Brand Builder</a>
+    <a class="nav-a" href="/community">&#127942; Community Tools</a>
+    <a class="nav-a" href="/developers">&#128196; Developers</a>
+    <a class="nav-cta" href="/brand">Get Started</a>
   </div>
+</nav>
 
-  <footer class="footer">
-    <span>Sigil &copy; 2026</span>
-    <span class="footer-sep">&bull;</span>
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-badge"><span></span> Live Demo — Free to Use</div>
+  <h1>Brand your Discord<br/><span class="grad">server in minutes.</span></h1>
+  <p class="hero-sub">Sigil is an open-source Discord bot + web toolkit that generates custom icons, banners, welcome cards, and rank cards — no design experience needed.</p>
+  <div class="hero-btns">
+    <a class="btn btn-primary" href="/brand">&#127912; Open Brand Builder</a>
+    <a class="btn btn-ghost" href="/community">&#127942; Community Tools</a>
+    <a class="btn btn-discord" href="https://discord.gg/7c89HKrVe" target="_blank" rel="noopener">&#128279; Demo Server</a>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── WHAT IS SIGIL ── -->
+<section class="section">
+  <div class="section-label">What is Sigil</div>
+  <h2 class="section-title">Everything your server needs to look professional.</h2>
+  <p class="section-sub">Sigil combines a Discord slash-command bot with a visual web GUI. Use the browser tools to design and preview assets live, then copy the Discord command to generate them directly in your server — no uploads, no third-party apps.</p>
+
+  <div class="features">
+    <div class="feat-card">
+      <div class="feat-icon">&#127912;</div>
+      <h3>Brand Builder</h3>
+      <p>Pick a template, customise colors, fonts, and shapes, then export a matching icon and banner. Eight themes included out of the box — from Dark Fantasy to Cyberpunk.</p>
+      <span class="feat-tag">Canvas-rendered</span>
+      <span class="feat-tag">Instant download</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">&#127881;</div>
+      <h3>Welcome Cards</h3>
+      <p>Auto-generate styled welcome images when new members join. Customise the accent colour, background, font, and message — previewed live in the browser before you commit.</p>
+      <span class="feat-tag">/welcomecard</span>
+      <span class="feat-tag">Automation ready</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">&#127942;</div>
+      <h3>Rank Cards</h3>
+      <p>Show XP progress bars, level, and rank in a sleek card image. Works alongside any XP levelling system that supports slash commands.</p>
+      <span class="feat-tag">/rankcard</span>
+      <span class="feat-tag">XP bar</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">&#128202;</div>
+      <h3>Server Stats</h3>
+      <p>One command generates a visual snapshot of your server — member count, channels, roles, emoji count, and boost level — in a single shareable card.</p>
+      <span class="feat-tag">/serverstats</span>
+      <span class="feat-tag">Live data</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">&#9881;&#65039;</div>
+      <h3>Automation Engine</h3>
+      <p>Set it and forget it. Configure auto-welcome, auto-goodbye, member milestone celebrations, and boost shoutouts — all via slash commands, no code required.</p>
+      <span class="feat-tag">/sigilconfig</span>
+      <span class="feat-tag">SQLite persistence</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">&#10024;</div>
+      <h3>AI Generate <span style="font-size:.7rem;padding:.2rem .5rem;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--faint);font-weight:700;vertical-align:middle;">Coming Soon</span></h3>
+      <p>Describe your server in a sentence and let AI suggest a full brand kit — colours, fonts, shapes, and a generated logo image. Currently in development.</p>
+      <span class="feat-tag">Disabled</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="section">
+  <div class="section-label">How it works</div>
+  <h2 class="section-title">Three steps to a branded server.</h2>
+  <p class="section-sub" style="margin-bottom:2rem;">No installs needed for the web tools. Add the bot to your server when you're ready to run commands.</p>
+  <div class="steps">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <h3>Design in the browser</h3>
+      <p>Open the Brand Builder or Community Tools. Tweak colours, fonts, and layouts. See changes update live on canvas in real time.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <h3>Download or copy</h3>
+      <p>Download your PNG assets directly from the browser, or copy the auto-generated Discord slash command from the Command box below each preview.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <h3>Run the command</h3>
+      <p>Paste the copied command into your Discord server. Sigil bot renders and posts the image instantly with your exact settings.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">04</div>
+      <h3>Automate it</h3>
+      <p>Use <code style="font-size:.8rem;background:var(--surface2);padding:.1rem .35rem;border-radius:.3rem;">/sigilconfig</code> to set up automatic welcome cards, goodbye messages, and milestone alerts — fire and forget.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── TOOLS ── -->
+<section class="section">
+  <div class="section-label">Tools</div>
+  <h2 class="section-title">Two focused workspaces.</h2>
+  <p class="section-sub" style="margin-bottom:2rem;">Each tool is purpose-built and mobile-friendly.</p>
+  <div class="tools-grid">
+    <div class="tool-card brand-accent">
+      <div class="tool-card-header">
+        <h3>&#127912; Brand Builder</h3>
+        <p>A 4-step wizard: pick a template, set colours, choose a shape and font, then generate your icon and banner. Exports 512×512 Discord icon and 960×240 banner.</p>
+        <ul style="margin-top:1rem;padding-left:1.1rem;font-size:.83rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem;">
+          <li>8 built-in templates (Dark Fantasy, Cyberpunk, Fantasy RPG, and more)</li>
+          <li>Custom primary + secondary colours</li>
+          <li>Circle, square, hex, diamond, shield, rounded shapes</li>
+          <li>8 font options + 10 background styles</li>
+          <li>One-click PNG download</li>
+        </ul>
+      </div>
+      <div class="tool-card-footer">
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+          <span class="tool-pill">Canvas</span>
+          <span class="tool-pill">No upload</span>
+          <span class="tool-pill">Instant</span>
+        </div>
+        <a class="btn btn-primary" style="padding:.4rem 1rem;font-size:.8rem;" href="/brand">Open &#8594;</a>
+      </div>
+    </div>
+    <div class="tool-card community-accent">
+      <div class="tool-card-header">
+        <h3>&#127942; Community Tools</h3>
+        <p>Design and preview welcome cards, rank cards, and server stat images. Each panel shows a live preview and generates the exact Discord command to reproduce it.</p>
+        <ul style="margin-top:1rem;padding-left:1.1rem;font-size:.83rem;color:var(--muted);display:flex;flex-direction:column;gap:.3rem;">
+          <li>Welcome card with accent colour + background picker</li>
+          <li>Rank card with XP bar, level, and rank display</li>
+          <li>Server stats card — members, channels, boosts, age</li>
+          <li>Copy-ready Discord commands</li>
+          <li>Download PNG from browser</li>
+        </ul>
+      </div>
+      <div class="tool-card-footer">
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+          <span class="tool-pill">Server-rendered</span>
+          <span class="tool-pill">Live preview</span>
+        </div>
+        <a class="btn btn-discord" style="padding:.4rem 1rem;font-size:.8rem;" href="/community">Open &#8594;</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── DEMO SERVER ── -->
+<section class="section" style="padding-top:4rem;padding-bottom:5rem;">
+  <div class="demo-banner">
+    <h2>&#128279; Try it in our demo server</h2>
+    <p>Join the Sigil demo Discord server to see the bot in action. Test every command, trigger automation events, and see real cards posted live.</p>
+    <a class="btn btn-discord" href="https://discord.gg/7c89HKrVe" target="_blank" rel="noopener">Join discord.gg/7c89HKrVe</a>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<footer>
+  <div class="footer-links">
     <a href="/brand">Brand Builder</a>
-    <span class="footer-sep">&bull;</span>
     <a href="/community">Community Tools</a>
-    <span class="footer-sep">&bull;</span>
-    <a href="/health">API Status</a>
-  </footer>
+    <a href="/developers">Developers</a>
+    <a href="https://github.com/ShadowWalkerNC/Sigil" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://discord.gg/7c89HKrVe" target="_blank" rel="noopener">Demo Server</a>
+  </div>
+  <p>Sigil &mdash; Open-source Discord branding toolkit. Built by ShadowWalker.</p>
+</footer>
 
-</div>
-
-<script>
-  document.getElementById('themeBtn').addEventListener('click', () => {
-    const r = document.documentElement;
-    r.setAttribute('data-theme', r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-  });
-</script>
 </body>
 </html>
