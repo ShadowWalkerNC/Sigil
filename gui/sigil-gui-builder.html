@@ -41,7 +41,6 @@
     button { cursor: pointer; border: none; background: none; }
     fieldset { border: none; }
 
-    /* ── Navbar ── */
     .navbar {
       position: sticky; top: 0; z-index: 100;
       background: var(--surface); border-bottom: 1px solid var(--border);
@@ -74,51 +73,24 @@
       .nav-btn.hide-xs { display:none; }
     }
 
-    /* ── Page body ── */
     .page { display:flex; flex-direction:column; }
-    @media(min-width:900px) {
-      .page { flex-direction:row; min-height:calc(100dvh - 52px); }
-    }
+    @media(min-width:900px) { .page { flex-direction:row; min-height:calc(100dvh - 52px); } }
 
-    /* ── Sidebar ── */
-    .sidebar {
-      background:var(--surface); border-bottom:1px solid var(--border);
-      display:flex; flex-direction:column;
-    }
+    .sidebar { background:var(--surface); border-bottom:1px solid var(--border); display:flex; flex-direction:column; }
     @media(min-width:900px) {
-      .sidebar {
-        width:380px; flex-shrink:0;
-        border-bottom:none; border-right:1px solid var(--border);
-        position:sticky; top:52px;
-        height:calc(100dvh - 52px); overflow:hidden;
-      }
+      .sidebar { width:380px; flex-shrink:0; border-bottom:none; border-right:1px solid var(--border); position:sticky; top:52px; height:calc(100dvh - 52px); overflow:hidden; }
     }
 
     .wizard-header { padding:1rem 1.25rem 0; }
     .wizard-title { font-family:var(--fontd); font-size:.9rem; font-weight:700; margin-bottom:.85rem; }
 
     .stepper { display:flex; }
-    .step {
-      flex:1; display:flex; flex-direction:column; align-items:center;
-      position:relative; cursor:pointer; padding-bottom:.4rem;
-    }
-    .step::before {
-      content:''; position:absolute; top:13px; left:50%; right:-50%;
-      height:2px; background:var(--border); z-index:0;
-    }
+    .step { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; cursor:pointer; padding-bottom:.4rem; }
+    .step::before { content:''; position:absolute; top:13px; left:50%; right:-50%; height:2px; background:var(--border); z-index:0; }
     .step:last-child::before { display:none; }
-    .step::after {
-      content:''; position:absolute; top:12px; left:-50%; right:50%;
-      height:2px; background:linear-gradient(90deg,var(--primary),var(--secondary));
-      z-index:0; opacity:0; transition:opacity 300ms;
-    }
+    .step::after { content:''; position:absolute; top:12px; left:-50%; right:50%; height:2px; background:linear-gradient(90deg,var(--primary),var(--secondary)); z-index:0; opacity:0; transition:opacity 300ms; }
     .step.done::after { opacity:1; }
-    .step-dot {
-      width:26px; height:26px; border-radius:50%;
-      border:2px solid var(--border); background:var(--surface2);
-      display:grid; place-items:center; font-size:.7rem; font-weight:800;
-      z-index:1; transition:all 240ms var(--ease);
-    }
+    .step-dot { width:26px; height:26px; border-radius:50%; border:2px solid var(--border); background:var(--surface2); display:grid; place-items:center; font-size:.7rem; font-weight:800; z-index:1; transition:all 240ms var(--ease); }
     .step.done   .step-dot { background:linear-gradient(135deg,var(--primary),var(--secondary)); border-color:transparent; color:#fff; }
     .step.active .step-dot { border-color:var(--primary); color:var(--primary); box-shadow:0 0 0 3px rgba(139,0,0,.18); }
     .step-label { font-size:.58rem; font-weight:700; color:var(--faint); margin-top:4px; text-transform:uppercase; letter-spacing:.07em; text-align:center; }
@@ -135,16 +107,9 @@
     .wizard-panel.active { display:block; }
 
     .field { margin-bottom:1rem; }
-    .field > label {
-      display:flex; justify-content:space-between; align-items:center;
-      font-size:.8rem; font-weight:600; margin-bottom:.35rem; color:var(--muted);
-    }
+    .field > label { display:flex; justify-content:space-between; align-items:center; font-size:.8rem; font-weight:600; margin-bottom:.35rem; color:var(--muted); }
     .field > label span { font-weight:400; color:var(--faint); font-size:.75rem; }
-    .inp {
-      width:100%; background:var(--surface2); border:1px solid var(--border);
-      border-radius:var(--radius); padding:.65rem .85rem; font-size:.88rem;
-      transition:border-color 150ms; outline:none;
-    }
+    .inp { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:.65rem .85rem; font-size:.88rem; transition:border-color 150ms; outline:none; }
     .inp:focus { border-color:rgba(255,255,255,.25); }
     textarea.inp { min-height:76px; resize:vertical; }
     select.inp {
@@ -155,10 +120,7 @@
     .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
 
     .color-row { display:flex; gap:.45rem; align-items:center; }
-    .color-row input[type=color] {
-      width:38px; height:36px; border-radius:.4rem;
-      border:1px solid var(--border); padding:2px; background:var(--surface2); cursor:pointer; flex-shrink:0;
-    }
+    .color-row input[type=color] { width:38px; height:36px; border-radius:.4rem; border:1px solid var(--border); padding:2px; background:var(--surface2); cursor:pointer; flex-shrink:0; }
     .color-row .inp { flex:1; }
 
     .range-row { display:grid; grid-template-columns:1fr 42px; gap:.65rem; align-items:center; }
@@ -166,11 +128,7 @@
     .range-val { font-size:.85rem; font-weight:800; text-align:right; }
 
     .chip-wrap { display:flex; flex-wrap:wrap; gap:.4rem; }
-    .chip {
-      padding:.35rem .75rem; border-radius:999px; font-size:.75rem; font-weight:700;
-      border:1px solid var(--border); background:var(--surface2);
-      transition:all 150ms var(--ease); white-space:nowrap;
-    }
+    .chip { padding:.35rem .75rem; border-radius:999px; font-size:.75rem; font-weight:700; border:1px solid var(--border); background:var(--surface2); transition:all 150ms var(--ease); white-space:nowrap; }
     .chip.on { background:linear-gradient(135deg,rgba(139,0,0,.4),rgba(75,0,130,.4)); border-color:rgba(255,255,255,.28); color:#fff; }
 
     .swatch-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
@@ -184,43 +142,21 @@
     .sh:first-child { margin-top:0; }
 
     details.acc { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:.55rem; overflow:hidden; }
-    details.acc summary {
-      padding:.7rem .9rem; font-size:.8rem; font-weight:700; cursor:pointer;
-      list-style:none; display:flex; justify-content:space-between; align-items:center;
-      background:var(--surface2);
-    }
+    details.acc summary { padding:.7rem .9rem; font-size:.8rem; font-weight:700; cursor:pointer; list-style:none; display:flex; justify-content:space-between; align-items:center; background:var(--surface2); }
     details.acc summary::after { content:'\25BE'; font-size:.68rem; color:var(--faint); transition:transform 180ms; }
     details.acc[open] summary::after { transform:rotate(180deg); }
     details.acc .acc-body { padding:.8rem .9rem; }
 
-    .wizard-footer {
-      padding:.85rem 1.25rem; border-top:1px solid var(--divider);
-      display:flex; justify-content:space-between; align-items:center; gap:.5rem;
-      background:var(--surface); flex-shrink:0;
-    }
-    .wbtn {
-      padding:.55rem 1.1rem; border-radius:var(--radius); font-size:.82rem; font-weight:700;
-      border:1px solid var(--border); background:var(--surface2); transition:background 150ms;
-      white-space:nowrap;
-    }
+    .wizard-footer { padding:.85rem 1.25rem; border-top:1px solid var(--divider); display:flex; justify-content:space-between; align-items:center; gap:.5rem; background:var(--surface); flex-shrink:0; }
+    .wbtn { padding:.55rem 1.1rem; border-radius:var(--radius); font-size:.82rem; font-weight:700; border:1px solid var(--border); background:var(--surface2); transition:background 150ms; white-space:nowrap; }
     .wbtn:hover { background:var(--surface3); }
     .wbtn.next { background:linear-gradient(135deg,var(--primary),var(--secondary)); border:none; color:#fff; }
     .wbtn:disabled { opacity:.4; cursor:not-allowed; }
 
-    /* ── Main ── */
     .main { flex:1; min-width:0; display:flex; flex-direction:column; }
-
-    .main-tabs {
-      display:flex; border-bottom:1px solid var(--border);
-      padding:0 1rem; background:var(--surface); flex-shrink:0;
-      overflow-x:auto; -webkit-overflow-scrolling:touch;
-    }
+    .main-tabs { display:flex; border-bottom:1px solid var(--border); padding:0 1rem; background:var(--surface); flex-shrink:0; overflow-x:auto; -webkit-overflow-scrolling:touch; }
     .main-tabs::-webkit-scrollbar { display:none; }
-    .mtab {
-      padding:.65rem .9rem; font-size:.8rem; font-weight:700; color:var(--faint);
-      border-bottom:2px solid transparent; transition:all 150ms; cursor:pointer;
-      white-space:nowrap; flex-shrink:0;
-    }
+    .mtab { padding:.65rem .9rem; font-size:.8rem; font-weight:700; color:var(--faint); border-bottom:2px solid transparent; transition:all 150ms; cursor:pointer; white-space:nowrap; flex-shrink:0; }
     .mtab.on { color:var(--text); border-bottom-color:var(--primary); }
 
     .main-body { padding:1rem; }
@@ -257,14 +193,7 @@
     .palette-table tr:last-child td { border-bottom:none; }
     .color-chip-sm { width:18px; height:18px; border-radius:.22rem; display:inline-block; vertical-align:middle; border:1px solid var(--border); }
 
-    /* Status bar — single line, never overflows */
-    .gen-status {
-      display:none; padding:.6rem .9rem; border-radius:.6rem;
-      background:var(--surface2); border-left:4px solid var(--primary);
-      font-size:.82rem; margin-bottom:.75rem;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      max-width:100%;
-    }
+    .gen-status { display:none; padding:.6rem .9rem; border-radius:.6rem; background:var(--surface2); border-left:4px solid var(--primary); font-size:.82rem; margin-bottom:.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
     progress.gen-prog { width:100%; height:4px; border-radius:999px; border:none; appearance:none; margin-bottom:.65rem; display:none; }
     progress.gen-prog::-webkit-progress-bar { background:var(--surface2); border-radius:999px; }
     progress.gen-prog::-webkit-progress-value { background:linear-gradient(90deg,var(--primary),var(--secondary)); border-radius:999px; }
@@ -286,11 +215,14 @@
     .dialog-close { width:30px; height:30px; border-radius:.4rem; background:var(--surface2); display:grid; place-items:center; font-size:1rem; border:1px solid var(--border); }
     .dialog-body { padding:1.25rem 1.35rem; }
     .dialog-foot { padding:.9rem 1.35rem; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:.45rem; flex-wrap:wrap; }
+
+    /* Share toast */
+    #shareToast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%) translateY(4rem); opacity:0; transition:all 320ms var(--ease); background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.55rem 1.1rem; font-size:.82rem; font-weight:700; pointer-events:none; z-index:200; white-space:nowrap; }
+    #shareToast.show { transform:translateX(-50%) translateY(0); opacity:1; }
   </style>
 </head>
 <body>
 
-  <!-- Navbar -->
   <nav class="navbar">
     <span class="nav-logo">SIGIL</span>
     <div class="nav-sep"></div>
@@ -298,15 +230,17 @@
     <div id="serverPill" class="nav-pill"><span class="dot"></span><span id="serverLabel">Offline</span></div>
     <div class="nav-actions">
       <button class="nav-btn hide-xs" id="themeBtn">&#9680; Theme</button>
+      <button class="nav-btn hide-xs" id="randomBtn">&#9861; Randomize</button>
+      <button class="nav-btn hide-xs" id="shareBtn">&#128279; Share</button>
       <button class="nav-btn hide-xs" id="exportBtn">&#10515; Export</button>
       <button class="nav-btn" id="previewBtn">&#9889; Preview</button>
       <button class="nav-btn primary" id="generateBtn">&#10022; Generate</button>
     </div>
   </nav>
 
-  <div class="page">
+  <div id="shareToast">&#10003; Link copied to clipboard!</div>
 
-    <!-- Sidebar wizard -->
+  <div class="page">
     <aside class="sidebar">
       <div class="wizard-header">
         <div class="wizard-title">Setup Wizard</div>
@@ -356,11 +290,25 @@
             <label for="glowRange">Glow</label>
             <div class="range-row"><input type="range" id="glowRange" min="0" max="25" value="15" /><span class="range-val" id="glowVal">15</span></div>
           </div>
-          <div class="field"><label for="fontSelect">Font</label><select id="fontSelect" class="inp"><option value="Arial Black">Arial Black</option><option value="Impact">Impact</option><option value="Another Danger">Another Danger</option><option value="Bebas Neue">Bebas Neue</option><option value="Oswald">Oswald</option><option value="Playfair Display">Playfair Display</option><option value="Source Code Pro">Source Code Pro</option><option value="Dancing Script">Dancing Script</option></select></div>
+          <div class="field"><label for="fontSelect">Font</label>
+            <select id="fontSelect" class="inp">
+              <option value="Arial Black">Arial Black</option>
+              <option value="Impact">Impact</option>
+              <option value="Another Danger">Another Danger</option>
+              <option value="Bebas Neue">Bebas Neue</option>
+              <option value="Oswald">Oswald</option>
+              <option value="Playfair Display">Playfair Display</option>
+              <option value="Source Code Pro">Source Code Pro</option>
+              <option value="Dancing Script">Dancing Script</option>
+            </select>
+          </div>
           <div class="field">
             <label for="opacityRange">Overlay opacity</label>
             <div class="range-row"><input type="range" id="opacityRange" min="0" max="100" value="85" /><span class="range-val" id="opacityVal">85%</span></div>
           </div>
+          <!-- Output size presets -->
+          <div class="sh">Output size</div>
+          <div id="sizeChips" class="chip-wrap" style="margin-bottom:.85rem"></div>
         </fieldset>
 
         <!-- Step 4: Generate -->
@@ -368,11 +316,11 @@
           <legend class="sh">Generate</legend>
           <div style="margin-bottom:1rem;padding:.85rem;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);font-size:.8rem;color:var(--muted);line-height:1.6">
             <strong style="color:var(--text);display:block;margin-bottom:.3rem">&#9889; Manual build (stable)</strong>
-            Use <strong>Preview</strong> to render your current settings as icon + banner PNGs. No API key needed.
+            Use <strong>Preview</strong> to render your current settings. No API key needed.
           </div>
           <div style="margin-bottom:1rem;padding:.85rem;background:var(--surface2);border-radius:var(--radius);border:1px solid rgba(255,191,0,.25);font-size:.8rem;color:var(--muted);line-height:1.6">
             <strong style="color:var(--warning);display:block;margin-bottom:.3rem">&#9888; AI Generate (beta)</strong>
-            Requires your own Gemini API key. Self-hosted only — the hosted demo has limited quota.
+            Requires your own Gemini API key. Self-hosted only.
           </div>
           <div class="field">
             <label for="apiKey">Gemini API key <span>Beta — optional</span></label>
@@ -385,7 +333,13 @@
           <details class="acc">
             <summary>Advanced options</summary>
             <div class="acc-body">
-              <div class="field"><label for="modelSelect">Model</label><select id="modelSelect" class="inp"><option value="gemini-2.0-flash">gemini-2.0-flash (default)</option><option value="gemini-1.5-pro">gemini-1.5-pro</option><option value="gemini-1.5-flash">gemini-1.5-flash</option></select></div>
+              <div class="field"><label for="modelSelect">Model</label>
+                <select id="modelSelect" class="inp">
+                  <option value="gemini-2.0-flash">gemini-2.0-flash (default)</option>
+                  <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                </select>
+              </div>
               <div class="field">
                 <label for="tempRange">Temperature &nbsp;<span id="tempLbl">0.9</span></label>
                 <input type="range" id="tempRange" min="0" max="20" value="9" style="width:100%" />
@@ -399,7 +353,7 @@
           </details>
         </fieldset>
 
-      </div><!-- /sidebar-body -->
+      </div>
 
       <div class="wizard-footer">
         <button class="wbtn" id="prevBtn" disabled>&#8592; Back</button>
@@ -408,7 +362,6 @@
       </div>
     </aside>
 
-    <!-- Main panel -->
     <main class="main">
       <div class="main-tabs" role="tablist">
         <button class="mtab on" role="tab" data-tab="preview">Preview</button>
@@ -426,7 +379,6 @@
           <button class="dl-btn" id="dlAi" style="display:none">&#8595; AI Image</button>
         </div>
 
-        <!-- Preview tab -->
         <div class="mpanel on" id="tab-preview">
           <div class="preview-grid">
             <div class="mock mock-icon" id="iconCard">
@@ -456,11 +408,11 @@
               <dt>Border</dt>     <dd id="s-border">glow</dd>
               <dt>Glow</dt>       <dd id="s-glow">15</dd>
               <dt>Font</dt>       <dd id="s-font">Arial Black</dd>
+              <dt>Size</dt>       <dd id="s-size">Discord Icon</dd>
             </dl>
           </div>
         </div>
 
-        <!-- Output tab -->
         <div class="mpanel" id="tab-output">
           <div class="panel-card">
             <div class="panel-card-head"><h3>Color palette</h3><span class="tag">Live</span></div>
@@ -474,7 +426,6 @@
           </div>
         </div>
 
-        <!-- AI Image tab -->
         <div class="mpanel" id="tab-ai">
           <div id="aiImageWrap"><img id="aiImageEl" alt="AI generated image" /></div>
           <p id="aiPlaceholder" style="color:var(--faint);font-size:.85rem;margin-top:2rem;text-align:center">AI image appears here after <strong>&#10022; Generate</strong> with a Gemini API key.</p>
@@ -483,7 +434,6 @@
     </main>
   </div>
 
-  <!-- Export dialog -->
   <dialog id="exportDialog">
     <div class="dialog-head"><h3>✦ Export brand config</h3><button class="dialog-close" id="dialogClose">&#10005;</button></div>
     <div class="dialog-body">
@@ -521,6 +471,18 @@ const BACKGROUNDS = [
   {k:'polar',            l:'Polar',     css:'linear-gradient(135deg,#0a1520,#0a2030,#051525)'},
 ];
 const BORDERS = ['none','solid','glow','gradient','double','dashed'];
+const FONTS   = ['Arial Black','Impact','Another Danger','Bebas Neue','Oswald','Playfair Display','Source Code Pro','Dancing Script'];
+
+// ── Output size presets ───────────────────────────────────────────────────
+const SIZES = [
+  {k:'discord-icon',   l:'Discord Icon',   w:512,  h:512,  note:'512×512'},
+  {k:'discord-banner', l:'Discord Banner', w:960,  h:540,  note:'960×540'},
+  {k:'twitch-panel',   l:'Twitch Panel',   w:320,  h:160,  note:'320×160'},
+  {k:'twitch-banner',  l:'Twitch Banner',  w:1200, h:480,  note:'1200×480'},
+  {k:'youtube-art',    l:'YouTube Art',    w:2560, h:1440, note:'2560×1440'},
+  {k:'reddit-banner',  l:'Reddit Banner',  w:1920, h:384,  note:'1920×384'},
+  {k:'square',         l:'Square',         w:1024, h:1024, note:'1024×1024'},
+];
 
 const state = {
   brandName:'Demonfall', tagline:'Unleash the Darkness. Fight the Demons.',
@@ -531,6 +493,7 @@ const state = {
   opacity:85, gradient:true,
   imagePrompt:'ancient demon sigil hovering over a ruined crimson fortress in a violet storm',
   apiKey:'', model:'gemini-2.0-flash', temperature:0.9,
+  sizePreset:'discord-icon',
   step:1, totalSteps:4,
 };
 
@@ -538,6 +501,7 @@ let lastRender=null, serverAlive=false;
 const SERVER = window.location.origin;
 const $ = id => document.getElementById(id);
 const $$ = s => document.querySelectorAll(s);
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 
 function hexToRgba(hex,a){
   const c=hex.replace('#','');
@@ -548,40 +512,95 @@ function dlBlob(b64,name){
   const a=document.createElement('a'); a.href=`data:image/png;base64,${b64}`; a.download=name; a.click();
 }
 
-/**
- * cleanError — always returns a short single-line human-readable string.
- * Never lets a raw API JSON blob or stack trace reach the status bar.
- */
-function cleanError(raw) {
-  if (!raw) return '\u26a0 Something went wrong. Try again.';
-  const s = String(raw);
-  // Already a friendly message from server classifyError()
-  if (s.startsWith('\u26a0')) return s.split('\n')[0].slice(0, 120);
-  // Quota / rate limit
-  if (s.includes('429') || s.includes('quota') || s.includes('RESOURCE_EXHAUSTED') || s.includes('Too Many Requests'))
-    return '\u26a0 Gemini quota exceeded. Wait a moment or use your own API key.';
-  // Bad key
-  if (s.includes('API_KEY_INVALID') || s.includes('400') && s.includes('key'))
-    return '\u26a0 Invalid Gemini API key. Check the key in Step 4.';
-  // Network
-  if (s.includes('fetch') || s.includes('ENOTFOUND') || s.includes('Failed to fetch'))
-    return '\u26a0 Could not reach the server. Check your connection.';
-  // Timeout
-  if (s.includes('timeout') || s.includes('TimeoutError'))
-    return '\u26a0 Request timed out. Try Preview instead.';
-  // JSON parse
-  if (s.includes('JSON') || s.includes('Unexpected token'))
-    return '\u26a0 Server returned an unreadable response. Try again.';
-  // Fallback: first line only, max 120 chars
-  return (s.split('\n')[0] || s).slice(0, 120);
+// ── URL hash state (share / restore) ────────────────────────────────────
+const HASH_KEYS = ['brandName','tagline','description','iconText','bannerText',
+  'primaryHex','secondaryHex','background','border','glow','font','opacity',
+  'gradient','sizePreset'];
+
+function saveHash(){
+  const obj={};
+  HASH_KEYS.forEach(k=>obj[k]=state[k]);
+  try{ window.location.replace('#'+btoa(encodeURIComponent(JSON.stringify(obj)))); }catch{}
 }
 
-function setStatus(msg, type='info'){
-  const el=$('genStatus');
-  el.style.display='block';
-  el.style.borderLeftColor = type==='ok' ? 'var(--success)' : type==='error' ? 'var(--error)' : 'var(--primary)';
-  // Always display one clean line — never raw blobs
-  el.textContent = type==='error' ? cleanError(msg) : msg;
+function loadHash(){
+  try{
+    if(!window.location.hash) return false;
+    const raw = decodeURIComponent(atob(window.location.hash.slice(1)));
+    const obj = JSON.parse(raw);
+    HASH_KEYS.forEach(k=>{ if(obj[k]!==undefined) state[k]=obj[k]; });
+    // push values into form fields
+    $('brandName').value   = state.brandName;
+    $('tagline').value     = state.tagline;
+    $('description').value = state.description;
+    $('iconText').value    = state.iconText;
+    $('bannerText').value  = state.bannerText;
+    $('primaryHex').value  = state.primaryHex;
+    $('secondaryHex').value= state.secondaryHex;
+    try{$('primaryPicker').value  = state.primaryHex;}catch{}
+    try{$('secondaryPicker').value= state.secondaryHex;}catch{}
+    $('glowRange').value   = state.glow;
+    $('opacityRange').value= state.opacity;
+    $('gradientToggle').checked = !!state.gradient;
+    try{$('fontSelect').value = state.font;}catch{}
+    return true;
+  }catch{ return false; }
+}
+
+function shareLink(){
+  saveHash();
+  navigator.clipboard.writeText(window.location.href).then(()=>{
+    const t=$('shareToast'); t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2200);
+  }).catch(()=>{
+    // fallback: select the url bar (can't on mobile, just show toast)
+    const t=$('shareToast'); t.textContent='\u2197 Copy the URL from your address bar';
+    t.classList.add('show'); setTimeout(()=>{ t.classList.remove('show'); t.textContent='\u2713 Link copied to clipboard!'; },2400);
+  });
+}
+
+// ── Randomize ────────────────────────────────────────────────────────────
+function randomize(){
+  const allColors = Object.values(COLORS).flat().map(c=>c.hex);
+  state.primaryHex   = pick(allColors);
+  state.secondaryHex = pick(allColors.filter(h=>h!==state.primaryHex));
+  state.background   = pick(BACKGROUNDS).k;
+  state.border       = pick(BORDERS);
+  state.font         = pick(FONTS);
+  state.glow         = Math.floor(Math.random()*20);
+  state.gradient     = Math.random()>.3;
+  // push to fields
+  $('primaryHex').value   = state.primaryHex;
+  $('secondaryHex').value = state.secondaryHex;
+  try{$('primaryPicker').value   = state.primaryHex;}catch{}
+  try{$('secondaryPicker').value = state.secondaryHex;}catch{}
+  $('glowRange').value    = state.glow;
+  $('gradientToggle').checked = state.gradient;
+  try{$('fontSelect').value = state.font;}catch{}
+  buildChips(); buildSizeChips(); buildColorLibrary(); updatePreview(); saveHash();
+}
+
+// ── Error handling ───────────────────────────────────────────────────────
+function cleanError(raw){
+  if(!raw) return '\u26a0 Something went wrong. Try again.';
+  const s=String(raw);
+  if(s.startsWith('\u26a0')) return s.split('\n')[0].slice(0,120);
+  if(s.includes('429')||s.includes('quota')||s.includes('RESOURCE_EXHAUSTED')||s.includes('Too Many Requests'))
+    return '\u26a0 Gemini quota exceeded. Wait a moment or use your own API key.';
+  if(s.includes('API_KEY_INVALID')||(s.includes('400')&&s.includes('key')))
+    return '\u26a0 Invalid Gemini API key. Check the key in Step 4.';
+  if(s.includes('fetch')||s.includes('ENOTFOUND')||s.includes('Failed to fetch'))
+    return '\u26a0 Could not reach the server. Check your connection.';
+  if(s.includes('timeout')||s.includes('TimeoutError'))
+    return '\u26a0 Request timed out. Try Preview instead.';
+  if(s.includes('JSON')||s.includes('Unexpected token'))
+    return '\u26a0 Server returned an unreadable response. Try again.';
+  return (s.split('\n')[0]||s).slice(0,120);
+}
+function setStatus(msg,type='info'){
+  const el=$('genStatus'); el.style.display='block';
+  el.style.borderLeftColor=type==='ok'?'var(--success)':type==='error'?'var(--error)':'var(--primary)';
+  el.textContent=type==='error'?cleanError(msg):msg;
 }
 function setProgress(v){
   const p=$('genProg');
@@ -589,12 +608,12 @@ function setProgress(v){
   p.style.display='block'; p.value=v;
 }
 
-// Wizard
+// ── Wizard ───────────────────────────────────────────────────────────────
 const LABELS=['Identity','Colors','Style','Generate'];
 function buildStepper(){
   const nav=$('stepper'); nav.innerHTML='';
   LABELS.forEach((l,i)=>{
-    const n=i+1, btn=document.createElement('button');
+    const n=i+1,btn=document.createElement('button');
     btn.className='step'+(n<state.step?' done':n===state.step?' active':'');
     btn.setAttribute('aria-label',`Step ${n}: ${l}`);
     btn.innerHTML=`<span class="step-dot">${n<state.step?'&#10003;':n}</span><span class="step-label">${l}</span>`;
@@ -615,16 +634,12 @@ function goStep(n){
   $$('.wizard-panel').forEach(p=>p.classList.remove('active'));
   $(`panel-${n}`).classList.add('active');
   state.step=n; buildStepper();
-  const sb=document.querySelector('.sidebar-body');
-  if(sb) sb.scrollTop=0;
+  const sb=document.querySelector('.sidebar-body'); if(sb) sb.scrollTop=0;
 }
 $('prevBtn').addEventListener('click',()=>goStep(state.step-1));
-$('nextBtn').addEventListener('click',()=>{
-  if(state.step===state.totalSteps) runPreview(); // Final step = Build (manual)
-  else goStep(state.step+1);
-});
+$('nextBtn').addEventListener('click',()=>{ if(state.step===state.totalSteps) runPreview(); else goStep(state.step+1); });
 
-// Tabs
+// ── Tabs ─────────────────────────────────────────────────────────────────
 $$('[role=tab]').forEach(t=>{
   t.addEventListener('click',()=>{
     $$('[role=tab]').forEach(x=>x.classList.remove('on'));
@@ -633,7 +648,7 @@ $$('[role=tab]').forEach(t=>{
   });
 });
 
-// Color library
+// ── Color library ────────────────────────────────────────────────────────
 function buildColorLibrary(){
   const lib=$('colorLibrary'); lib.innerHTML='';
   Object.entries(COLORS).forEach(([group,items])=>{
@@ -657,32 +672,43 @@ function buildColorLibrary(){
   });
 }
 
-// Chips
+// ── Chips ────────────────────────────────────────────────────────────────
 function buildChips(){
   const bw=$('bgChips'); bw.innerHTML='';
   BACKGROUNDS.forEach(bg=>{
     const b=document.createElement('button'); b.className='chip'+(state.background===bg.k?' on':'');
     b.style.cssText=`background:${bg.css};color:#fff;font-size:.72rem;`;
     b.textContent=bg.l;
-    b.addEventListener('click',()=>{state.background=bg.k;buildChips();updatePreview();});
+    b.addEventListener('click',()=>{state.background=bg.k;buildChips();updatePreview();saveHash();});
     bw.appendChild(b);
   });
   const bdw=$('borderChips'); bdw.innerHTML='';
   BORDERS.forEach(bdr=>{
     const b=document.createElement('button'); b.className='chip'+(state.border===bdr?' on':'');
     b.textContent=bdr.charAt(0).toUpperCase()+bdr.slice(1);
-    b.addEventListener('click',()=>{state.border=bdr;buildChips();updatePreview();});
+    b.addEventListener('click',()=>{state.border=bdr;buildChips();updatePreview();saveHash();});
     bdw.appendChild(b);
   });
 }
 
-// Picker sync
+function buildSizeChips(){
+  const sw=$('sizeChips'); sw.innerHTML='';
+  SIZES.forEach(sz=>{
+    const b=document.createElement('button'); b.className='chip'+(state.sizePreset===sz.k?' on':'');
+    b.title=sz.note;
+    b.textContent=sz.l;
+    b.addEventListener('click',()=>{state.sizePreset=sz.k;buildSizeChips();updatePreview();saveHash();});
+    sw.appendChild(b);
+  });
+}
+
+// ── Picker sync ──────────────────────────────────────────────────────────
 $('primaryPicker').addEventListener('input',e=>{$('primaryHex').value=e.target.value.toUpperCase();updatePreview();});
 $('secondaryPicker').addEventListener('input',e=>{$('secondaryHex').value=e.target.value.toUpperCase();updatePreview();});
 $('primaryHex').addEventListener('input',e=>{try{$('primaryPicker').value=e.target.value;}catch{}updatePreview();});
 $('secondaryHex').addEventListener('input',e=>{try{$('secondaryPicker').value=e.target.value;}catch{}updatePreview();});
 
-// Read state
+// ── Read state ───────────────────────────────────────────────────────────
 function readState(){
   state.brandName   =$('brandName').value.trim()||'Untitled';
   state.tagline     =$('tagline').value.trim();
@@ -741,6 +767,8 @@ function updatePreview(){
   $('s-primary').textContent=state.primaryHex; $('s-secondary').textContent=state.secondaryHex;
   $('s-bg').textContent=state.background; $('s-border').textContent=state.border;
   $('s-glow').textContent=state.glow; $('s-font').textContent=state.font;
+  const sz=SIZES.find(s=>s.k===state.sizePreset)||SIZES[0];
+  $('s-size').textContent=`${sz.l} (${sz.note})`;
   updatePaletteTable();
   $('jsonOutput').value=JSON.stringify(getConfig(),null,2);
 }
@@ -755,14 +783,15 @@ function updatePaletteTable(){
 }
 
 function getConfig(){
+  const sz=SIZES.find(s=>s.k===state.sizePreset)||SIZES[0];
   return {
     brand:{name:state.brandName,tagline:state.tagline,description:state.description,image_prompt:state.imagePrompt},
-    visuals:{icon_text:state.iconText,banner_text:state.bannerText,primary_color:state.primaryHex,secondary_color:state.secondaryHex,background:state.background,border:state.border,glow:state.glow,font:state.font,opacity:state.opacity/100,gradient:state.gradient},
-    ai:{gemini_key:state.apiKey,model:state.model,temperature:state.temperature},
+    visuals:{icon_text:state.iconText,banner_text:state.bannerText,primary_color:state.primaryHex,secondary_color:state.secondaryHex,background:state.background,border:state.border,glow:state.glow,font:state.font,opacity:state.opacity/100,gradient:state.gradient,width:sz.w,height:sz.h},
+    ai:{model:state.model,temperature:state.temperature},
   };
 }
 
-// Server health
+// ── Server health ────────────────────────────────────────────────────────
 async function pingServer(){
   try{const r=await fetch(`${SERVER}/health`,{signal:AbortSignal.timeout(2000)});serverAlive=r.ok;}catch{serverAlive=false;}
   const pill=$('serverPill'),lbl=$('serverLabel');
@@ -771,7 +800,7 @@ async function pingServer(){
 }
 pingServer(); setInterval(pingServer,8000);
 
-// ── Preview (manual — stable) ──
+// ── Preview ──────────────────────────────────────────────────────────────
 async function runPreview(){
   if(!serverAlive){setStatus('\u26a0 Server offline','error');return;}
   updatePreview(); setProgress(30); setStatus('Rendering canvas\u2026','info');
@@ -782,11 +811,12 @@ async function runPreview(){
     if(!data.ok) throw new Error(data.error||'Preview failed');
     setProgress(100); showImages(data); wireDownloads(data);
     setStatus('\u2713 Preview rendered','ok');
+    saveHash();
   }catch(e){setStatus(e.message,'error');}
   finally{setProgress(-1);btn.disabled=false;btn.textContent='\u26a1 Preview';}
 }
 
-// ── Generate (AI beta) ──
+// ── Generate ─────────────────────────────────────────────────────────────
 async function runGenerate(){
   if(!serverAlive){setStatus('\u26a0 Server offline','error');return;}
   if(!state.apiKey){goStep(4);setStatus('\u26a0 AI Generate requires a Gemini API key in Step 4','error');return;}
@@ -794,7 +824,7 @@ async function runGenerate(){
   const btn=$('generateBtn'); btn.disabled=true; btn.textContent='\u27f3 Generating\u2026';
   try{
     setProgress(40);
-    const res=await fetch(`${SERVER}/generate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:state.description,image_prompt:state.imagePrompt,gemini_key:state.apiKey}),signal:AbortSignal.timeout(90000)});
+    const res=await fetch(`${SERVER}/generate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:state.description,image_prompt:state.imagePrompt,gemini_key:state.apiKey,model:state.model,temperature:state.temperature}),signal:AbortSignal.timeout(90000)});
     setProgress(80);
     const data=await res.json();
     if(!data.ok) throw new Error(data.error||'Generate failed');
@@ -810,8 +840,9 @@ async function runGenerate(){
     }
     showImages(data);
     if(data.ai_image_b64) showAiImage(data.ai_image_b64,data.brand?.name||state.brandName);
-    wireDownloads(data); updatePreview(); buildChips(); buildColorLibrary();
+    wireDownloads(data); updatePreview(); buildChips(); buildSizeChips(); buildColorLibrary();
     setProgress(100); setStatus(`\u2713 Brand kit generated${data.ai_image_b64?' + AI image':''}`, 'ok');
+    saveHash();
   }catch(e){setStatus(e.message,'error');}
   finally{setProgress(-1);btn.disabled=false;btn.textContent='\u2726 Generate';}
 }
@@ -838,7 +869,7 @@ function wireDownloads(data){
   if(data.ai_image_b64){$('dlAi').style.display='inline-flex';$('dlAi').onclick=()=>dlBlob(data.ai_image_b64,`${state.brandName}-ai.png`);}
 }
 
-// Export dialog
+// ── Export dialog ────────────────────────────────────────────────────────
 $('exportBtn').addEventListener('click',()=>{updatePreview();$('dialogJson').value=JSON.stringify(getConfig(),null,2);$('exportDialog').showModal();});
 $('dialogClose').addEventListener('click',()=>$('exportDialog').close());
 $('dialogClose2').addEventListener('click',()=>$('exportDialog').close());
@@ -846,14 +877,18 @@ $('dialogCopyBtn').addEventListener('click',async()=>{await navigator.clipboard.
 $('copyJsonBtn').addEventListener('click',async()=>{await navigator.clipboard.writeText($('jsonOutput').value);$('copyJsonBtn').textContent='\u2713 Copied!';setTimeout(()=>$('copyJsonBtn').textContent='\u10063 Copy',1600);});
 
 $('themeBtn').addEventListener('click',()=>{const r=document.documentElement;r.setAttribute('data-theme',r.getAttribute('data-theme')==='dark'?'light':'dark');});
+$('randomBtn').addEventListener('click',randomize);
+$('shareBtn').addEventListener('click',shareLink);
 
-['brandName','tagline','description','iconText','bannerText','apiKey','imagePrompt','fontSelect','modelSelect'].forEach(id=>$(id).addEventListener('input',updatePreview));
-['glowRange','opacityRange','tempRange','gradientToggle'].forEach(id=>$(id).addEventListener('input',updatePreview));
+['brandName','tagline','description','iconText','bannerText','imagePrompt','fontSelect','modelSelect'].forEach(id=>$(id).addEventListener('input',()=>{updatePreview();saveHash();}));
+['glowRange','opacityRange','tempRange','gradientToggle'].forEach(id=>$(id).addEventListener('input',()=>{updatePreview();saveHash();}));
 $('previewBtn').addEventListener('click',runPreview);
 $('generateBtn').addEventListener('click',runGenerate);
+$('apiKey').addEventListener('input',updatePreview);
 
-// Boot
-buildStepper(); buildColorLibrary(); buildChips(); updatePreview();
+// ── Boot ─────────────────────────────────────────────────────────────────
+loadHash();
+buildStepper(); buildColorLibrary(); buildChips(); buildSizeChips(); updatePreview();
 </script>
 </body>
 </html>
