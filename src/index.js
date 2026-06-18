@@ -1,13 +1,39 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
-import { readdirSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { pathToFileURL } from 'url';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDatabase } from './utils/database.js';
+import express from 'express';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// ── GUI Web Server ─────────────────────────────────────────────────────────────
+const app  = express();
+const PORT = Number(process.env.PORT) || 3420;
+
+app.use(express.json({ limit: '1mb' }));
+
+app.get('/', (req, res) => {
+  const htmlPath = path.join(__dirname, '..', 'gui', 'sigil-gui-builder.html');
+  try {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(readFileSync(htmlPath));
+  } catch {
+    res.status(500).json({ error: 'GUI HTML not found.' });
+  }
+});
+
+app.get('/health', (req, res) => {
+  res.json({ ok: true, version: '2.0.0' });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[GUI] Web server running on port ${PORT}`);
+});
+
+// ── Discord Bot ────────────────────────────────────────────────────────────────
 export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,7 +46,6 @@ export const client = new Client({
 
 client.commands = new Collection();
 
-// Load commands
 const cmdDir = path.join(__dirname, 'commands');
 for (const file of readdirSync(cmdDir).filter(f => f.endsWith('.js'))) {
   const cmd = await import(pathToFileURL(path.join(cmdDir, file)).href);
@@ -30,16 +55,14 @@ for (const file of readdirSync(cmdDir).filter(f => f.endsWith('.js'))) {
   }
 }
 
-// Load events
 const evtDir = path.join(__dirname, 'events');
 for (const file of readdirSync(evtDir).filter(f => f.endsWith('.js'))) {
   const evt = await import(pathToFileURL(path.join(evtDir, file)).href);
   const mod = evt.default || evt;
-  if (mod.name === 'interactionCreate') continue; // handled below
+  if (mod.name === 'interactionCreate') continue;
   client.on(mod.name, (...args) => mod.execute(client, ...args));
 }
 
-// Interaction handler
 client.on('interactionCreate', async interaction => {
   if (interaction.isChatInputCommand()) {
     const cmd = client.commands.get(interaction.commandName);
@@ -58,7 +81,6 @@ client.on('interactionCreate', async interaction => {
     return;
   }
 
-  // Button interactions
   if (interaction.isButton()) {
     const mod = await import(pathToFileURL(path.join(evtDir, 'interactionCreate.js')).href);
     await (mod.default || mod).execute(client, interaction);
@@ -66,5 +88,4 @@ client.on('interactionCreate', async interaction => {
 });
 
 initDatabase();
-
 client.login(process.env.TOKEN);
