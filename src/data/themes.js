@@ -2,11 +2,9 @@
 
 /**
  * themes.js — 12 gaming/anime brand presets for Sigil v4.0
- * Each theme is a complete set of visual parameters that can be
- * applied directly to a server profile or GUI picker.
  */
 
-export const THEMES = [
+const THEMES = [
   {
     key:        'cyberpunk',
     name:       'Cyberpunk',
@@ -141,28 +139,16 @@ export const THEMES = [
   },
 ];
 
-/**
- * Look up a theme by key. Returns undefined if not found.
- * @param {string} key
- * @returns {object|undefined}
- */
-export function getTheme(key) {
+function getTheme(key) {
   return THEMES.find(t => t.key === key);
 }
 
-/**
- * Return all themes matching any of the given tags.
- * @param {string[]} tags
- * @returns {object[]}
- */
-export function getThemesByTag(...tags) {
+function getThemesByTag(...tags) {
   return THEMES.filter(t => tags.some(tag => t.tags.includes(tag)));
 }
 
-/**
- * Return a flat list of all theme keys.
- * @returns {string[]}
- */
-export function listThemeKeys() {
+function listThemeKeys() {
   return THEMES.map(t => t.key);
 }
+
+module.exports = { THEMES, getTheme, getThemesByTag, listThemeKeys };
