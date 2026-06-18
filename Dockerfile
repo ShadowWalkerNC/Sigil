@@ -7,7 +7,7 @@ RUN apk add --no-cache \
     cairo-dev pango-dev jpeg-dev giflib-dev
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 COPY . .
 
