@@ -2,6 +2,6 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "sh start.sh"
+startCommand = "node src/index.js"
 restartPolicyType = "ON_FAILURE"
 healthcheckPath = "/health"
