@@ -28,12 +28,8 @@ function autoFontSize(ctx, text, maxWidth, startSize) {
 }
 
 /**
- * Apply a shape clip path to a square canvas context.
+ * Apply a shape clip path to a canvas context.
  * Must be called after ctx.save() and before drawing content.
- * @param {CanvasRenderingContext2D} ctx
- * @param {number} W  canvas width
- * @param {number} H  canvas height
- * @param {string} shape  'circle' | 'rounded' | 'hexagon' | 'diamond' | 'square' (default)
  */
 function applyShapeClip(ctx, W, H, shape) {
     ctx.beginPath();
@@ -49,7 +45,6 @@ function applyShapeClip(ctx, W, H, shape) {
             break;
         }
         case 'hexagon': {
-            // flat-top hexagon matching the CSS clip-path percentages
             const pts = [
                 [0.50, 0.00], [0.93, 0.25], [0.93, 0.75],
                 [0.50, 1.00], [0.07, 0.75], [0.07, 0.25],
@@ -67,7 +62,7 @@ function applyShapeClip(ctx, W, H, shape) {
             ctx.closePath();
             break;
         }
-        default: // 'square' — full rectangle (no clip needed but keep path consistent)
+        default:
             ctx.rect(0, 0, W, H);
     }
     ctx.clip();
@@ -98,7 +93,7 @@ async function renderIcon(opts = {}) {
     const ctx    = canvas.getContext('2d');
     ctx.__fontFamily = font;
 
-    // Apply shape clip before drawing anything
+    // Apply shape clip before drawing background + text
     ctx.save();
     applyShapeClip(ctx, W, H, shape);
 
@@ -119,9 +114,10 @@ async function renderIcon(opts = {}) {
     ctx.fillText(text, W / 2, H / 2);
     ctx.shadowBlur = 0;
 
-    ctx.restore(); // release clip
+    ctx.restore(); // release clip so border draws outside it
 
-    try { getBorderById(border).draw(ctx, W, H, primary, secondary, glow); } catch {}
+    // Border drawn outside shape clip so it traces the silhouette edge
+    try { getBorderById(border).draw(ctx, W, H, primary, secondary, glow, shape); } catch {}
 
     return canvas.toBuffer('image/png');
 }
@@ -177,7 +173,8 @@ async function renderBanner(opts = {}) {
         ctx.fillText(subtitle, x, H * 0.65);
     }
 
-    try { getBorderById(border).draw(ctx, W, H, primary, secondary, glow); } catch {}
+    // Banners are always rectangular; shape not passed
+    try { getBorderById(border).draw(ctx, W, H, primary, secondary, glow, 'square'); } catch {}
 
     return canvas.toBuffer('image/png');
 }
@@ -203,7 +200,6 @@ async function renderPalette(colors = []) {
 
 /**
  * Convenience: render icon + banner + palette in parallel.
- * opts.shape is forwarded to renderIcon only (banners are always rectangular).
  */
 async function renderKit(opts = {}) {
     const [iconBuf, bannerBuf, paletteBuf] = await Promise.all([
