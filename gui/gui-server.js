@@ -16,11 +16,12 @@ const PORT = Number(process.env.PORT) || 8080;
 
 app.use(express.json({ limit: '4mb' }));
 
+// ── Static pages ──────────────────────────────────────────────────────────
+app.get('/',          (req, res) => res.sendFile(path.join(__dirname, 'sigil-gui-builder.html')));
+app.get('/community', (req, res) => res.sendFile(path.join(__dirname, 'sigil-community.html')));
+app.get('/health',    (req, res) => res.json({ ok: true, version: '2.0.0' }));
+
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'sigil-gui-builder.html')));
-app.get('/health', (req, res) => res.json({ ok: true, version: '2.0.0' }));
-
 function clamp(n, min, max) { const v = Number(n); return isNaN(v) ? min : Math.min(max, Math.max(min, v)); }
 function safeHex(hex, fallback = '#ffffff') {
     return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(String(hex || '').trim()) ? String(hex).trim() : fallback;
@@ -93,6 +94,10 @@ app.post('/preview/welcome', async (req, res) => {
         ctx.shadowColor = primary; ctx.shadowBlur = 8;
         ctx.fillText(username, TX, H * 0.30 + 48); ctx.shadowBlur = 0;
         ctx.font = `18px "${font}"`; ctx.fillStyle = '#cccccc'; ctx.fillText(message, TX, H * 0.30 + 80);
+        if (b.member_count) {
+            ctx.font = `13px Arial`; ctx.fillStyle = primary + 'cc';
+            ctx.fillText(String(b.member_count), TX, H * 0.30 + 106);
+        }
         ctx.font = '12px Arial'; ctx.fillStyle = '#ffffff18'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
         ctx.fillText('made with Sigil', W - 12, H - 8);
 
@@ -182,17 +187,17 @@ app.post('/preview/serverstats', async (req, res) => {
         ctx.font = `bold 28px Arial`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.fillText(server_name, 24, 58);
         ctx.font = `bold 13px Arial`; ctx.fillStyle = '#ff73fa';
-        const bl = `🚀 Level ${boost_level} • ${boost_count} Boosts`;
+        const bl = `\uD83D\uDE80 Level ${boost_level} \u2022 ${boost_count} Boosts`;
         ctx.fillText(bl, 24, 82);
         ctx.fillStyle = '#ffffff22'; ctx.fillRect(24, 100, W - 48, 1);
 
         const stats = [
-            { label: 'MEMBERS',  value: member_count.toLocaleString(),  icon: '👥' },
-            { label: 'CHANNELS', value: channel_count.toString(),        icon: '💬' },
-            { label: 'ROLES',    value: role_count.toString(),           icon: '🏷️' },
-            { label: 'EMOJI',    value: emoji_count.toString(),          icon: '😄' },
-            { label: 'BOOSTS',   value: boost_count.toString(),          icon: '🚀' },
-            { label: 'AGE',      value: `${age_days}d`,                  icon: '📅' },
+            { label: 'MEMBERS',  value: member_count.toLocaleString(),  icon: '\uD83D\uDC65' },
+            { label: 'CHANNELS', value: channel_count.toString(),        icon: '\uD83D\uDCAC' },
+            { label: 'ROLES',    value: role_count.toString(),           icon: '\uD83C\uDFF7\uFE0F' },
+            { label: 'EMOJI',    value: emoji_count.toString(),          icon: '\uD83D\uDE04' },
+            { label: 'BOOSTS',   value: boost_count.toString(),          icon: '\uD83D\uDE80' },
+            { label: 'AGE',      value: `${age_days}d`,                  icon: '\uD83D\uDCC5' },
         ];
         const CARD_W = (W - 48 - 40) / 3, CARD_H = 110;
         stats.forEach((s, i) => {
