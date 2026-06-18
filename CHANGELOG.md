@@ -6,6 +6,49 @@ Format: [Semantic Versioning](https://semver.org/) — `[version] — YYYY-MM-DD
 
 ---
 
+## [1.5.1] — 2026-06-18
+
+### Added
+- **`applyShapeClip(ctx, W, H, shape)`** exported from `src/utils/canvas.js` — clips the canvas context to the selected shape before drawing, using native Canvas 2D paths:
+  - `circle` — `ctx.arc()` centered fill
+  - `rounded` — `ctx.roundRect()` with 12% corner radius
+  - `hexagon` — 6-point flat-top polygon matching GUI CSS percentages
+  - `diamond` — 4-point rotated-square polygon
+  - `square` — full rect (no visible clip; keeps code path consistent)
+- **`safeShape(s)`** validator in `gui/gui-server.js` — whitelist-only, falls back to `'square'`
+
+### Changed
+- `renderIcon` in `canvas.js` now accepts a `shape` option and applies the clip via `ctx.save()` / `ctx.restore()` so border drawing remains unclipped
+- `/preview` endpoint now reads `b.shape` from request body and forwards it to `renderKit`
+- `/generate` endpoint:
+  - Adds `"shape"` field to the Gemini brand-design prompt so the AI picks an appropriate silhouette
+  - Validates and passes `shape` to `renderKit`
+  - Includes `shape` in the returned `brand` object so the GUI updates the selector
+- Health endpoint version bumped to `1.5.1`
+
+---
+
+## [1.5.0] — 2026-06-18
+
+### Added
+- **Icon Shape Selector** in GUI Step 3 — 5 shapes with live canvas preview thumbnails:
+  - Circle, Rounded, Square, Hexagon, Diamond
+  - Each button shows a color-filled mini-shape preview before selection
+  - Selecting a shape clips the live icon card in the Preview panel with a CSS transition
+- **Shape persisted in URL hash** (`shape` key) — shared links restore the chosen shape
+- **Shape included in exported Config JSON** under `visuals.shape`
+- **Shape row in embed spec card** — shows human-readable label (e.g. `Circle`)
+- All 8 **brand templates now declare a `shape`** default:
+  - Demonfall → Circle, Cyber Nexus → Square, Arcane Order → Hexagon, Cozy Den → Rounded, Neon Drift → Diamond, Polar Ops → Square, Emerald Fang → Hexagon, Void Protocol → Circle
+- **Randomize** now picks a random shape alongside colors/bg/font/border
+- AI Generate can override shape if `b.shape` is returned in the Gemini brand payload
+
+### Changed
+- GUI Step 3 header re-ordered: Icon shape → Background → Border → Glow → Font → Overlay opacity → Output size
+- `HASH_KEYS` array in GUI extended with `'shape'`
+
+---
+
 ## [1.4.0] — 2026-06-18
 
 ### Added
