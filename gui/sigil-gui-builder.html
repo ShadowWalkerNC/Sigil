@@ -30,360 +30,392 @@
       --ease:      cubic-bezier(.16,1,.3,1);
     }
     [data-theme="light"] {
-      --bg: #f0f2f8; --surface: #fff; --surface2: #e8eaf2; --surface3: #dde0ee;
-      --border: rgba(0,0,0,.1); --divider: rgba(0,0,0,.06);
-      --text: #0e0e1a; --muted: #555d78; --faint: #9299b0;
+      --bg:#f0f2f8; --surface:#fff; --surface2:#e8eaf2; --surface3:#dde0ee;
+      --border:rgba(0,0,0,.1); --divider:rgba(0,0,0,.06);
+      --text:#0e0e1a; --muted:#555d78; --faint:#9299b0;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body { font-family: var(--font); font-size: 15px; color: var(--text); background: var(--bg); line-height: 1.55; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); font-size: 15px; color: var(--text); background: var(--bg); line-height: 1.55; min-height: 100dvh; }
     button, input, select, textarea { font: inherit; color: inherit; }
     button { cursor: pointer; border: none; background: none; }
-    a { color: inherit; }
+    fieldset { border: none; }
 
-    /* ── Layout ── */
-    .app { display: grid; grid-template-rows: 56px 1fr; height: 100vh; overflow: hidden; }
-    .navbar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 1.5rem; gap: 1rem; z-index: 10; }
-    .nav-logo { font-family: var(--fontd); font-weight: 900; font-size: 1.1rem; background: linear-gradient(135deg, #ff4444, #8b0000, #4b0082); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-right: .5rem; }
-    .nav-sep { width: 1px; height: 24px; background: var(--border); }
-    .nav-pill { padding: .3rem .75rem; border-radius: 999px; font-size: .78rem; font-weight: 700; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); display: flex; align-items: center; gap: 6px; transition: all 200ms; }
-    .nav-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
-    .nav-pill.online .dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
-    .nav-actions { margin-left: auto; display: flex; gap: .5rem; align-items: center; }
-    .nav-btn { padding: .35rem .85rem; border-radius: .5rem; font-size: .82rem; font-weight: 600; border: 1px solid var(--border); background: var(--surface2); transition: all 160ms var(--ease); }
-    .nav-btn:hover { background: var(--surface3); }
-    .nav-btn.primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: #fff; }
+    /* ── Navbar ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: .5rem; padding: .6rem 1rem;
+    }
+    .nav-logo { font-family: var(--fontd); font-weight: 900; font-size: 1.1rem;
+      background: linear-gradient(135deg,#ff4444,#8b0000,#4b0082);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .nav-sep { width:1px; height:20px; background:var(--border); flex-shrink:0; }
+    .nav-subtitle { font-size:.8rem; color:var(--muted); font-weight:600; }
+    .nav-pill {
+      padding:.25rem .7rem; border-radius:999px; font-size:.75rem; font-weight:700;
+      border:1px solid var(--border); background:var(--surface2); color:var(--muted);
+      display:flex; align-items:center; gap:5px;
+    }
+    .nav-pill .dot { width:7px; height:7px; border-radius:50%; background:var(--faint); flex-shrink:0; }
+    .nav-pill.online .dot { background:var(--success); box-shadow:0 0 7px var(--success); }
+    .nav-actions { margin-left:auto; display:flex; gap:.4rem; flex-wrap:wrap; }
+    .nav-btn {
+      padding:.35rem .8rem; border-radius:.5rem; font-size:.8rem; font-weight:600;
+      border:1px solid var(--border); background:var(--surface2);
+      transition:background 150ms; white-space:nowrap;
+    }
+    .nav-btn:hover { background:var(--surface3); }
+    .nav-btn.primary { background:linear-gradient(135deg,var(--primary),var(--secondary)); border:none; color:#fff; }
+    /* hide less-critical nav buttons on very small screens */
+    @media(max-width:480px) {
+      .nav-subtitle, .nav-sep { display:none; }
+      .nav-btn.hide-xs { display:none; }
+    }
 
-    .body { display: grid; grid-template-columns: 380px 1fr; overflow: hidden; height: 100%; }
+    /* ── Page body: sidebar + main stacked on mobile, side-by-side on desktop ── */
+    .page { display:flex; flex-direction:column; }
+    @media(min-width:900px) {
+      .page { flex-direction:row; min-height:calc(100dvh - 52px); }
+    }
 
     /* ── Sidebar ── */
-    .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-    .wizard-header { padding: 1.25rem 1.5rem 0; }
-    .wizard-title { font-family: var(--fontd); font-size: .95rem; font-weight: 700; margin-bottom: 1rem; }
+    .sidebar {
+      background:var(--surface); border-bottom:1px solid var(--border);
+      display:flex; flex-direction:column;
+    }
+    @media(min-width:900px) {
+      .sidebar {
+        width:380px; flex-shrink:0;
+        border-bottom:none; border-right:1px solid var(--border);
+        position:sticky; top:52px;
+        height:calc(100dvh - 52px); overflow:hidden;
+      }
+    }
 
-    /* Progress stepper */
-    .stepper { display: flex; gap: 0; margin-bottom: 0; }
-    .step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; cursor: pointer; }
-    .step::before { content: ''; position: absolute; top: 14px; left: 50%; right: -50%; height: 2px; background: var(--border); z-index: 0; }
-    .step:last-child::before { display: none; }
-    .step-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface2); display: grid; place-items: center; font-size: .72rem; font-weight: 800; z-index: 1; transition: all 250ms var(--ease); }
-    .step.done .step-dot  { background: linear-gradient(135deg, var(--primary), var(--secondary)); border-color: transparent; color: #fff; }
-    .step.active .step-dot { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 0 4px rgba(139,0,0,.18); }
-    .step-label { font-size: .65rem; font-weight: 700; color: var(--faint); margin-top: 5px; text-transform: uppercase; letter-spacing: .07em; text-align: center; }
-    .step.active .step-label { color: var(--text); }
-    .step.done .step-label  { color: var(--muted); }
-    .step::after { content: ''; position: absolute; top: 13px; left: -50%; right: 50%; height: 2px; background: linear-gradient(90deg, var(--primary), var(--secondary)); z-index: 0; opacity: 0; transition: opacity 300ms; }
-    .step.done::after { opacity: 1; }
+    .wizard-header { padding:1rem 1.25rem 0; }
+    .wizard-title { font-family:var(--fontd); font-size:.9rem; font-weight:700; margin-bottom:.85rem; }
 
-    .progress-bar-wrap { height: 3px; background: var(--surface2); margin: 1rem 0 0; }
-    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); transition: width 400ms var(--ease); }
+    /* Stepper */
+    .stepper { display:flex; }
+    .step {
+      flex:1; display:flex; flex-direction:column; align-items:center;
+      position:relative; cursor:pointer; padding-bottom:.4rem;
+    }
+    .step::before {
+      content:''; position:absolute; top:13px; left:50%; right:-50%;
+      height:2px; background:var(--border); z-index:0;
+    }
+    .step:last-child::before { display:none; }
+    .step::after {
+      content:''; position:absolute; top:12px; left:-50%; right:50%;
+      height:2px; background:linear-gradient(90deg,var(--primary),var(--secondary));
+      z-index:0; opacity:0; transition:opacity 300ms;
+    }
+    .step.done::after { opacity:1; }
+    .step-dot {
+      width:26px; height:26px; border-radius:50%;
+      border:2px solid var(--border); background:var(--surface2);
+      display:grid; place-items:center; font-size:.7rem; font-weight:800;
+      z-index:1; transition:all 240ms var(--ease);
+    }
+    .step.done   .step-dot { background:linear-gradient(135deg,var(--primary),var(--secondary)); border-color:transparent; color:#fff; }
+    .step.active .step-dot { border-color:var(--primary); color:var(--primary); box-shadow:0 0 0 3px rgba(139,0,0,.18); }
+    .step-label { font-size:.58rem; font-weight:700; color:var(--faint); margin-top:4px; text-transform:uppercase; letter-spacing:.07em; text-align:center; }
+    .step.active .step-label { color:var(--text); }
+    .step.done   .step-label { color:var(--muted); }
 
-    /* Panels */
-    .sidebar-body { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; }
-    .wizard-panel { display: none; }
-    .wizard-panel.active { display: block; }
+    .prog-bar { height:3px; background:var(--surface2); margin:.75rem 0 0; }
+    .prog-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--secondary)); transition:width 380ms var(--ease); }
 
-    .field { margin-bottom: 1.1rem; }
-    .field > label { display: flex; justify-content: space-between; align-items: center; font-size: .82rem; font-weight: 600; margin-bottom: .4rem; color: var(--muted); }
-    .field > label span { font-weight: 400; color: var(--faint); }
-    .inp { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem .9rem; font-size: .88rem; transition: border-color 160ms; outline: none; }
-    .inp:focus { border-color: rgba(255,255,255,.25); }
-    textarea.inp { min-height: 80px; resize: vertical; }
-    select.inp { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%23888'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .75rem center; padding-right: 2rem; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; }
+    /* Sidebar scrollable body */
+    .sidebar-body { padding:1rem 1.25rem; overflow-y:auto; }
+    @media(min-width:900px) { .sidebar-body { flex:1; } }
+
+    .wizard-panel { display:none; }
+    .wizard-panel.active { display:block; }
+
+    /* Fields */
+    .field { margin-bottom:1rem; }
+    .field > label {
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:.8rem; font-weight:600; margin-bottom:.35rem; color:var(--muted);
+    }
+    .field > label span { font-weight:400; color:var(--faint); font-size:.75rem; }
+    .inp {
+      width:100%; background:var(--surface2); border:1px solid var(--border);
+      border-radius:var(--radius); padding:.65rem .85rem; font-size:.88rem;
+      transition:border-color 150ms; outline:none;
+    }
+    .inp:focus { border-color:rgba(255,255,255,.25); }
+    textarea.inp { min-height:76px; resize:vertical; }
+    select.inp {
+      appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%23888'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right .75rem center; padding-right:2rem;
+    }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
 
     /* Color picker row */
-    .color-row { display: flex; gap: .5rem; align-items: center; }
-    .color-row input[type=color] { width: 40px; height: 38px; border-radius: .45rem; border: 1px solid var(--border); padding: 2px; background: var(--surface2); cursor: pointer; flex-shrink: 0; }
-    .color-row .inp { flex: 1; }
+    .color-row { display:flex; gap:.45rem; align-items:center; }
+    .color-row input[type=color] {
+      width:38px; height:36px; border-radius:.4rem;
+      border:1px solid var(--border); padding:2px; background:var(--surface2); cursor:pointer; flex-shrink:0;
+    }
+    .color-row .inp { flex:1; }
 
-    /* Range slider */
-    .range-row { display: grid; grid-template-columns: 1fr 44px; gap: .75rem; align-items: center; }
-    input[type=range] { width: 100%; accent-color: var(--primary); cursor: pointer; }
-    .range-val { font-size: .88rem; font-weight: 800; text-align: right; color: var(--text); }
+    /* Range */
+    .range-row { display:grid; grid-template-columns:1fr 42px; gap:.65rem; align-items:center; }
+    input[type=range] { width:100%; accent-color:var(--primary); cursor:pointer; }
+    .range-val { font-size:.85rem; font-weight:800; text-align:right; }
 
-    /* Chip buttons */
-    .chip-wrap { display: flex; flex-wrap: wrap; gap: .5rem; }
-    .chip { padding: .4rem .8rem; border-radius: 999px; font-size: .78rem; font-weight: 700; border: 1px solid var(--border); background: var(--surface2); transition: all 160ms var(--ease); white-space: nowrap; }
-    .chip:hover { border-color: rgba(255,255,255,.2); }
-    .chip.on { background: linear-gradient(135deg, rgba(139,0,0,.4), rgba(75,0,130,.4)); border-color: rgba(255,255,255,.28); color: #fff; }
+    /* Chips */
+    .chip-wrap { display:flex; flex-wrap:wrap; gap:.4rem; }
+    .chip {
+      padding:.35rem .75rem; border-radius:999px; font-size:.75rem; font-weight:700;
+      border:1px solid var(--border); background:var(--surface2);
+      transition:all 150ms var(--ease); white-space:nowrap;
+    }
+    .chip.on { background:linear-gradient(135deg,rgba(139,0,0,.4),rgba(75,0,130,.4)); border-color:rgba(255,255,255,.28); color:#fff; }
 
     /* Swatch grid */
-    .swatch-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-    .swatch { border-radius: .55rem; overflow: hidden; border: 2px solid transparent; cursor: pointer; transition: all 160ms; }
-    .swatch:hover { transform: scale(1.06); }
-    .swatch.on { border-color: #fff; }
-    .swatch-color { height: 38px; }
-    .swatch-name { font-size: .62rem; font-weight: 700; padding: 3px 4px; background: var(--surface2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .swatch-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+    .swatch { border-radius:.5rem; overflow:hidden; border:2px solid transparent; cursor:pointer; transition:all 140ms; }
+    .swatch:hover { transform:scale(1.05); }
+    .swatch.on { border-color:#fff; }
+    .swatch-color { height:34px; }
+    .swatch-name { font-size:.6rem; font-weight:700; padding:3px 4px; background:var(--surface2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-    /* Section headings in sidebar */
-    .sh { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--faint); margin: 1rem 0 .5rem; }
-    .sh:first-child { margin-top: 0; }
+    /* Section heading */
+    .sh { font-size:.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:var(--faint); margin:.85rem 0 .4rem; }
+    .sh:first-child { margin-top:0; }
 
     /* Accordion */
-    details.acc { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: .6rem; overflow: hidden; }
-    details.acc summary { padding: .75rem 1rem; font-size: .82rem; font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; background: var(--surface2); }
-    details.acc summary::after { content: '\25BE'; font-size: .7rem; color: var(--faint); transition: transform 200ms; }
-    details.acc[open] summary::after { transform: rotate(180deg); }
-    details.acc .acc-body { padding: .85rem 1rem; }
+    details.acc { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:.55rem; overflow:hidden; }
+    details.acc summary {
+      padding:.7rem .9rem; font-size:.8rem; font-weight:700; cursor:pointer;
+      list-style:none; display:flex; justify-content:space-between; align-items:center;
+      background:var(--surface2);
+    }
+    details.acc summary::after { content:'\25BE'; font-size:.68rem; color:var(--faint); transition:transform 180ms; }
+    details.acc[open] summary::after { transform:rotate(180deg); }
+    details.acc .acc-body { padding:.8rem .9rem; }
 
-    /* Wizard footer nav */
-    .wizard-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--divider); display: flex; justify-content: space-between; gap: .5rem; background: var(--surface); }
-    .wbtn { padding: .6rem 1.25rem; border-radius: var(--radius); font-size: .85rem; font-weight: 700; border: 1px solid var(--border); background: var(--surface2); transition: all 160ms var(--ease); }
-    .wbtn:hover { background: var(--surface3); }
-    .wbtn.next { background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; color: #fff; }
-    .wbtn:disabled { opacity: .4; cursor: not-allowed; }
+    /* Wizard footer */
+    .wizard-footer {
+      padding:.85rem 1.25rem; border-top:1px solid var(--divider);
+      display:flex; justify-content:space-between; align-items:center; gap:.5rem;
+      background:var(--surface); flex-shrink:0;
+    }
+    .wbtn {
+      padding:.55rem 1.1rem; border-radius:var(--radius); font-size:.82rem; font-weight:700;
+      border:1px solid var(--border); background:var(--surface2); transition:background 150ms;
+      white-space:nowrap;
+    }
+    .wbtn:hover { background:var(--surface3); }
+    .wbtn.next { background:linear-gradient(135deg,var(--primary),var(--secondary)); border:none; color:#fff; }
+    .wbtn:disabled { opacity:.4; cursor:not-allowed; }
 
     /* ── Main ── */
-    .main { display: flex; flex-direction: column; overflow: hidden; }
-    .main-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 1.5rem; background: var(--surface); flex-shrink: 0; }
-    .mtab { padding: .75rem 1rem; font-size: .82rem; font-weight: 700; color: var(--faint); border-bottom: 2px solid transparent; transition: all 160ms; cursor: pointer; }
-    .mtab.on { color: var(--text); border-bottom-color: var(--primary); }
+    .main { flex:1; min-width:0; display:flex; flex-direction:column; }
 
-    .main-body { flex: 1; overflow-y: auto; padding: 1.5rem; }
-    .mpanel { display: none; }
-    .mpanel.on { display: block; }
+    .main-tabs {
+      display:flex; border-bottom:1px solid var(--border);
+      padding:0 1rem; background:var(--surface); flex-shrink:0;
+      overflow-x:auto; -webkit-overflow-scrolling:touch;
+    }
+    .main-tabs::-webkit-scrollbar { display:none; }
+    .mtab {
+      padding:.65rem .9rem; font-size:.8rem; font-weight:700; color:var(--faint);
+      border-bottom:2px solid transparent; transition:all 150ms; cursor:pointer;
+      white-space:nowrap; flex-shrink:0;
+    }
+    .mtab.on { color:var(--text); border-bottom-color:var(--primary); }
 
-    /* Preview canvas */
-    .preview-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 1.25rem; margin-bottom: 1.25rem; }
-    .mock { border-radius: 1.25rem; overflow: hidden; position: relative; box-shadow: 0 12px 40px rgba(0,0,0,.45); }
-    .mock-icon { aspect-ratio: 1; min-height: 240px; display: grid; place-items: center; }
-    .mock-text { font-family: var(--fontd); font-size: 4rem; font-weight: 900; z-index: 1; }
-    .mock-stack { display: flex; flex-direction: column; gap: 1.25rem; }
-    .mock-banner { min-height: 112px; display: flex; align-items: flex-end; padding: 1rem 1.25rem; font-family: var(--fontd); font-size: 1.6rem; font-weight: 900; }
-    .mock-palette { display: grid; grid-template-columns: 1fr 1fr; min-height: 88px; }
-    .palette-cell { display: flex; flex-direction: column; justify-content: flex-end; padding: .75rem; font-size: .72rem; font-weight: 700; }
-    .palette-cell strong { font-size: .88rem; }
-    .img-overlay { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .4s var(--ease); display: none; }
-    .img-overlay.show { display: block; opacity: 1; }
+    .main-body { padding:1rem; }
+    @media(min-width:600px) { .main-body { padding:1.25rem 1.5rem; } }
+    .mpanel { display:none; }
+    .mpanel.on { display:block; }
 
-    /* Embed card */
-    .embed { background: #0e1018; border: 1px solid var(--border); border-left: 5px solid var(--primary); border-radius: 1rem; padding: 1.25rem 1.5rem; }
-    .embed-title { font-size: 1.4rem; font-weight: 800; margin-bottom: .5rem; }
-    .embed-tag { font-style: italic; color: var(--muted); margin-bottom: 1rem; }
-    .embed-specs { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem .75rem; margin-bottom: 1rem; font-size: .85rem; }
-    .embed-specs dt { color: var(--faint); font-weight: 600; }
-    .embed-specs dd { color: var(--text); font-weight: 700; }
+    /* Preview mocks */
+    .preview-grid { display:grid; grid-template-columns:1fr; gap:1rem; margin-bottom:1rem; }
+    @media(min-width:600px) { .preview-grid { grid-template-columns:1.2fr .8fr; } }
+    .mock { border-radius:1.1rem; overflow:hidden; position:relative; box-shadow:0 10px 36px rgba(0,0,0,.45); }
+    .mock-icon { aspect-ratio:1; min-height:180px; display:grid; place-items:center; }
+    .mock-text { font-family:var(--fontd); font-size:3.5rem; font-weight:900; z-index:1; }
+    .mock-stack { display:flex; flex-direction:column; gap:1rem; }
+    .mock-banner { min-height:100px; display:flex; align-items:flex-end; padding:.85rem 1rem; font-family:var(--fontd); font-size:1.4rem; font-weight:900; }
+    .mock-palette { display:grid; grid-template-columns:1fr 1fr; min-height:80px; }
+    .palette-cell { display:flex; flex-direction:column; justify-content:flex-end; padding:.65rem; font-size:.7rem; font-weight:700; }
+    .palette-cell strong { font-size:.82rem; }
+    .img-overlay { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .4s var(--ease); display:none; }
+    .img-overlay.show { display:block; opacity:1; }
 
-    /* AI image panel */
-    #aiImageWrap { border-radius: 1rem; overflow: hidden; border: 1px solid var(--border); display: none; }
-    #aiImageWrap img { width: 100%; display: block; }
+    /* Embed */
+    .embed { background:#0e1018; border:1px solid var(--border); border-left:5px solid var(--primary); border-radius:.9rem; padding:1rem 1.25rem; }
+    .embed-title { font-size:1.25rem; font-weight:800; margin-bottom:.4rem; }
+    .embed-tag { font-style:italic; color:var(--muted); margin-bottom:.75rem; font-size:.9rem; }
+    .embed-specs { display:grid; grid-template-columns:1fr 1fr; gap:.35rem .65rem; margin-bottom:.75rem; font-size:.82rem; }
+    .embed-specs dt { color:var(--faint); font-weight:600; }
+    .embed-specs dd { color:var(--text); font-weight:700; word-break:break-all; }
+
+    /* AI image */
+    #aiImageWrap { border-radius:.9rem; overflow:hidden; border:1px solid var(--border); display:none; }
+    #aiImageWrap img { width:100%; display:block; }
 
     /* Output panel */
-    .palette-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-    .palette-table th { text-align: left; padding: .5rem .75rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); border-bottom: 1px solid var(--border); }
-    .palette-table td { padding: .6rem .75rem; border-bottom: 1px solid var(--divider); }
-    .palette-table tr:last-child td { border-bottom: none; }
-    .color-chip-sm { width: 20px; height: 20px; border-radius: .25rem; display: inline-block; vertical-align: middle; border: 1px solid var(--border); }
+    .palette-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    .palette-table th { text-align:left; padding:.45rem .7rem; font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--faint); border-bottom:1px solid var(--border); }
+    .palette-table td { padding:.55rem .7rem; border-bottom:1px solid var(--divider); }
+    .palette-table tr:last-child td { border-bottom:none; }
+    .color-chip-sm { width:18px; height:18px; border-radius:.22rem; display:inline-block; vertical-align:middle; border:1px solid var(--border); }
 
-    /* Status / progress */
-    .gen-status { display: none; padding: .65rem 1rem; border-radius: .65rem; background: var(--surface2); border-left: 4px solid var(--primary); font-size: .85rem; margin-bottom: 1rem; }
-    progress.gen-prog { width: 100%; height: 4px; border-radius: 999px; border: none; appearance: none; margin-bottom: .75rem; display: none; }
-    progress.gen-prog::-webkit-progress-bar { background: var(--surface2); border-radius: 999px; }
-    progress.gen-prog::-webkit-progress-value { background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 999px; transition: width 300ms; }
+    /* Status */
+    .gen-status { display:none; padding:.6rem .9rem; border-radius:.6rem; background:var(--surface2); border-left:4px solid var(--primary); font-size:.82rem; margin-bottom:.75rem; }
+    progress.gen-prog { width:100%; height:4px; border-radius:999px; border:none; appearance:none; margin-bottom:.65rem; display:none; }
+    progress.gen-prog::-webkit-progress-bar { background:var(--surface2); border-radius:999px; }
+    progress.gen-prog::-webkit-progress-value { background:linear-gradient(90deg,var(--primary),var(--secondary)); border-radius:999px; }
 
     /* Download bar */
-    .dl-bar { display: none; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
-    .dl-btn { padding: .45rem .9rem; border-radius: .5rem; font-size: .8rem; font-weight: 700; border: 1px solid var(--border); background: var(--surface2); transition: all 160ms; }
-    .dl-btn:hover { background: var(--surface3); }
+    .dl-bar { display:none; flex-wrap:wrap; gap:.4rem; margin-bottom:.75rem; }
+    .dl-btn { padding:.4rem .85rem; border-radius:.45rem; font-size:.78rem; font-weight:700; border:1px solid var(--border); background:var(--surface2); transition:background 140ms; }
+    .dl-btn:hover { background:var(--surface3); }
 
-    /* Dialog / modal */
-    dialog { border: 1px solid var(--border); border-radius: var(--radiuslg); background: var(--surface); color: var(--text); padding: 0; max-width: 680px; width: 92vw; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
-    dialog::backdrop { background: rgba(0,0,0,.7); backdrop-filter: blur(4px); }
-    .dialog-head { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-    .dialog-head h3 { font-size: 1rem; font-weight: 800; }
-    .dialog-close { width: 32px; height: 32px; border-radius: .45rem; background: var(--surface2); display: grid; place-items: center; font-size: 1.1rem; border: 1px solid var(--border); }
-    .dialog-body { padding: 1.5rem; }
-    .dialog-foot { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: .5rem; }
+    /* Panel card */
+    .panel-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radiuslg); padding:1rem 1.1rem; margin-bottom:1rem; }
+    .panel-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:.85rem; }
+    .panel-card-head h3 { font-size:.92rem; font-weight:800; }
+    code { font-family:monospace; font-size:.83em; background:var(--surface2); padding:.1em .35em; border-radius:.28em; }
+    .tag { display:inline-flex; align-items:center; gap:4px; padding:.22rem .55rem; border-radius:999px; background:var(--surface2); border:1px solid var(--border); font-size:.72rem; font-weight:700; }
 
-    /* Misc */
-    code { font-family: monospace; font-size: .85em; background: var(--surface2); padding: .1em .4em; border-radius: .3em; }
-    .tag { display: inline-flex; align-items: center; gap: 5px; padding: .25rem .6rem; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); font-size: .75rem; font-weight: 700; }
-    .panel-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radiuslg); padding: 1.25rem; margin-bottom: 1.25rem; }
-    .panel-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .panel-card-head h3 { font-size: .95rem; font-weight: 800; }
-
-    @media (max-width: 1100px) {
-      .body { grid-template-columns: 320px 1fr; }
-      .preview-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 780px) {
-      .body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-      .sidebar { border-right: none; border-bottom: 1px solid var(--border); max-height: 55vh; }
-    }
+    /* Dialog */
+    dialog { border:1px solid var(--border); border-radius:var(--radiuslg); background:var(--surface); color:var(--text); padding:0; max-width:660px; width:94vw; box-shadow:0 20px 70px rgba(0,0,0,.6); }
+    dialog::backdrop { background:rgba(0,0,0,.72); backdrop-filter:blur(4px); }
+    .dialog-head { padding:1.1rem 1.35rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+    .dialog-head h3 { font-size:.95rem; font-weight:800; }
+    .dialog-close { width:30px; height:30px; border-radius:.4rem; background:var(--surface2); display:grid; place-items:center; font-size:1rem; border:1px solid var(--border); }
+    .dialog-body { padding:1.25rem 1.35rem; }
+    .dialog-foot { padding:.9rem 1.35rem; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:.45rem; flex-wrap:wrap; }
   </style>
 </head>
 <body>
-<div class="app">
 
-  <!-- ── Navbar ── -->
+  <!-- Navbar -->
   <nav class="navbar">
     <span class="nav-logo">SIGIL</span>
     <div class="nav-sep"></div>
-    <span style="font-size:.82rem;color:var(--muted);font-weight:600;">Brand Builder</span>
+    <span class="nav-subtitle">Brand Builder</span>
     <div id="serverPill" class="nav-pill"><span class="dot"></span><span id="serverLabel">Offline</span></div>
     <div class="nav-actions">
-      <button class="nav-btn" id="themeBtn">&#9680; Theme</button>
-      <button class="nav-btn" id="exportBtn">&#10515; Export JSON</button>
+      <button class="nav-btn hide-xs" id="themeBtn">&#9680; Theme</button>
+      <button class="nav-btn hide-xs" id="exportBtn">&#10515; Export</button>
       <button class="nav-btn" id="previewBtn">&#9889; Preview</button>
       <button class="nav-btn primary" id="generateBtn">&#10022; Generate</button>
     </div>
   </nav>
 
-  <div class="body">
+  <div class="page">
 
-    <!-- ── Sidebar Wizard ── -->
+    <!-- Sidebar wizard -->
     <aside class="sidebar">
       <div class="wizard-header">
         <div class="wizard-title">Setup Wizard</div>
-        <nav class="stepper" id="stepper" aria-label="wizard steps"></nav>
-        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill" style="width:25%"></div></div>
+        <nav class="stepper" id="stepper" aria-label="Setup steps"></nav>
+        <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:25%"></div></div>
       </div>
 
-      <div class="sidebar-body" id="sidebarBody">
+      <div class="sidebar-body">
 
         <!-- Step 1: Identity -->
-        <fieldset class="wizard-panel active" id="panel-1" data-step="1">
+        <fieldset class="wizard-panel active" id="panel-1">
           <legend class="sh">Brand identity</legend>
+          <div class="field"><label for="brandName">Brand name</label><input id="brandName" class="inp" value="Demonfall" /></div>
+          <div class="field"><label for="tagline">Tagline</label><input id="tagline" class="inp" value="Unleash the Darkness. Fight the Demons." /></div>
           <div class="field">
-            <label for="brandName">Brand name</label>
-            <input id="brandName" class="inp" value="Demonfall" />
-          </div>
-          <div class="field">
-            <label for="tagline">Tagline</label>
-            <input id="tagline" class="inp" value="Unleash the Darkness. Fight the Demons." />
-          </div>
-          <div class="field">
-            <label for="description">AI prompt / description <span>Used by Gemini Generate</span></label>
+            <label for="description">AI prompt <span>Used by Gemini Generate</span></label>
             <textarea id="description" class="inp">dark fantasy fighting guild with infernal magic and supernatural atmosphere</textarea>
           </div>
           <div class="grid2">
-            <div class="field">
-              <label for="iconText">Icon text</label>
-              <input id="iconText" class="inp" value="DF" />
-            </div>
-            <div class="field">
-              <label for="bannerText">Banner text</label>
-              <input id="bannerText" class="inp" value="Demonfall" />
-            </div>
+            <div class="field"><label for="iconText">Icon text</label><input id="iconText" class="inp" value="DF" /></div>
+            <div class="field"><label for="bannerText">Banner text</label><input id="bannerText" class="inp" value="Demonfall" /></div>
           </div>
         </fieldset>
 
         <!-- Step 2: Colors -->
-        <fieldset class="wizard-panel" id="panel-2" data-step="2">
+        <fieldset class="wizard-panel" id="panel-2">
           <legend class="sh">Colors</legend>
           <div class="field">
-            <label for="primaryHex">Primary color</label>
-            <div class="color-row">
-              <input type="color" id="primaryPicker" value="#8b0000" />
-              <input id="primaryHex" class="inp" value="#8B0000" />
-            </div>
+            <label for="primaryHex">Primary</label>
+            <div class="color-row"><input type="color" id="primaryPicker" value="#8b0000" /><input id="primaryHex" class="inp" value="#8B0000" /></div>
           </div>
           <div class="field">
-            <label for="secondaryHex">Secondary color</label>
-            <div class="color-row">
-              <input type="color" id="secondaryPicker" value="#4b0082" />
-              <input id="secondaryHex" class="inp" value="#4B0082" />
-            </div>
+            <label for="secondaryHex">Secondary</label>
+            <div class="color-row"><input type="color" id="secondaryPicker" value="#4b0082" /><input id="secondaryHex" class="inp" value="#4B0082" /></div>
           </div>
-
-          <div class="sh">Color library <span style="font-weight:400;color:var(--faint);font-size:.72rem">(click = primary, shift+click = secondary)</span></div>
+          <div class="sh">Library <span style="font-weight:400;font-size:.68rem;">(tap = primary &nbsp;&bull;&nbsp; long-press/shift+tap = secondary)</span></div>
           <div id="colorLibrary"></div>
         </fieldset>
 
         <!-- Step 3: Style -->
-        <fieldset class="wizard-panel" id="panel-3" data-step="3">
+        <fieldset class="wizard-panel" id="panel-3">
           <legend class="sh">Background</legend>
-          <div id="bgChips" class="chip-wrap" style="margin-bottom:1rem"></div>
-
+          <div id="bgChips" class="chip-wrap" style="margin-bottom:.85rem"></div>
           <div class="sh">Border</div>
-          <div id="borderChips" class="chip-wrap" style="margin-bottom:1rem"></div>
-
+          <div id="borderChips" class="chip-wrap" style="margin-bottom:.85rem"></div>
           <div class="field">
-            <label for="glowRange">Glow intensity</label>
-            <div class="range-row">
-              <input type="range" id="glowRange" min="0" max="25" value="15" />
-              <span class="range-val" id="glowVal">15</span>
-            </div>
+            <label for="glowRange">Glow</label>
+            <div class="range-row"><input type="range" id="glowRange" min="0" max="25" value="15" /><span class="range-val" id="glowVal">15</span></div>
           </div>
-
-          <div class="sh">Font</div>
-          <div class="field">
-            <select id="fontSelect" class="inp">
-              <option value="Another Danger">Another Danger</option>
-              <option value="Bebas Neue">Bebas Neue</option>
-              <option value="Oswald">Oswald</option>
-              <option value="Playfair Display">Playfair Display</option>
-              <option value="Source Code Pro">Source Code Pro</option>
-              <option value="Dancing Script">Dancing Script</option>
-              <option value="Arial Black">Arial Black</option>
-              <option value="Impact">Impact</option>
-            </select>
-          </div>
-
+          <div class="field"><label for="fontSelect">Font</label><select id="fontSelect" class="inp"><option value="Arial Black">Arial Black</option><option value="Impact">Impact</option><option value="Another Danger">Another Danger</option><option value="Bebas Neue">Bebas Neue</option><option value="Oswald">Oswald</option><option value="Playfair Display">Playfair Display</option><option value="Source Code Pro">Source Code Pro</option><option value="Dancing Script">Dancing Script</option></select></div>
           <div class="field">
             <label for="opacityRange">Overlay opacity</label>
-            <div class="range-row">
-              <input type="range" id="opacityRange" min="0" max="100" value="85" />
-              <span class="range-val" id="opacityVal">85%</span>
-            </div>
+            <div class="range-row"><input type="range" id="opacityRange" min="0" max="100" value="85" /><span class="range-val" id="opacityVal">85%</span></div>
           </div>
         </fieldset>
 
         <!-- Step 4: Generate -->
-        <fieldset class="wizard-panel" id="panel-4" data-step="4">
-          <legend class="sh">Integration &amp; generate</legend>
+        <fieldset class="wizard-panel" id="panel-4">
+          <legend class="sh">Generate</legend>
           <div class="field">
-            <label for="apiKey">Gemini API key <span>Optional — for AI Generate</span></label>
+            <label for="apiKey">Gemini API key <span>Optional</span></label>
             <input id="apiKey" class="inp" type="password" placeholder="AIza…" autocomplete="off" />
           </div>
           <div class="field">
             <label for="imagePrompt">Image prompt <span>AI icon overlay</span></label>
             <textarea id="imagePrompt" class="inp">ancient demon sigil hovering over a ruined crimson fortress in a violet storm</textarea>
           </div>
-
           <details class="acc">
             <summary>Advanced options</summary>
             <div class="acc-body">
+              <div class="field"><label for="modelSelect">Model</label><select id="modelSelect" class="inp"><option value="gemini-2.0-flash">gemini-2.0-flash (default)</option><option value="gemini-1.5-pro">gemini-1.5-pro</option><option value="gemini-1.5-flash">gemini-1.5-flash</option></select></div>
               <div class="field">
-                <label for="modelSelect">Gemini model</label>
-                <select id="modelSelect" class="inp">
-                  <option value="gemini-2.0-flash">gemini-2.0-flash (default)</option>
-                  <option value="gemini-1.5-pro">gemini-1.5-pro</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="tempRange">Temperature <span id="tempLbl">0.9</span></label>
+                <label for="tempRange">Temperature &nbsp;<span id="tempLbl">0.9</span></label>
                 <input type="range" id="tempRange" min="0" max="20" value="9" style="width:100%" />
               </div>
               <div class="field">
-                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer">
-                  <input type="checkbox" id="gradientToggle" checked style="width:16px;height:16px" />
-                  Gradient blend overlay
+                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.82rem;color:var(--muted);font-weight:600">
+                  <input type="checkbox" id="gradientToggle" checked style="width:15px;height:15px" /> Gradient overlay
                 </label>
               </div>
             </div>
           </details>
-
-          <div style="margin-top:1rem;padding:.9rem;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);font-size:.82rem;color:var(--muted);">
-            <strong style="color:var(--text);">Ready to generate!</strong><br />
-            Click <strong>&#9889; Preview</strong> for a fast canvas render, or <strong>&#10022; Generate</strong> to use Gemini AI for a full brand kit.
+          <div style="margin-top:.85rem;padding:.8rem;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);font-size:.8rem;color:var(--muted)">
+            <strong style="color:var(--text)">Ready!</strong> Use <strong>&#9889; Preview</strong> for a fast canvas render, or <strong>&#10022; Generate</strong> for a full Gemini AI brand kit.
           </div>
         </fieldset>
 
-      </div>
+      </div><!-- /sidebar-body -->
 
-      <!-- Wizard footer nav -->
       <div class="wizard-footer">
         <button class="wbtn" id="prevBtn" disabled>&#8592; Back</button>
-        <div style="display:flex;gap:.5rem;align-items:center" id="stepIndicator" aria-live="polite"></div>
+        <div id="stepDots" style="display:flex;gap:.4rem;align-items:center" aria-live="polite"></div>
         <button class="wbtn next" id="nextBtn">Next &#8594;</button>
       </div>
     </aside>
 
-    <!-- ── Main panel ── -->
+    <!-- Main panel -->
     <main class="main">
       <div class="main-tabs" role="tablist">
         <button class="mtab on" role="tab" data-tab="preview">Preview</button>
@@ -392,14 +424,12 @@
       </div>
 
       <div class="main-body">
-
-        <!-- Status / progress -->
         <progress class="gen-prog" id="genProg" max="100" value="0"></progress>
         <div class="gen-status" id="genStatus"></div>
         <div class="dl-bar" id="dlBar">
-          <button class="dl-btn" id="dlIcon">&#8595; Icon PNG</button>
-          <button class="dl-btn" id="dlBanner">&#8595; Banner PNG</button>
-          <button class="dl-btn" id="dlPalette">&#8595; Palette PNG</button>
+          <button class="dl-btn" id="dlIcon">&#8595; Icon</button>
+          <button class="dl-btn" id="dlBanner">&#8595; Banner</button>
+          <button class="dl-btn" id="dlPalette">&#8595; Palette</button>
           <button class="dl-btn" id="dlAi" style="display:none">&#8595; AI Image</button>
         </div>
 
@@ -421,13 +451,12 @@
               </div>
             </div>
           </div>
-
           <div class="embed" id="embedCard">
             <div class="embed-title" id="embedTitle">✦ AI Brand Kit — Demonfall</div>
             <div class="embed-tag" id="embedTag">&ldquo;Unleash the Darkness. Fight the Demons.&rdquo;</div>
             <dl class="embed-specs">
-              <dt>Icon text</dt>  <dd id="s-icon">DF</dd>
-              <dt>Banner text</dt><dd id="s-banner">Demonfall</dd>
+              <dt>Icon</dt>       <dd id="s-icon">DF</dd>
+              <dt>Banner</dt>     <dd id="s-banner">Demonfall</dd>
               <dt>Primary</dt>    <dd id="s-primary">#8B0000</dd>
               <dt>Secondary</dt>  <dd id="s-secondary">#4B0082</dd>
               <dt>Background</dt> <dd id="s-bg">midnight-gradient</dd>
@@ -441,49 +470,40 @@
         <!-- Output tab -->
         <div class="mpanel" id="tab-output">
           <div class="panel-card">
-            <div class="panel-card-head"><h3>Color palette</h3><span class="tag">Auto-generated</span></div>
-            <table class="palette-table" id="paletteTable">
-              <thead><tr><th>Swatch</th><th>Name</th><th>Hex</th><th>Role</th></tr></thead>
-              <tbody id="paletteTbody"></tbody>
-            </table>
+            <div class="panel-card-head"><h3>Color palette</h3><span class="tag">Live</span></div>
+            <div style="overflow-x:auto">
+              <table class="palette-table"><thead><tr><th></th><th>Name</th><th>Hex</th><th>Role</th></tr></thead><tbody id="paletteTbody"></tbody></table>
+            </div>
           </div>
           <div class="panel-card">
             <div class="panel-card-head"><h3>Config JSON</h3><button class="dl-btn" id="copyJsonBtn">&#10063; Copy</button></div>
-            <textarea class="inp" id="jsonOutput" style="min-height:360px;font-family:monospace;font-size:.78rem;" readonly></textarea>
+            <textarea class="inp" id="jsonOutput" style="min-height:320px;font-family:monospace;font-size:.75rem" readonly></textarea>
           </div>
         </div>
 
         <!-- AI Image tab -->
         <div class="mpanel" id="tab-ai">
-          <div id="aiImageWrap">
-            <img id="aiImageEl" alt="AI generated image" />
-          </div>
-          <p id="aiPlaceholder" style="color:var(--faint);font-size:.88rem;margin-top:2rem;text-align:center;">AI image will appear here after you click <strong>&#10022; Generate</strong> with a Gemini API key.</p>
+          <div id="aiImageWrap"><img id="aiImageEl" alt="AI generated image" /></div>
+          <p id="aiPlaceholder" style="color:var(--faint);font-size:.85rem;margin-top:2rem;text-align:center">AI image appears here after <strong>&#10022; Generate</strong> with a Gemini API key.</p>
         </div>
-
       </div>
     </main>
   </div>
-</div>
 
-<!-- Export dialog -->
-<dialog id="exportDialog">
-  <div class="dialog-head">
-    <h3>✦ Export brand config</h3>
-    <button class="dialog-close" id="dialogClose">&#10005;</button>
-  </div>
-  <div class="dialog-body">
-    <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem;">This JSON payload is compatible with Sigil’s <code>/brand ai</code> command and <code>gemini.js</code>.</p>
-    <textarea class="inp" id="dialogJson" style="min-height:300px;font-family:monospace;font-size:.78rem;" readonly></textarea>
-  </div>
-  <div class="dialog-foot">
-    <button class="wbtn" id="dialogCopyBtn">&#10063; Copy to clipboard</button>
-    <button class="wbtn next" id="dialogClose2">Done</button>
-  </div>
-</dialog>
+  <!-- Export dialog -->
+  <dialog id="exportDialog">
+    <div class="dialog-head"><h3>✦ Export brand config</h3><button class="dialog-close" id="dialogClose">&#10005;</button></div>
+    <div class="dialog-body">
+      <p style="color:var(--muted);font-size:.82rem;margin-bottom:.9rem">Compatible with <code>/brand ai</code> and <code>gemini.js</code>.</p>
+      <textarea class="inp" id="dialogJson" style="min-height:280px;font-family:monospace;font-size:.75rem" readonly></textarea>
+    </div>
+    <div class="dialog-foot">
+      <button class="wbtn" id="dialogCopyBtn">&#10063; Copy</button>
+      <button class="wbtn next" id="dialogClose2">Done</button>
+    </div>
+  </dialog>
 
 <script>
-// ── Data ─────────────────────────────────────────────────────────────────────
 const COLORS = {
   'Reds':     [{name:'Crimson',hex:'#DC143C'},{name:'Scarlet',hex:'#FF2400'},{name:'Ruby',hex:'#9B111E'},{name:'Blood Red',hex:'#8b0000'}],
   'Purples':  [{name:'Indigo',hex:'#4B0082'},{name:'Violet',hex:'#EE82EE'},{name:'Amethyst',hex:'#9966CC'},{name:'Deep Purple',hex:'#6600CC'}],
@@ -493,22 +513,20 @@ const COLORS = {
   'Cyans':    [{name:'Cyan',hex:'#00FFFF'},{name:'Teal',hex:'#008080'},{name:'Turquoise',hex:'#40E0D0'},{name:'Seafoam',hex:'#93E9BE'}],
   'Neutrals': [{name:'White',hex:'#FFFFFF'},{name:'Silver',hex:'#C0C0C0'},{name:'Charcoal',hex:'#36454F'},{name:'Black',hex:'#000000'}],
 };
-
 const BACKGROUNDS = [
-  {k:'midnight-gradient', l:'Midnight',  css:'linear-gradient(135deg,#0a0a1a,#1a0a2e,#0a1a2e)'},
-  {k:'deep-space',        l:'Deep Space',css:'linear-gradient(135deg,#000010,#0a0020,#000510)'},
-  {k:'inferno',           l:'Inferno',   css:'linear-gradient(135deg,#1a0000,#3d0000,#1a0500)'},
-  {k:'ocean-depth',       l:'Ocean',     css:'linear-gradient(135deg,#001020,#002040,#001530)'},
-  {k:'twilight',          l:'Twilight',  css:'linear-gradient(135deg,#1a0a1a,#2a0a3a,#1a1a2a)'},
-  {k:'aurora',            l:'Aurora',    css:'linear-gradient(135deg,#001a10,#001a20,#0a0015,#001510)'},
-  {k:'storm',             l:'Storm',     css:'linear-gradient(135deg,#0a0a0a,#1a1a2a,#0a0a1a)'},
-  {k:'void',              l:'Void',      css:'linear-gradient(135deg,#000000,#050005,#000000)'},
-  {k:'neon-city',         l:'Neon City', css:'linear-gradient(135deg,#000010,#0a0020,#100005,#000010)'},
-  {k:'sunset-fade',       l:'Sunset',    css:'linear-gradient(135deg,#1a0a00,#2a0a0a,#1a0510)'},
-  {k:'forest-night',      l:'Forest',    css:'linear-gradient(135deg,#001008,#002010,#001508)'},
-  {k:'polar',             l:'Polar',     css:'linear-gradient(135deg,#0a1520,#0a2030,#051525)'},
+  {k:'midnight-gradient',l:'Midnight',  css:'linear-gradient(135deg,#0a0a1a,#1a0a2e,#0a1a2e)'},
+  {k:'deep-space',       l:'Deep Space',css:'linear-gradient(135deg,#000010,#0a0020,#000510)'},
+  {k:'inferno',          l:'Inferno',   css:'linear-gradient(135deg,#1a0000,#3d0000,#1a0500)'},
+  {k:'ocean-depth',      l:'Ocean',     css:'linear-gradient(135deg,#001020,#002040,#001530)'},
+  {k:'twilight',         l:'Twilight',  css:'linear-gradient(135deg,#1a0a1a,#2a0a3a,#1a1a2a)'},
+  {k:'aurora',           l:'Aurora',    css:'linear-gradient(135deg,#001a10,#001a20,#0a0015,#001510)'},
+  {k:'storm',            l:'Storm',     css:'linear-gradient(135deg,#0a0a0a,#1a1a2a,#0a0a1a)'},
+  {k:'void',             l:'Void',      css:'linear-gradient(135deg,#000,#050005,#000)'},
+  {k:'neon-city',        l:'Neon City', css:'linear-gradient(135deg,#000010,#0a0020,#100005,#000010)'},
+  {k:'sunset-fade',      l:'Sunset',    css:'linear-gradient(135deg,#1a0a00,#2a0a0a,#1a0510)'},
+  {k:'forest-night',     l:'Forest',    css:'linear-gradient(135deg,#001008,#002010,#001508)'},
+  {k:'polar',            l:'Polar',     css:'linear-gradient(135deg,#0a1520,#0a2030,#051525)'},
 ];
-
 const BORDERS = ['none','solid','glow','gradient','double','dashed'];
 
 const state = {
@@ -523,390 +541,296 @@ const state = {
   step:1, totalSteps:4,
 };
 
-let lastRender = null;
-let serverAlive = false;
+let lastRender=null, serverAlive=false;
 const SERVER = window.location.origin;
+const $ = id => document.getElementById(id);
+const $$ = s => document.querySelectorAll(s);
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const $  = id => document.getElementById(id);
-const $$ = sel => document.querySelectorAll(sel);
-
-function hexToRgba(hex, a) {
-  const c = hex.replace('#','');
-  const n = parseInt(c.length===3 ? c.split('').map(x=>x+x).join('') : c, 16);
+function hexToRgba(hex,a) {
+  const c=hex.replace('#','');
+  const n=parseInt(c.length===3?c.split('').map(x=>x+x).join(''):c,16);
   return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
 }
-
-function dlBlob(b64, name, mime='image/png') {
-  const a = document.createElement('a');
-  a.href = `data:${mime};base64,${b64}`; a.download = name; a.click();
+function dlBlob(b64,name) {
+  const a=document.createElement('a'); a.href=`data:image/png;base64,${b64}`; a.download=name; a.click();
 }
-
-function setStatus(msg, type='info') {
-  const el = $('genStatus');
-  el.style.display = 'block';
-  el.style.borderLeftColor = type==='ok' ? 'var(--success)' : type==='error' ? 'var(--error)' : 'var(--primary)';
-  el.textContent = msg;
+function setStatus(msg,type='info') {
+  const el=$('genStatus'); el.style.display='block';
+  el.style.borderLeftColor=type==='ok'?'var(--success)':type==='error'?'var(--error)':'var(--primary)';
+  el.textContent=msg;
 }
-
 function setProgress(v) {
-  const p = $('genProg');
-  if (v < 0) { p.style.display='none'; return; }
-  p.style.display = 'block'; p.value = v;
+  const p=$('genProg');
+  if(v<0){p.style.display='none';return;}
+  p.style.display='block'; p.value=v;
 }
 
-function readState() {
-  state.brandName    = $('brandName').value.trim() || 'Untitled';
-  state.tagline      = $('tagline').value.trim();
-  state.description  = $('description').value.trim();
-  state.iconText     = ($('iconText').value.trim() || 'S').slice(0,4).toUpperCase();
-  state.bannerText   = $('bannerText').value.trim() || state.brandName;
-  state.primaryHex   = $('primaryHex').value.trim() || '#8B0000';
-  state.secondaryHex = $('secondaryHex').value.trim() || '#4B0082';
-  state.glow         = Number($('glowRange').value);
-  state.opacity      = Number($('opacityRange').value);
-  state.gradient     = $('gradientToggle').checked;
-  state.apiKey       = $('apiKey').value.trim();
-  state.imagePrompt  = $('imagePrompt').value.trim();
-  state.font         = $('fontSelect').value;
-  state.model        = $('modelSelect').value;
-  state.temperature  = Number($('tempRange').value) / 10;
-  $('glowVal').textContent    = state.glow;
-  $('opacityVal').textContent = state.opacity + '%';
-  $('tempLbl').textContent    = state.temperature.toFixed(1);
-}
-
-// ── Wizard stepper ────────────────────────────────────────────────────────────
-const STEP_LABELS = ['Identity','Colors','Style','Generate'];
-
+// Wizard
+const LABELS=['Identity','Colors','Style','Generate'];
 function buildStepper() {
-  const nav = $('stepper'); nav.innerHTML = '';
-  STEP_LABELS.forEach((l,i) => {
-    const n = i+1;
-    const btn = document.createElement('button');
-    btn.className = 'step' + (n < state.step ? ' done' : n===state.step ? ' active' : '');
-    btn.setAttribute('aria-label', `Step ${n}: ${l}`);
-    btn.innerHTML = `<span class="step-dot">${n < state.step ? '&#10003;' : n}</span><span class="step-label">${l}</span>`;
-    btn.addEventListener('click', () => goStep(n));
-    nav.appendChild(btn);
+  const nav=$('stepper'); nav.innerHTML='';
+  LABELS.forEach((l,i)=>{
+    const n=i+1, btn=document.createElement('button');
+    btn.className='step'+(n<state.step?' done':n===state.step?' active':'');
+    btn.setAttribute('aria-label',`Step ${n}: ${l}`);
+    btn.innerHTML=`<span class="step-dot">${n<state.step?'&#10003;':n}</span><span class="step-label">${l}</span>`;
+    btn.onclick=()=>goStep(n); nav.appendChild(btn);
   });
-  $('progressFill').style.width = (state.step / state.totalSteps * 100) + '%';
-
-  // Step indicator dots
-  const si = $('stepIndicator'); si.innerHTML='';
-  for(let i=1;i<=state.totalSteps;i++) {
+  $('progFill').style.width=(state.step/state.totalSteps*100)+'%';
+  const sd=$('stepDots'); sd.innerHTML='';
+  for(let i=1;i<=state.totalSteps;i++){
     const d=document.createElement('span');
-    d.style.cssText=`width:7px;height:7px;border-radius:50%;background:${i===state.step?'var(--primary)':'var(--border)'};display:inline-block;`;
-    si.appendChild(d);
+    d.style.cssText=`width:6px;height:6px;border-radius:50%;background:${i===state.step?'var(--primary)':'var(--border)'};display:inline-block;transition:background 200ms;`;
+    sd.appendChild(d);
   }
-
-  $('prevBtn').disabled = state.step === 1;
-  $('nextBtn').textContent = state.step === state.totalSteps ? '&#10022; Generate' : 'Next &#8594;';
-  $('nextBtn').innerHTML  = state.step === state.totalSteps ? '&#10022; Generate' : 'Next &#8594;';
+  $('prevBtn').disabled=state.step===1;
+  $('nextBtn').innerHTML=state.step===state.totalSteps?'&#10022; Generate':'Next &#8594;';
 }
-
-function goStep(n) {
-  if (n < 1 || n > state.totalSteps) return;
-  $$('.wizard-panel').forEach(p => p.classList.remove('active'));
+function goStep(n){
+  if(n<1||n>state.totalSteps) return;
+  $$('.wizard-panel').forEach(p=>p.classList.remove('active'));
   $(`panel-${n}`).classList.add('active');
-  state.step = n;
-  buildStepper();
+  state.step=n; buildStepper();
+  // scroll sidebar to top on step change (mobile)
+  const sb=document.querySelector('.sidebar-body');
+  if(sb) sb.scrollTop=0;
 }
+$('prevBtn').addEventListener('click',()=>goStep(state.step-1));
+$('nextBtn').addEventListener('click',()=>{ if(state.step===state.totalSteps) runGenerate(); else goStep(state.step+1); });
 
-$('prevBtn').addEventListener('click', () => goStep(state.step-1));
-$('nextBtn').addEventListener('click', () => {
-  if (state.step === state.totalSteps) { runGenerate(); }
-  else goStep(state.step+1);
-});
-
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-$$('[role=tab]').forEach(t => {
-  t.addEventListener('click', () => {
-    $$('[role=tab]').forEach(x => x.classList.remove('on'));
-    $$('.mpanel').forEach(x => x.classList.remove('on'));
-    t.classList.add('on');
-    $('tab-' + t.dataset.tab).classList.add('on');
+// Tabs
+$$('[role=tab]').forEach(t=>{
+  t.addEventListener('click',()=>{
+    $$('[role=tab]').forEach(x=>x.classList.remove('on'));
+    $$('.mpanel').forEach(x=>x.classList.remove('on'));
+    t.classList.add('on'); $('tab-'+t.dataset.tab).classList.add('on');
   });
 });
 
-// ── Color library ─────────────────────────────────────────────────────────────
-function buildColorLibrary() {
-  const lib = $('colorLibrary'); lib.innerHTML = '';
-  Object.entries(COLORS).forEach(([group, items]) => {
-    const h = document.createElement('div');
-    h.className='sh'; h.style.marginTop='.75rem'; h.textContent=group;
-    lib.appendChild(h);
-    const grid = document.createElement('div'); grid.className='swatch-grid';
-    items.forEach(item => {
-      const btn = document.createElement('button'); btn.className='swatch';
+// Color library
+function buildColorLibrary(){
+  const lib=$('colorLibrary'); lib.innerHTML='';
+  Object.entries(COLORS).forEach(([group,items])=>{
+    const h=document.createElement('div'); h.className='sh'; h.style.marginTop='.65rem'; h.textContent=group; lib.appendChild(h);
+    const grid=document.createElement('div'); grid.className='swatch-grid';
+    items.forEach(item=>{
+      const btn=document.createElement('button'); btn.className='swatch';
       if(item.hex.toLowerCase()===state.primaryHex.toLowerCase()) btn.classList.add('on');
       btn.title=`${item.name} ${item.hex}`;
-      btn.innerHTML = `<div class="swatch-color" style="background:${item.hex}"></div><div class="swatch-name">${item.name}</div>`;
-      btn.addEventListener('click', e => {
-        if (e.shiftKey) { state.secondaryHex=item.hex; $('secondaryHex').value=item.hex; $('secondaryPicker').value=item.hex; }
-        else { state.primaryHex=item.hex; $('primaryHex').value=item.hex; $('primaryPicker').value=item.hex; }
+      btn.innerHTML=`<div class="swatch-color" style="background:${item.hex}"></div><div class="swatch-name">${item.name}</div>`;
+      // Long-press for secondary on touch devices
+      let pressTimer;
+      btn.addEventListener('touchstart',()=>{ pressTimer=setTimeout(()=>{ state.secondaryHex=item.hex;$('secondaryHex').value=item.hex;$('secondaryPicker').value=item.hex;updatePreview();buildColorLibrary(); },500); },{passive:true});
+      btn.addEventListener('touchend',()=>clearTimeout(pressTimer),{passive:true});
+      btn.addEventListener('click',e=>{
+        if(e.shiftKey){state.secondaryHex=item.hex;$('secondaryHex').value=item.hex;$('secondaryPicker').value=item.hex;}
+        else{state.primaryHex=item.hex;$('primaryHex').value=item.hex;$('primaryPicker').value=item.hex;}
         updatePreview(); buildColorLibrary();
       });
       grid.appendChild(btn);
-    });
-    lib.appendChild(grid);
+    }); lib.appendChild(grid);
   });
 }
 
-// ── Background & border chips ─────────────────────────────────────────────────
-function buildChips() {
-  const bgWrap = $('bgChips'); bgWrap.innerHTML='';
-  BACKGROUNDS.forEach(bg => {
+// Chips
+function buildChips(){
+  const bw=$('bgChips'); bw.innerHTML='';
+  BACKGROUNDS.forEach(bg=>{
     const b=document.createElement('button'); b.className='chip'+(state.background===bg.k?' on':'');
-    b.style.background=bg.css; b.style.color='#fff'; b.style.fontSize='.72rem';
+    b.style.cssText=`background:${bg.css};color:#fff;font-size:.72rem;`;
     b.textContent=bg.l;
-    b.addEventListener('click', () => { state.background=bg.k; buildChips(); updatePreview(); });
-    bgWrap.appendChild(b);
+    b.addEventListener('click',()=>{state.background=bg.k;buildChips();updatePreview();});
+    bw.appendChild(b);
   });
-
-  const bWrap = $('borderChips'); bWrap.innerHTML='';
-  BORDERS.forEach(bdr => {
+  const bdw=$('borderChips'); bdw.innerHTML='';
+  BORDERS.forEach(bdr=>{
     const b=document.createElement('button'); b.className='chip'+(state.border===bdr?' on':'');
     b.textContent=bdr.charAt(0).toUpperCase()+bdr.slice(1);
-    b.addEventListener('click', () => { state.border=bdr; buildChips(); updatePreview(); });
-    bWrap.appendChild(b);
+    b.addEventListener('click',()=>{state.border=bdr;buildChips();updatePreview();});
+    bdw.appendChild(b);
   });
 }
 
-// ── Sync pickers ──────────────────────────────────────────────────────────────
-$('primaryPicker').addEventListener('input', e => { $('primaryHex').value=e.target.value.toUpperCase(); updatePreview(); });
-$('secondaryPicker').addEventListener('input', e => { $('secondaryHex').value=e.target.value.toUpperCase(); updatePreview(); });
-$('primaryHex').addEventListener('input', e => { try{$('primaryPicker').value=e.target.value;}catch{} updatePreview(); });
-$('secondaryHex').addEventListener('input', e => { try{$('secondaryPicker').value=e.target.value;}catch{} updatePreview(); });
+// Picker sync
+$('primaryPicker').addEventListener('input',e=>{$('primaryHex').value=e.target.value.toUpperCase();updatePreview();});
+$('secondaryPicker').addEventListener('input',e=>{$('secondaryHex').value=e.target.value.toUpperCase();updatePreview();});
+$('primaryHex').addEventListener('input',e=>{try{$('primaryPicker').value=e.target.value;}catch{}updatePreview();});
+$('secondaryHex').addEventListener('input',e=>{try{$('secondaryPicker').value=e.target.value;}catch{}updatePreview();});
 
-// ── Preview update ────────────────────────────────────────────────────────────
-function buildBg() {
-  const bg = BACKGROUNDS.find(b=>b.k===state.background)||BACKGROUNDS[0];
-  return state.gradient
-    ? `linear-gradient(135deg,${hexToRgba(state.primaryHex,.22)},${hexToRgba(state.secondaryHex,.18)}),${bg.css}`
-    : bg.css;
+// Read state
+function readState(){
+  state.brandName   =$('brandName').value.trim()||'Untitled';
+  state.tagline     =$('tagline').value.trim();
+  state.description =$('description').value.trim();
+  state.iconText    =($('iconText').value.trim()||'S').slice(0,4).toUpperCase();
+  state.bannerText  =$('bannerText').value.trim()||state.brandName;
+  state.primaryHex  =$('primaryHex').value.trim()||'#8B0000';
+  state.secondaryHex=$('secondaryHex').value.trim()||'#4B0082';
+  state.glow        =Number($('glowRange').value);
+  state.opacity     =Number($('opacityRange').value);
+  state.gradient    =$('gradientToggle').checked;
+  state.apiKey      =$('apiKey').value.trim();
+  state.imagePrompt =$('imagePrompt').value.trim();
+  state.font        =$('fontSelect').value;
+  state.model       =$('modelSelect').value;
+  state.temperature =Number($('tempRange').value)/10;
+  $('glowVal').textContent    =state.glow;
+  $('opacityVal').textContent =state.opacity+'%';
+  $('tempLbl').textContent    =state.temperature.toFixed(1);
 }
 
-function applyBorder(el) {
-  el.style.outline=''; el.style.boxShadow='0 12px 40px rgba(0,0,0,.45)';
-  const p=state.primaryHex, g=state.glow;
+function buildBg(){
+  const bg=BACKGROUNDS.find(b=>b.k===state.background)||BACKGROUNDS[0];
+  return state.gradient?`linear-gradient(135deg,${hexToRgba(state.primaryHex,.22)},${hexToRgba(state.secondaryHex,.18)}),${bg.css}`:bg.css;
+}
+function applyBorder(el){
+  el.style.outline=''; el.style.boxShadow='0 10px 36px rgba(0,0,0,.45)';
+  const p=state.primaryHex,g=state.glow;
   if(state.border==='solid')    el.style.outline=`3px solid ${p}`;
-  else if(state.border==='glow') el.style.boxShadow=`0 0 ${10+g*1.5}px ${hexToRgba(p,.7)},0 12px 40px rgba(0,0,0,.45)`;
-  else if(state.border==='double') el.style.outline=`4px double ${p}`;
-  else if(state.border==='dashed') el.style.outline=`3px dashed ${p}`;
-  else if(state.border==='gradient') el.style.outline=`3px solid ${p}`;
+  else if(state.border==='glow')    el.style.boxShadow=`0 0 ${10+g*1.5}px ${hexToRgba(p,.7)},0 10px 36px rgba(0,0,0,.45)`;
+  else if(state.border==='double')  el.style.outline=`4px double ${p}`;
+  else if(state.border==='dashed')  el.style.outline=`3px dashed ${p}`;
+  else if(state.border==='gradient')el.style.outline=`3px solid ${p}`;
 }
 
-function updatePreview() {
+function updatePreview(){
   readState();
-  document.documentElement.style.setProperty('--primary',   state.primaryHex);
-  document.documentElement.style.setProperty('--secondary', state.secondaryHex);
-
-  const bg = buildBg();
-  const ic = $('iconCard'), bc=$('bannerCard');
+  document.documentElement.style.setProperty('--primary',state.primaryHex);
+  document.documentElement.style.setProperty('--secondary',state.secondaryHex);
+  const bg=buildBg();
+  const ic=$('iconCard'),bc=$('bannerCard');
   ic.style.background=bg; bc.style.background=bg;
   applyBorder(ic); applyBorder(bc);
-
-  $('iconText2').textContent  = state.iconText;
-  $('iconText2').style.color  = state.primaryHex;
-  $('iconText2').style.fontFamily = `'${state.font}',sans-serif`;
-  $('iconText2').style.textShadow = `0 0 40px ${hexToRgba(state.primaryHex,.5)}`;
-
-  $('bannerText2').textContent = state.bannerText;
-  $('bannerText2').style.fontFamily = `'${state.font}',sans-serif`;
-
-  $('palPrimary').style.background   = state.primaryHex;
-  $('palPrimary').querySelector('strong').textContent   = state.primaryHex;
-  $('palSecondary').style.background = state.secondaryHex;
-  $('palSecondary').querySelector('strong').textContent = state.secondaryHex;
-
-  $('embedCard').style.borderLeftColor = state.primaryHex;
-  $('embedTitle').textContent = `\u2726 AI Brand Kit \u2014 ${state.brandName}`;
-  $('embedTag').textContent   = `\u201C${state.tagline}\u201D`;
+  $('iconText2').textContent=state.iconText;
+  $('iconText2').style.cssText=`color:${state.primaryHex};font-family:'${state.font}',sans-serif;font-size:3.5rem;font-weight:900;z-index:1;text-shadow:0 0 40px ${hexToRgba(state.primaryHex,.5)};`;
+  $('bannerText2').textContent=state.bannerText;
+  $('bannerText2').style.fontFamily=`'${state.font}',sans-serif`;
+  $('palPrimary').style.background=state.primaryHex;
+  $('palPrimary').querySelector('strong').textContent=state.primaryHex;
+  $('palSecondary').style.background=state.secondaryHex;
+  $('palSecondary').querySelector('strong').textContent=state.secondaryHex;
+  $('embedCard').style.borderLeftColor=state.primaryHex;
+  $('embedTitle').textContent=`\u2726 AI Brand Kit \u2014 ${state.brandName}`;
+  $('embedTag').textContent=`\u201C${state.tagline}\u201D`;
   $('s-icon').textContent=state.iconText; $('s-banner').textContent=state.bannerText;
   $('s-primary').textContent=state.primaryHex; $('s-secondary').textContent=state.secondaryHex;
   $('s-bg').textContent=state.background; $('s-border').textContent=state.border;
   $('s-glow').textContent=state.glow; $('s-font').textContent=state.font;
-
   updatePaletteTable();
-  $('jsonOutput').value = JSON.stringify(getConfig(), null, 2);
+  $('jsonOutput').value=JSON.stringify(getConfig(),null,2);
 }
 
-// ── Palette table ─────────────────────────────────────────────────────────────
-function updatePaletteTable() {
-  const tbody = $('paletteTbody'); tbody.innerHTML='';
-  const entries = [
-    {hex:state.primaryHex,   name:'Primary',   role:'Main brand color'},
-    {hex:state.secondaryHex, name:'Secondary', role:'Accent / gradient end'},
-    {hex:'#ffffff',          name:'White',     role:'Text on dark bg'},
-    {hex:'#000000',          name:'Black',     role:'Text on light bg'},
-  ];
-  entries.forEach(e => {
+function updatePaletteTable(){
+  const tb=$('paletteTbody'); tb.innerHTML='';
+  [{hex:state.primaryHex,name:'Primary',role:'Main brand color'},{hex:state.secondaryHex,name:'Secondary',role:'Accent / gradient end'},{hex:'#ffffff',name:'White',role:'Text on dark bg'},{hex:'#000000',name:'Black',role:'Text on light bg'}].forEach(e=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><span class="color-chip-sm" style="background:${e.hex}"></span></td><td>${e.name}</td><td><code>${e.hex}</code></td><td style="color:var(--faint);font-size:.78rem">${e.role}</td>`;
-    tbody.appendChild(tr);
+    tr.innerHTML=`<td><span class="color-chip-sm" style="background:${e.hex}"></span></td><td>${e.name}</td><td><code>${e.hex}</code></td><td style="color:var(--faint);font-size:.75rem">${e.role}</td>`;
+    tb.appendChild(tr);
   });
 }
 
-// ── Config payload ────────────────────────────────────────────────────────────
-function getConfig() {
+function getConfig(){
   return {
-    brand: { name:state.brandName, tagline:state.tagline, description:state.description, image_prompt:state.imagePrompt },
-    visuals: { icon_text:state.iconText, banner_text:state.bannerText, primary_color:state.primaryHex, secondary_color:state.secondaryHex, background:state.background, border:state.border, glow:state.glow, font:state.font, opacity:state.opacity/100, gradient:state.gradient },
-    ai: { gemini_key:state.apiKey, model:state.model, temperature:state.temperature },
+    brand:{name:state.brandName,tagline:state.tagline,description:state.description,image_prompt:state.imagePrompt},
+    visuals:{icon_text:state.iconText,banner_text:state.bannerText,primary_color:state.primaryHex,secondary_color:state.secondaryHex,background:state.background,border:state.border,glow:state.glow,font:state.font,opacity:state.opacity/100,gradient:state.gradient},
+    ai:{gemini_key:state.apiKey,model:state.model,temperature:state.temperature},
   };
 }
 
-// ── Server health ─────────────────────────────────────────────────────────────
-async function pingServer() {
-  try {
-    const r = await fetch(`${SERVER}/health`, {signal:AbortSignal.timeout(2000)});
-    serverAlive = r.ok;
-  } catch { serverAlive=false; }
-  const pill=$('serverPill'), lbl=$('serverLabel');
-  pill.classList.toggle('online', serverAlive);
-  lbl.textContent = serverAlive ? 'Online' : 'Offline';
+// Server health
+async function pingServer(){
+  try{const r=await fetch(`${SERVER}/health`,{signal:AbortSignal.timeout(2000)});serverAlive=r.ok;}catch{serverAlive=false;}
+  const pill=$('serverPill'),lbl=$('serverLabel');
+  pill.classList.toggle('online',serverAlive);
+  lbl.textContent=serverAlive?'Online':'Offline';
 }
-pingServer(); setInterval(pingServer, 8000);
+pingServer(); setInterval(pingServer,8000);
 
-// ── Fast preview ──────────────────────────────────────────────────────────────
-async function runPreview() {
-  if (!serverAlive) { setStatus('\u26a0 Server offline', 'error'); return; }
-  updatePreview();
-  setProgress(30);
-  setStatus('Rendering canvas\u2026', 'info');
+// Preview
+async function runPreview(){
+  if(!serverAlive){setStatus('\u26a0 Server offline','error');return;}
+  updatePreview(); setProgress(30); setStatus('Rendering canvas\u2026','info');
   const btn=$('previewBtn'); btn.disabled=true; btn.textContent='\u27f3 Rendering\u2026';
-  try {
-    const res = await fetch(`${SERVER}/preview`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(getConfig().visuals), signal:AbortSignal.timeout(20000),
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    setProgress(100);
-    showImages(data); wireDownloads(data);
-    setStatus('\u2713 Canvas preview rendered', 'ok');
-  } catch(e) { setStatus(`\u2717 ${e.message}`, 'error'); }
-  finally { setProgress(-1); btn.disabled=false; btn.textContent='\u26a1 Preview'; }
+  try{
+    const res=await fetch(`${SERVER}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(getConfig().visuals),signal:AbortSignal.timeout(20000)});
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    setProgress(100); showImages(data); wireDownloads(data);
+    setStatus('\u2713 Canvas preview rendered','ok');
+  }catch(e){setStatus(`\u2717 ${e.message}`,'error');}
+  finally{setProgress(-1);btn.disabled=false;btn.textContent='\u26a1 Preview';}
 }
 
-// ── AI generate ───────────────────────────────────────────────────────────────
-async function runGenerate() {
-  if (!serverAlive) { setStatus('\u26a0 Server offline', 'error'); return; }
-  if (!state.apiKey) {
-    goStep(4);
-    setStatus('\u26a0 Enter your Gemini API key in Step 4 first', 'error');
-    return;
-  }
-  updatePreview();
-  setProgress(20);
-  setStatus('Calling Gemini AI\u2026', 'info');
+// Generate
+async function runGenerate(){
+  if(!serverAlive){setStatus('\u26a0 Server offline','error');return;}
+  if(!state.apiKey){goStep(4);setStatus('\u26a0 Enter your Gemini API key in Step 4 first','error');return;}
+  updatePreview(); setProgress(20); setStatus('Calling Gemini AI\u2026','info');
   const btn=$('generateBtn'); btn.disabled=true; btn.textContent='\u27f3 Generating\u2026';
-  try {
+  try{
     setProgress(40);
-    const res = await fetch(`${SERVER}/generate`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ description:state.description, image_prompt:state.imagePrompt, gemini_key:state.apiKey }),
-      signal:AbortSignal.timeout(90000),
-    });
+    const res=await fetch(`${SERVER}/generate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:state.description,image_prompt:state.imagePrompt,gemini_key:state.apiKey}),signal:AbortSignal.timeout(90000)});
     setProgress(80);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    // Write AI brand back into form
-    if (data.brand) {
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    if(data.brand){
       const b=data.brand;
-      if(b.name)      { $('brandName').value=b.name; state.brandName=b.name; }
-      if(b.tagline)   { $('tagline').value=b.tagline; state.tagline=b.tagline; }
-      if(b.palette?.length) {
-        state.primaryHex=b.palette[0]; $('primaryHex').value=b.palette[0]; $('primaryPicker').value=b.palette[0];
-        if(b.palette[1]){ state.secondaryHex=b.palette[1]; $('secondaryHex').value=b.palette[1]; $('secondaryPicker').value=b.palette[1]; }
-      }
-      if(b.background){ state.background=b.background; }
-      if(b.border)    { state.border=b.border; }
-      if(b.font)      { state.font=b.font; try{$('fontSelect').value=b.font;}catch{} }
-      if(b.glow!=null){ state.glow=b.glow; $('glowRange').value=b.glow; }
+      if(b.name){$('brandName').value=b.name;state.brandName=b.name;}
+      if(b.tagline){$('tagline').value=b.tagline;state.tagline=b.tagline;}
+      if(b.palette?.length){state.primaryHex=b.palette[0];$('primaryHex').value=b.palette[0];$('primaryPicker').value=b.palette[0];if(b.palette[1]){state.secondaryHex=b.palette[1];$('secondaryHex').value=b.palette[1];$('secondaryPicker').value=b.palette[1];}}
+      if(b.background) state.background=b.background;
+      if(b.border)     state.border=b.border;
+      if(b.font){state.font=b.font;try{$('fontSelect').value=b.font;}catch{}}
+      if(b.glow!=null){state.glow=b.glow;$('glowRange').value=b.glow;}
     }
-
     showImages(data);
-    if (data.ai_image_b64) showAiImage(data.ai_image_b64, data.brand?.name||state.brandName);
-    wireDownloads(data);
-    updatePreview(); buildChips(); buildColorLibrary();
-    setProgress(100);
-    setStatus(`\u2713 Brand kit generated${data.ai_image_b64?' + AI image':''}`, 'ok');
-  } catch(e) { setStatus(`\u2717 ${e.message}`, 'error'); }
-  finally { setProgress(-1); btn.disabled=false; btn.textContent='\u2726 Generate'; }
+    if(data.ai_image_b64) showAiImage(data.ai_image_b64,data.brand?.name||state.brandName);
+    wireDownloads(data); updatePreview(); buildChips(); buildColorLibrary();
+    setProgress(100); setStatus(`\u2713 Brand kit generated${data.ai_image_b64?' + AI image':''}`, 'ok');
+  }catch(e){setStatus(`\u2717 ${e.message}`,'error');}
+  finally{setProgress(-1);btn.disabled=false;btn.textContent='\u2726 Generate';}
 }
 
-// ── Image helpers ─────────────────────────────────────────────────────────────
-function showImages(data) {
-  if (data.icon_b64)   setOverlay($('iconImg'),   data.icon_b64);
-  if (data.banner_b64) setOverlay($('bannerImg'), data.banner_b64);
+function showImages(data){
+  if(data.icon_b64)   setOverlay($('iconImg'),  data.icon_b64);
+  if(data.banner_b64) setOverlay($('bannerImg'),data.banner_b64);
 }
-function setOverlay(img, b64) {
+function setOverlay(img,b64){
   img.src=`data:image/png;base64,${b64}`; img.style.display='block';
   requestAnimationFrame(()=>img.classList.add('show'));
 }
-function showAiImage(b64, name) {
-  const wrap=$('aiImageWrap'), img=$('aiImageEl'), ph=$('aiPlaceholder');
-  wrap.style.display='block'; ph.style.display='none';
-  img.src=`data:image/png;base64,${b64}`; img.alt=`AI image: ${name}`;
-  // switch to AI tab
-  $$('[role=tab]').forEach(t=>t.classList.remove('on'));
-  $$('.mpanel').forEach(t=>t.classList.remove('on'));
-  document.querySelector('[data-tab=ai]').classList.add('on');
-  $('tab-ai').classList.add('on');
+function showAiImage(b64,name){
+  $('aiImageWrap').style.display='block'; $('aiPlaceholder').style.display='none';
+  $('aiImageEl').src=`data:image/png;base64,${b64}`; $('aiImageEl').alt=`AI: ${name}`;
+  $$('[role=tab]').forEach(t=>t.classList.remove('on')); $$('.mpanel').forEach(t=>t.classList.remove('on'));
+  document.querySelector('[data-tab=ai]').classList.add('on'); $('tab-ai').classList.add('on');
 }
-
-// ── Downloads ─────────────────────────────────────────────────────────────────
-function wireDownloads(data) {
-  lastRender=data;
-  const bar=$('dlBar'); bar.style.display='flex';
+function wireDownloads(data){
+  lastRender=data; $('dlBar').style.display='flex';
   if(data.icon_b64)    $('dlIcon').onclick=()=>dlBlob(data.icon_b64,   `${state.brandName}-icon.png`);
-  if(data.banner_b64)  $('dlBanner').onclick=()=>dlBlob(data.banner_b64, `${state.brandName}-banner.png`);
+  if(data.banner_b64)  $('dlBanner').onclick=()=>dlBlob(data.banner_b64,`${state.brandName}-banner.png`);
   if(data.palette_b64) $('dlPalette').onclick=()=>dlBlob(data.palette_b64,`${state.brandName}-palette.png`);
-  if(data.ai_image_b64){ $('dlAi').style.display='inline-flex'; $('dlAi').onclick=()=>dlBlob(data.ai_image_b64,`${state.brandName}-ai.png`); }
+  if(data.ai_image_b64){$('dlAi').style.display='inline-flex';$('dlAi').onclick=()=>dlBlob(data.ai_image_b64,`${state.brandName}-ai.png`);}
 }
 
-// ── Export dialog ─────────────────────────────────────────────────────────────
-$('exportBtn').addEventListener('click', () => {
-  updatePreview();
-  $('dialogJson').value = JSON.stringify(getConfig(), null, 2);
-  $('exportDialog').showModal();
-});
-$('dialogClose').addEventListener('click',  () => $('exportDialog').close());
-$('dialogClose2').addEventListener('click', () => $('exportDialog').close());
-$('dialogCopyBtn').addEventListener('click', async () => {
-  await navigator.clipboard.writeText($('dialogJson').value);
-  $('dialogCopyBtn').textContent='\u2713 Copied!';
-  setTimeout(()=>$('dialogCopyBtn').textContent='\u10063 Copy to clipboard',1600);
-});
-$('copyJsonBtn').addEventListener('click', async () => {
-  await navigator.clipboard.writeText($('jsonOutput').value);
-  $('copyJsonBtn').textContent='\u2713 Copied!';
-  setTimeout(()=>$('copyJsonBtn').textContent='\u10063 Copy',1600);
-});
+// Export dialog
+$('exportBtn').addEventListener('click',()=>{updatePreview();$('dialogJson').value=JSON.stringify(getConfig(),null,2);$('exportDialog').showModal();});
+$('dialogClose').addEventListener('click',()=>$('exportDialog').close());
+$('dialogClose2').addEventListener('click',()=>$('exportDialog').close());
+$('dialogCopyBtn').addEventListener('click',async()=>{await navigator.clipboard.writeText($('dialogJson').value);$('dialogCopyBtn').textContent='\u2713 Copied!';setTimeout(()=>$('dialogCopyBtn').textContent='Copy',1600);});
+$('copyJsonBtn').addEventListener('click',async()=>{await navigator.clipboard.writeText($('jsonOutput').value);$('copyJsonBtn').textContent='\u2713 Copied!';setTimeout(()=>$('copyJsonBtn').textContent='\u10063 Copy',1600);});
 
-// ── Theme toggle ──────────────────────────────────────────────────────────────
-$('themeBtn').addEventListener('click', () => {
-  const root=document.documentElement;
-  root.setAttribute('data-theme', root.getAttribute('data-theme')==='dark'?'light':'dark');
-});
+// Theme
+$('themeBtn').addEventListener('click',()=>{const r=document.documentElement;r.setAttribute('data-theme',r.getAttribute('data-theme')==='dark'?'light':'dark');});
 
-// ── Wire all inputs ───────────────────────────────────────────────────────────
-['brandName','tagline','description','iconText','bannerText','apiKey','imagePrompt','fontSelect','modelSelect']
-  .forEach(id => $(id).addEventListener('input', updatePreview));
-['glowRange','opacityRange','tempRange','gradientToggle']
-  .forEach(id => $(id).addEventListener('input', updatePreview));
+// Wire inputs
+['brandName','tagline','description','iconText','bannerText','apiKey','imagePrompt','fontSelect','modelSelect'].forEach(id=>$(id).addEventListener('input',updatePreview));
+['glowRange','opacityRange','tempRange','gradientToggle'].forEach(id=>$(id).addEventListener('input',updatePreview));
+$('previewBtn').addEventListener('click',runPreview);
+$('generateBtn').addEventListener('click',runGenerate);
 
-$('previewBtn').addEventListener('click', runPreview);
-$('generateBtn').addEventListener('click', runGenerate);
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
-buildStepper();
-buildColorLibrary();
-buildChips();
-updatePreview();
+// Boot
+buildStepper(); buildColorLibrary(); buildChips(); updatePreview();
 </script>
 </body>
 </html>
