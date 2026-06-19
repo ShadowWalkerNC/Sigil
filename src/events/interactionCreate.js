@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { getPanel, getPanelButtons } = require('../utils/db.js');
+const rsvpCommand = require('../commands/rsvp.js');
 
 // Slash command routing is handled in src/index.js.
 // This file handles all button interactions.
@@ -10,7 +11,12 @@ module.exports = {
 
         const { customId } = interaction;
 
-        // Setup wizard buttons
+        // ── RSVP buttons ───────────────────────────────────────────
+        if (customId.startsWith('rsvp_')) {
+            return rsvpCommand.handleButton(interaction);
+        }
+
+        // ── Setup wizard buttons ──────────────────────────────────
         if (customId === 'setup_brand') {
             return interaction.reply({
                 embeds: [new EmbedBuilder().setColor('#00FF00').setTitle('✓ Step 1 — Brand')
@@ -40,7 +46,7 @@ module.exports = {
             });
         }
 
-        // Reaction role panels — customId: rr_<panelId>_<roleId>
+        // ── Reaction role panels — customId: rr_<panelId>_<roleId> ────────
         if (customId.startsWith('rr_')) {
             const parts   = customId.split('_');
             if (parts.length < 3) return;
