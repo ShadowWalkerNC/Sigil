@@ -30,6 +30,8 @@ db.exec(`
         stats_channel         TEXT,
         event_banner_enabled  INTEGER DEFAULT 0,
         event_banner_channel  TEXT,
+        webhook_channel       TEXT,
+        webhook_secret        TEXT,
         updated_at            TEXT DEFAULT (datetime('now'))
     );
 
@@ -45,11 +47,14 @@ db.exec(`
 
 // Runtime migration -- adds columns to existing DBs that predate this schema
 const existingCols = db.prepare('PRAGMA table_info(guild_config)').all().map(r => r.name);
-if (!existingCols.includes('event_banner_enabled')) {
-    db.exec('ALTER TABLE guild_config ADD COLUMN event_banner_enabled INTEGER DEFAULT 0');
-}
-if (!existingCols.includes('event_banner_channel')) {
-    db.exec('ALTER TABLE guild_config ADD COLUMN event_banner_channel TEXT');
+const migrations = [
+    ['event_banner_enabled', 'ALTER TABLE guild_config ADD COLUMN event_banner_enabled INTEGER DEFAULT 0'],
+    ['event_banner_channel', 'ALTER TABLE guild_config ADD COLUMN event_banner_channel TEXT'],
+    ['webhook_channel',      'ALTER TABLE guild_config ADD COLUMN webhook_channel TEXT'],
+    ['webhook_secret',       'ALTER TABLE guild_config ADD COLUMN webhook_secret TEXT'],
+];
+for (const [col, sql] of migrations) {
+    if (!existingCols.includes(col)) db.exec(sql);
 }
 
 // Guild config helpers
