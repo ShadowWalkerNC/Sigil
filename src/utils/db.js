@@ -15,20 +15,22 @@ const db = new Database(DB_PATH);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS guild_config (
-        guild_id          TEXT PRIMARY KEY,
-        welcome_enabled   INTEGER DEFAULT 0,
-        welcome_channel   TEXT,
-        welcome_color     TEXT DEFAULT '#39FF14',
-        welcome_bg        TEXT DEFAULT 'gradient-purple',
-        welcome_font      TEXT DEFAULT 'Arial',
-        goodbye_enabled   INTEGER DEFAULT 0,
-        goodbye_channel   TEXT,
-        milestone_enabled INTEGER DEFAULT 0,
-        milestone_channel TEXT,
-        boost_enabled     INTEGER DEFAULT 0,
-        boost_channel     TEXT,
-        stats_channel     TEXT,
-        updated_at        TEXT DEFAULT (datetime('now'))
+        guild_id              TEXT PRIMARY KEY,
+        welcome_enabled       INTEGER DEFAULT 0,
+        welcome_channel       TEXT,
+        welcome_color         TEXT DEFAULT '#39FF14',
+        welcome_bg            TEXT DEFAULT 'gradient-purple',
+        welcome_font          TEXT DEFAULT 'Arial',
+        goodbye_enabled       INTEGER DEFAULT 0,
+        goodbye_channel       TEXT,
+        milestone_enabled     INTEGER DEFAULT 0,
+        milestone_channel     TEXT,
+        boost_enabled         INTEGER DEFAULT 0,
+        boost_channel         TEXT,
+        stats_channel         TEXT,
+        event_banner_enabled  INTEGER DEFAULT 0,
+        event_banner_channel  TEXT,
+        updated_at            TEXT DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS scheduled_posts (
@@ -40,6 +42,19 @@ db.exec(`
         created_at  TEXT DEFAULT (datetime('now'))
     );
 `);
+
+-- Migrate existing DBs: add event_banner columns if missing
+PRAGMA table_info(guild_config);
+`);
+
+// Runtime migration — adds columns to existing DBs that predate this schema
+const existingCols = db.prepare('PRAGMA table_info(guild_config)').all().map(r => r.name);
+if (!existingCols.includes('event_banner_enabled')) {
+    db.exec('ALTER TABLE guild_config ADD COLUMN event_banner_enabled INTEGER DEFAULT 0');
+}
+if (!existingCols.includes('event_banner_channel')) {
+    db.exec('ALTER TABLE guild_config ADD COLUMN event_banner_channel TEXT');
+}
 
 // Guild config helpers
 function getConfig(guildId) {
