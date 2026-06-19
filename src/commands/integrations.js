@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 const { getConfig, setConfig } = require('../utils/db.js');
 
-// Safely parse a JSON array stored in the DB, returning [] on failure
 function parseList(str) {
     try { return JSON.parse(str || '[]'); } catch { return []; }
 }
@@ -12,7 +11,6 @@ module.exports = {
         .setDescription('Configure Twitch and YouTube live / upload notifications (admin only)')
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
 
-        // ── /integrations twitch ───────────────────────────────────────────
         .addSubcommandGroup(group => group
             .setName('twitch')
             .setDescription('Twitch live notifications')
@@ -42,6 +40,7 @@ module.exports = {
                     .setName('streamer')
                     .setDescription('Twitch username to remove')
                     .setRequired(true)
+                    .setAutocomplete(true)
                 )
             )
             .addSubcommand(sub => sub
@@ -50,7 +49,6 @@ module.exports = {
             )
         )
 
-        // ── /integrations youtube ─────────────────────────────────────────
         .addSubcommandGroup(group => group
             .setName('youtube')
             .setDescription('YouTube upload notifications')
@@ -80,6 +78,7 @@ module.exports = {
                     .setName('handle')
                     .setDescription('YouTube handle or channel ID to remove')
                     .setRequired(true)
+                    .setAutocomplete(true)
                 )
             )
             .addSubcommand(sub => sub
@@ -88,11 +87,34 @@ module.exports = {
             )
         )
 
-        // ── /integrations status ───────────────────────────────────────────
         .addSubcommand(sub => sub
             .setName('status')
             .setDescription('Show current integration status for this server')
         ),
+
+    async autocomplete(interaction) {
+        const group   = interaction.options.getSubcommandGroup(false);
+        const focused = interaction.options.getFocused().toLowerCase();
+        const cfg     = getConfig(interaction.guild.id);
+
+        if (group === 'twitch') {
+            const streamers = parseList(cfg.twitch_streamers)
+                .filter(s => s.includes(focused))
+                .slice(0, 25)
+                .map(s => ({ name: s, value: s }));
+            return interaction.respond(streamers);
+        }
+
+        if (group === 'youtube') {
+            const handles = parseList(cfg.youtube_handles)
+                .filter(h => h.toLowerCase().includes(focused))
+                .slice(0, 25)
+                .map(h => ({ name: h, value: h }));
+            return interaction.respond(handles);
+        }
+
+        await interaction.respond([]);
+    },
 
     async execute(interaction) {
         const group   = interaction.options.getSubcommandGroup(false);
@@ -169,12 +191,16 @@ module.exports = {
 
             if (sub === 'remove') {
                 const streamer  = interaction.options.getString('streamer').toLowerCase().trim();
-                const streamers = parseList(cfg.twitch_streamers).filter(s => s !== streamer);
-                setConfig(guildId, { twitch_streamers: JSON.stringify(streamers) });
+                const streamers = parseList(cfg.twitch_streamers);
+                if (!streamers.includes(streamer)) {
+                    return interaction.reply({ content: `❌ \`${streamer}\` is not in your watch list.`, ephemeral: true });
+                }
+                const updated = streamers.filter(s => s !== streamer);
+                setConfig(guildId, { twitch_streamers: JSON.stringify(updated) });
                 return interaction.reply({
                     embeds: [new EmbedBuilder()
                         .setTitle('✅ Streamer Removed')
-                        .setDescription(`Removed **${streamer}** from watch list.${streamers.length ? `\nRemaining: ${streamers.map(s => `\`${s}\``).join(', ')}` : '\nWatch list is now empty.'}`)
+                        .setDescription(`Removed **${streamer}** from watch list.${updated.length ? `\nRemaining: ${updated.map(s => `\`${s}\``).join(', ')}` : '\nWatch list is now empty.'}`)
                         .setColor('#9146FF')
                         .setFooter({ text: 'Sigil • integrations twitch remove' })],
                     ephemeral: true,
@@ -234,12 +260,16 @@ module.exports = {
 
             if (sub === 'remove') {
                 const handle  = interaction.options.getString('handle').trim();
-                const handles = parseList(cfg.youtube_handles).filter(h => h !== handle);
-                setConfig(guildId, { youtube_handles: JSON.stringify(handles) });
+                const handles = parseList(cfg.youtube_handles);
+                if (!handles.includes(handle)) {
+                    return interaction.reply({ content: `❌ \`${handle}\` is not in your watch list.`, ephemeral: true });
+                }
+                const updated = handles.filter(h => h !== handle);
+                setConfig(guildId, { youtube_handles: JSON.stringify(updated) });
                 return interaction.reply({
                     embeds: [new EmbedBuilder()
                         .setTitle('✅ YouTube Channel Removed')
-                        .setDescription(`Removed **${handle}** from watch list.${handles.length ? `\nRemaining: ${handles.map(h => `\`${h}\``).join(', ')}` : '\nWatch list is now empty.'}`)
+                        .setDescription(`Removed **${handle}** from watch list.${updated.length ? `\nRemaining: ${updated.map(h => `\`${h}\``).join(', ')}` : '\nWatch list is now empty.'}`)
                         .setColor('#FF0000')
                         .setFooter({ text: 'Sigil • integrations youtube remove' })],
                     ephemeral: true,
