@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { readdirSync } = require('fs');
 const { join } = require('path');
 require('dotenv').config();
@@ -22,6 +22,12 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildModeration,
         GatewayIntentBits.GuildInvites,
+        GatewayIntentBits.GuildMessageReactions,
+    ],
+    partials: [
+        Partials.Message,
+        Partials.Channel,
+        Partials.Reaction,
     ],
 });
 

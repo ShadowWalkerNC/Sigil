@@ -57,6 +57,11 @@ db.exec(`
         automod_bypass_role     TEXT,
         automod_badwords        TEXT,
         automod_allowed_domains TEXT,
+        starboard_enabled       INTEGER DEFAULT 0,
+        starboard_channel       TEXT,
+        starboard_threshold     INTEGER DEFAULT 3,
+        starboard_emoji         TEXT DEFAULT '⭐',
+        starboard_ignored       TEXT,
         updated_at              TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS scheduled_posts (
@@ -169,6 +174,13 @@ db.exec(`
         created_at   TEXT DEFAULT (datetime('now')),
         closed_at    TEXT
     );
+    CREATE TABLE IF NOT EXISTS starboard_entries (
+        guild_id      TEXT NOT NULL,
+        message_id    TEXT NOT NULL,
+        sb_message_id TEXT,
+        created_at    TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (guild_id, message_id)
+    );
 `);
 
 const existingCols = db.prepare('PRAGMA table_info(guild_config)').all().map(r => r.name);
@@ -206,6 +218,11 @@ const migrations = [
     ['automod_bypass_role',     'ALTER TABLE guild_config ADD COLUMN automod_bypass_role     TEXT'],
     ['automod_badwords',        'ALTER TABLE guild_config ADD COLUMN automod_badwords        TEXT'],
     ['automod_allowed_domains', 'ALTER TABLE guild_config ADD COLUMN automod_allowed_domains TEXT'],
+    ['starboard_enabled',       'ALTER TABLE guild_config ADD COLUMN starboard_enabled       INTEGER DEFAULT 0'],
+    ['starboard_channel',       'ALTER TABLE guild_config ADD COLUMN starboard_channel       TEXT'],
+    ['starboard_threshold',     'ALTER TABLE guild_config ADD COLUMN starboard_threshold     INTEGER DEFAULT 3'],
+    ['starboard_emoji',         "ALTER TABLE guild_config ADD COLUMN starboard_emoji         TEXT DEFAULT '⭐'"],
+    ['starboard_ignored',       'ALTER TABLE guild_config ADD COLUMN starboard_ignored       TEXT'],
 ];
 for (const [col, sql] of migrations) {
     if (!existingCols.includes(col)) db.exec(sql);
@@ -400,6 +417,12 @@ function getGuildTickets(guildId, status) {
     if (status) return db.prepare('SELECT * FROM tickets WHERE guild_id = ? AND status = ? ORDER BY created_at DESC').all(guildId, status);
     return db.prepare('SELECT * FROM tickets WHERE guild_id = ? ORDER BY created_at DESC').all(guildId);
 }
+function getStarboardEntry(guildId, messageId) {
+    return db.prepare('SELECT * FROM starboard_entries WHERE guild_id = ? AND message_id = ?').get(guildId, messageId) ?? null;
+}
+function setStarboardEntry(guildId, messageId, sbMessageId) {
+    db.prepare('INSERT OR REPLACE INTO starboard_entries (guild_id, message_id, sb_message_id) VALUES (?, ?, ?)').run(guildId, messageId, sbMessageId);
+}
 
 module.exports = {
     getConfig, setConfig, getGuildsWithFeature,
@@ -413,4 +436,5 @@ module.exports = {
     addAutoRole, removeAutoRole, getAutoRoles, getAutoRolesByTrigger, getLevelAutoRoles,
     createPanel, getPanel, getGuildPanels, setPanelMessageId, deletePanel, addPanelButton, removePanelButton, getPanelButtons,
     createTicket, getTicket, getTicketByThread, setTicketThreadId, closeTicket, getGuildTickets,
+    getStarboardEntry, setStarboardEntry,
 };
