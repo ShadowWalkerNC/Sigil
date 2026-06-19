@@ -46,6 +46,11 @@ for (const file of eventFiles) {
     }
 }
 
+// Expose client globally so gui-server.js webhook endpoint can post to Discord
+client.once('ready', () => {
+    global.sigilClient = client;
+});
+
 // Slash command handler
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
