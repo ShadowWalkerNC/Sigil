@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { getPanel, getPanelButtons } = require('../utils/db.js');
 const rsvpCommand = require('../commands/rsvp.js');
+const lfgCommand  = require('../commands/lfg.js');
 
 // Slash command routing is handled in src/index.js.
 // This file handles all button interactions.
@@ -14,6 +15,11 @@ module.exports = {
         // ── RSVP buttons ───────────────────────────────────────────
         if (customId.startsWith('rsvp_')) {
             return rsvpCommand.handleButton(interaction);
+        }
+
+        // ── LFG buttons ────────────────────────────────────────────
+        if (customId.startsWith('lfg_')) {
+            return lfgCommand.handleButton(interaction);
         }
 
         // ── Setup wizard buttons ──────────────────────────────────
