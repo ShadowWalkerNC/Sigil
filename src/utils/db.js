@@ -1,6 +1,6 @@
 /**
  * Lightweight SQLite wrapper using better-sqlite3.
- * Stores per-guild automation config and scheduled posts.
+ * Stores per-guild automation config, scheduled posts, and mod cases.
  */
 const Database = require('better-sqlite3');
 const path     = require('path');
@@ -40,6 +40,7 @@ db.exec(`
         youtube_channel         TEXT,
         youtube_handles         TEXT,
         youtube_last_video_id   TEXT,
+        mod_log_channel         TEXT,
         updated_at              TEXT DEFAULT (datetime('now'))
     );
 
@@ -51,9 +52,22 @@ db.exec(`
         payload     TEXT NOT NULL,
         created_at  TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS mod_cases (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        guild_id    TEXT NOT NULL,
+        case_number INTEGER NOT NULL,
+        type        TEXT NOT NULL,
+        user_id     TEXT NOT NULL,
+        user_tag    TEXT NOT NULL,
+        mod_id      TEXT NOT NULL,
+        mod_tag     TEXT NOT NULL,
+        reason      TEXT NOT NULL,
+        created_at  TEXT DEFAULT (datetime('now'))
+    );
 `);
 
-// Runtime migration -- adds columns to existing DBs that predate this schema
+// Runtime migrations — adds columns to existing DBs that predate this schema
 const existingCols = db.prepare('PRAGMA table_info(guild_config)').all().map(r => r.name);
 const migrations = [
     ['event_banner_enabled',  'ALTER TABLE guild_config ADD COLUMN event_banner_enabled  INTEGER DEFAULT 0'],
@@ -68,12 +82,13 @@ const migrations = [
     ['youtube_channel',       'ALTER TABLE guild_config ADD COLUMN youtube_channel        TEXT'],
     ['youtube_handles',       'ALTER TABLE guild_config ADD COLUMN youtube_handles        TEXT'],
     ['youtube_last_video_id', 'ALTER TABLE guild_config ADD COLUMN youtube_last_video_id  TEXT'],
+    ['mod_log_channel',       'ALTER TABLE guild_config ADD COLUMN mod_log_channel        TEXT'],
 ];
 for (const [col, sql] of migrations) {
     if (!existingCols.includes(col)) db.exec(sql);
 }
 
-// Guild config helpers
+// ── Guild config helpers ──────────────────────────────────────────────────────
 function getConfig(guildId) {
     let row = db.prepare('SELECT * FROM guild_config WHERE guild_id = ?').get(guildId);
     if (!row) {
@@ -91,12 +106,11 @@ function setConfig(guildId, fields) {
     db.prepare(`UPDATE guild_config SET ${sets} WHERE guild_id = @guild_id`).run(merged);
 }
 
-// Retrieve all guilds that have a specific feature enabled
 function getGuildsWithFeature(column) {
     return db.prepare(`SELECT * FROM guild_config WHERE ${column} = 1`).all();
 }
 
-// Scheduled posts helpers
+// ── Scheduled posts helpers ───────────────────────────────────────────────────
 function addScheduledPost(guildId, channelId, postAt, payload) {
     return db.prepare(
         'INSERT INTO scheduled_posts (guild_id, channel_id, post_at, payload) VALUES (?, ?, ?, ?)'
@@ -118,4 +132,32 @@ function getScheduledPosts(guildId) {
         .map(r => ({ ...r, payload: JSON.parse(r.payload) }));
 }
 
-module.exports = { getConfig, setConfig, getGuildsWithFeature, addScheduledPost, getDueScheduledPosts, deleteScheduledPost, getScheduledPosts };
+// ── Mod case helpers ──────────────────────────────────────────────────────────
+function getNextCaseNumber(guildId) {
+    const row = db.prepare('SELECT MAX(case_number) as max FROM mod_cases WHERE guild_id = ?').get(guildId);
+    return (row?.max ?? 0) + 1;
+}
+
+function addModCase(guildId, type, userId, userTag, modId, modTag, reason) {
+    const caseNumber = getNextCaseNumber(guildId);
+    db.prepare(
+        'INSERT INTO mod_cases (guild_id, case_number, type, user_id, user_tag, mod_id, mod_tag, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(guildId, caseNumber, type, userId, userTag, modId, modTag, reason);
+    return caseNumber;
+}
+
+function getModCases(guildId, userId, limit = 10, offset = 0) {
+    return db.prepare(
+        'SELECT * FROM mod_cases WHERE guild_id = ? AND user_id = ? ORDER BY case_number DESC LIMIT ? OFFSET ?'
+    ).all(guildId, userId, limit, offset);
+}
+
+function countModCases(guildId, userId) {
+    return db.prepare('SELECT COUNT(*) as count FROM mod_cases WHERE guild_id = ? AND user_id = ?').get(guildId, userId)?.count ?? 0;
+}
+
+module.exports = {
+    getConfig, setConfig, getGuildsWithFeature,
+    addScheduledPost, getDueScheduledPosts, deleteScheduledPost, getScheduledPosts,
+    addModCase, getModCases, countModCases,
+};

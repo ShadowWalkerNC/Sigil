@@ -49,13 +49,18 @@ module.exports = {
             .addChannelOption(opt => opt.setName('channel').setDescription('Channel to post weekly reports in (leave blank to disable)').addChannelTypes(ChannelType.GuildText))
         )
         .addSubcommand(sub => sub
+            .setName('mod')
+            .setDescription('Configure the mod log channel')
+            .addChannelOption(opt => opt.setName('channel').setDescription('Channel to post mod cases in (leave blank to disable)').addChannelTypes(ChannelType.GuildText))
+        )
+        .addSubcommand(sub => sub
             .setName('webhook')
             .setDescription('Configure the external webhook trigger channel and secret')
             .addChannelOption(opt => opt.setName('channel').setDescription('Channel to post webhook notifications in').addChannelTypes(ChannelType.GuildText))
             .addStringOption(opt => opt.setName('action').setDescription('What to do with the webhook secret').setRequired(false)
                 .addChoices(
                     { name: 'Generate new secret', value: 'generate' },
-                    { name: 'Clear secret (disable HMAC)',  value: 'clear'    },
+                    { name: 'Clear secret (disable HMAC)', value: 'clear' },
                 )
             )
         )
@@ -88,12 +93,13 @@ module.exports = {
                     { name: '📅 Events',       value: cfg.event_banner_enabled ? `🟢 On — <#${cfg.event_banner_channel}>` : '🔴 Off', inline: true },
                     { name: '📊 Weekly Stats', value: cfg.stats_channel        ? `🟢 On — <#${cfg.stats_channel}>`        : '🔴 Off', inline: true },
                     { name: '🔗 Webhooks',     value: cfg.webhook_channel      ? `🟢 On — <#${cfg.webhook_channel}>${cfg.webhook_secret ? ' 🔒 HMAC set' : ' ⚠️ No secret'}` : '🔴 Off', inline: true },
+                    { name: '🛡️ Mod Log',      value: cfg.mod_log_channel      ? `🟢 On — <#${cfg.mod_log_channel}>`      : '🔴 Off', inline: true },
                 )
                 .setFooter({ text: 'Sigil • sigilconfig status' });
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        // ── STATS ───────────────────────────────────────────────────────────────
+        // ── STATS ────────────────────────────────────────────────────────────
         if (sub === 'stats') {
             const channel = interaction.options.getChannel('channel');
             setConfig(guildId, { stats_channel: channel ? channel.id : null });
@@ -107,7 +113,21 @@ module.exports = {
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
-        // ── WEBHOOK ──────────────────────────────────────────────────────────────
+        // ── MOD ──────────────────────────────────────────────────────────────
+        if (sub === 'mod') {
+            const channel = interaction.options.getChannel('channel');
+            setConfig(guildId, { mod_log_channel: channel ? channel.id : null });
+            const embed = new EmbedBuilder()
+                .setTitle('✅ Sigil — Mod Log Updated')
+                .setDescription(channel
+                    ? `Mod actions (warn/kick/ban) will be logged in <#${channel.id}>.`
+                    : 'Mod log channel has been **disabled**.')
+                .setColor(channel ? '#39FF14' : '#ff4444')
+                .setFooter({ text: 'Sigil • sigilconfig mod' });
+            return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        // ── WEBHOOK ──────────────────────────────────────────────────────────
         if (sub === 'webhook') {
             const channel = interaction.options.getChannel('channel');
             const action  = interaction.options.getString('action');
@@ -137,12 +157,11 @@ module.exports = {
                     `\n**Headers required:**` +
                     `\n\`x-sigil-guild-id: ${guildId}\`` +
                     `\n\`x-sigil-signature: sha256=<hmac>\`` +
-                    `\n\n**Supported types:** \`twitch.live\` \u2022 \`youtube.upload\` \u2022 \`github.push\``
+                    `\n\n**Supported types:** \`twitch.live\` • \`youtube.upload\` • \`github.push\``
                 )
                 .setColor('#39FF14')
                 .setFooter({ text: 'Sigil • sigilconfig webhook' });
 
-            // Ephemeral so the secret is only visible to the admin
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
