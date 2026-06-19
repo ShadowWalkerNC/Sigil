@@ -2,20 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discor
 const { createCanvas } = require('canvas');
 const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
 const { saveEntry } = require('../utils/history.js');
-const { getColorAutocomplete } = require('../utils/colors.js');
+const { EFFECT_CHOICES, dispatchAutocomplete, autocompleteColor, autocompleteEffect } = require('../utils/autocomplete.js');
 
 registerAllFonts();
-
-const EFFECT_CHOICES = [
-    { name: 'Neon',    value: 'neon'    },
-    { name: 'Chrome',  value: 'chrome'  },
-    { name: 'Fire',    value: 'fire'    },
-    { name: 'Glitch',  value: 'glitch'  },
-    { name: 'Ice',     value: 'ice'     },
-    { name: 'Gold',    value: 'gold'    },
-    { name: 'Shadow',  value: 'shadow'  },
-    { name: 'Outline', value: 'outline' },
-];
 
 function renderTextEffect({ text, effect, font, color }) {
     const FONT_SIZE = 96;
@@ -151,14 +140,15 @@ module.exports = {
         .setName('texteffect')
         .setDescription('Render stylised text as a downloadable PNG — neon, fire, chrome, glitch, and more')
         .addStringOption(opt => opt.setName('text').setDescription('Text to render').setRequired(true))
-        .addStringOption(opt => opt.setName('effect').setDescription('Visual effect').setRequired(true).addChoices(...EFFECT_CHOICES))
+        .addStringOption(opt => opt.setName('effect').setDescription('Visual effect').setRequired(true).setAutocomplete(true))
         .addStringOption(opt => opt.setName('font').setDescription('Font family').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f }))))
         .addStringOption(opt => opt.setName('color').setDescription('Base color for neon/shadow/outline effects (hex)').setAutocomplete(true)),
 
     async autocomplete(interaction) {
-        const focused = interaction.options.getFocused();
-        const results = getColorAutocomplete(focused);
-        await interaction.respond(results);
+        await dispatchAutocomplete(interaction, {
+            effect: autocompleteEffect,
+            color:  autocompleteColor,
+        });
     },
 
     async execute(interaction) {
@@ -186,7 +176,6 @@ module.exports = {
             .setFooter({ text: 'Sigil • texteffect — use in banners, intros, or anywhere outside Discord' });
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
-
         saveEntry(interaction.user.id, { command: 'texteffect', text, effect, font, color });
     },
 };

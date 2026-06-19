@@ -1,151 +1,74 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const { registerAllFonts, renderKit } = require('../utils/canvas.js');
+const { registerAllFonts, renderIcon, renderBanner } = require('../utils/canvas.js');
 const { saveEntry } = require('../utils/history.js');
+const { TEMPLATE_CHOICES, dispatchAutocomplete, autocompleteTemplate } = require('../utils/autocomplete.js');
 
 registerAllFonts();
 
-const TEMPLATES = [
-    {
-        id: 'demonfall', name: 'Demonfall', tag: 'Dark Fantasy',
-        primary: '#8B0000', secondary: '#4B0082',
-        background: 'inferno', border: 'glow',
-        font: 'Arial Black', glow: 15, opacity: 0.85, shape: 'circle',
-        brandName: 'Demonfall', tagline: 'Unleash the Darkness. Fight the Demons.', iconText: 'DF',
-    },
-    {
-        id: 'cyber-nexus', name: 'Cyber Nexus', tag: 'Cyberpunk',
-        primary: '#00FFFF', secondary: '#FF00FF',
-        background: 'neon-city', border: 'solid',
-        font: 'Source Code Pro', glow: 20, opacity: 0.90, shape: 'square',
-        brandName: 'Cyber Nexus', tagline: 'Jack In. Level Up. Own the Grid.', iconText: 'CN',
-    },
-    {
-        id: 'arcane-order', name: 'Arcane Order', tag: 'Fantasy RPG',
-        primary: '#9966CC', secondary: '#FFD700',
-        background: 'twilight', border: 'gradient',
-        font: 'Playfair Display', glow: 12, opacity: 0.88, shape: 'hexagon',
-        brandName: 'Arcane Order', tagline: 'Knowledge is Power. Magic is Law.', iconText: 'AO',
-    },
-    {
-        id: 'cozy-den', name: 'Cozy Den', tag: 'Community',
-        primary: '#FF6B35', secondary: '#FFD700',
-        background: 'sunset-fade', border: 'none',
-        font: 'Dancing Script', glow: 5, opacity: 0.80, shape: 'rounded',
-        brandName: 'Cozy Den', tagline: 'Your Home Away From Home.', iconText: 'CD',
-    },
-    {
-        id: 'neon-drift', name: 'Neon Drift', tag: 'Racing / Sports',
-        primary: '#FF4500', secondary: '#FFBF00',
-        background: 'deep-space', border: 'dashed',
-        font: 'Bebas Neue', glow: 18, opacity: 0.92, shape: 'diamond',
-        brandName: 'Neon Drift', tagline: 'No Limits. Full Speed.', iconText: 'ND',
-    },
-    {
-        id: 'polar-ops', name: 'Polar Ops', tag: 'Tactical FPS',
-        primary: '#7DF9FF', secondary: '#001F5B',
-        background: 'polar', border: 'double',
-        font: 'Impact', glow: 8, opacity: 0.95, shape: 'square',
-        brandName: 'Polar Ops', tagline: 'Cold. Calculated. Lethal.', iconText: 'PO',
-    },
-    {
-        id: 'emerald-fang', name: 'Emerald Fang', tag: 'Survival / RPG',
-        primary: '#39FF14', secondary: '#228B22',
-        background: 'forest-night', border: 'solid',
-        font: 'Oswald', glow: 14, opacity: 0.87, shape: 'hexagon',
-        brandName: 'Emerald Fang', tagline: 'Hunt or Be Hunted.', iconText: 'EF',
-    },
-    {
-        id: 'void-protocol', name: 'Void Protocol', tag: 'Sci-Fi',
-        primary: '#C0C0C0', secondary: '#6600CC',
-        background: 'void', border: 'glow',
-        font: 'Bebas Neue', glow: 10, opacity: 1.0, shape: 'circle',
-        brandName: 'Void Protocol', tagline: 'Beyond the Event Horizon.', iconText: 'VP',
-    },
-];
-
-const TEMPLATE_CHOICES = TEMPLATES.map(t => ({ name: `${t.name} — ${t.tag}`, value: t.id }));
+const TEMPLATES = {
+    'demonfall':     { primary: '#8B0000', secondary: '#ff4444', background: 'gradient-red',    border: 'glow',     font: 'Impact',           tagline: 'Enter the Demon Realm' },
+    'cyber-nexus':   { primary: '#00FFFF', secondary: '#0099ff', background: 'gradient-blue',   border: 'neon',     font: 'Bebas Neue',        tagline: 'Jack In. Stand Out.' },
+    'arcane-order':  { primary: '#9B59B6', secondary: '#e0aaff', background: 'gradient-purple', border: 'gradient', font: 'Playfair Display',  tagline: 'Ancient Power Awaits' },
+    'cozy-den':      { primary: '#E67E22', secondary: '#f5cba7', background: 'solid-dark',      border: 'none',     font: 'Dancing Script',    tagline: 'A Place to Unwind' },
+    'neon-drift':    { primary: '#FF00FF', secondary: '#00FFFF', background: 'gradient-dark',   border: 'rainbow',  font: 'Bebas Neue',        tagline: 'Drift Into the Neon' },
+    'polar-ops':     { primary: '#00BFFF', secondary: '#ffffff', background: 'gradient-blue',   border: 'double',   font: 'Arial Black',       tagline: 'Cold. Calculated. Elite.' },
+    'emerald-fang':  { primary: '#00FF7F', secondary: '#004d2e', background: 'gradient-green',  border: 'solid',    font: 'Oswald',            tagline: 'Fangs Out. Lights On.' },
+    'void-protocol': { primary: '#1a1a2e', secondary: '#e0e0e0', background: 'solid-dark',      border: 'dashed',   font: 'Source Code Pro',   tagline: 'Protocol Initiated.' },
+};
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('template')
-        .setDescription('Load a built-in brand template and generate its full kit')
-        .addStringOption(opt =>
-            opt.setName('name')
-                .setDescription('Choose a template')
-                .setRequired(true)
-                .addChoices(...TEMPLATE_CHOICES)
-        )
-        .addStringOption(opt =>
-            opt.setName('icon_text')
-                .setDescription('Override the icon text (default: template default)')
-        )
-        .addStringOption(opt =>
-            opt.setName('brand_name')
-                .setDescription('Override the brand name')
-        ),
+        .setDescription('Load a built-in fully-themed brand template instantly')
+        .addStringOption(opt => opt.setName('name').setDescription('Template name').setRequired(true).setAutocomplete(true))
+        .addStringOption(opt => opt.setName('icon_text').setDescription('Override icon initials (default: first 2 chars of brand_name)'))
+        .addStringOption(opt => opt.setName('brand_name').setDescription('Override the brand name shown on the banner')),
+
+    async autocomplete(interaction) {
+        await dispatchAutocomplete(interaction, {
+            name: autocompleteTemplate,
+        });
+    },
 
     async execute(interaction) {
         await interaction.deferReply();
 
-        const id  = interaction.options.getString('name');
-        const tpl = TEMPLATES.find(t => t.id === id);
+        const name      = interaction.options.getString('name');
+        const brandName = interaction.options.getString('brand_name') ?? name;
+        const iconText  = interaction.options.getString('icon_text')  ?? brandName.slice(0, 2).toUpperCase();
 
+        const tpl = TEMPLATES[name];
         if (!tpl) {
-            return interaction.editReply('❌ Template not found.');
+            return interaction.editReply({ content: `❌ Unknown template \`${name}\`. Use autocomplete to see valid options.`, ephemeral: true });
         }
 
-        const brandName = interaction.options.getString('brand_name') ?? tpl.brandName;
-        const iconText  = (interaction.options.getString('icon_text') ?? tpl.iconText).toUpperCase().slice(0, 4);
+        const { primary, secondary, background, border, font, tagline } = tpl;
 
-        const { iconBuf, bannerBuf, paletteBuf } = await renderKit({
-            text:       iconText,
-            subtitle:   tpl.tagline,
-            background: tpl.background,
-            border:     tpl.border,
-            primary:    tpl.primary,
-            secondary:  tpl.secondary,
-            font:       tpl.font,
-            glow:       tpl.glow,
-            opacity:    tpl.opacity,
-            shape:      tpl.shape,
-        });
+        const [iconBuf, bannerBuf] = await Promise.all([
+            renderIcon({ text: iconText, shape: 'circle', background, border, primary, secondary, font, glow: 6, opacity: 1.0 }),
+            renderBanner({ text: `${brandName}\n${tagline}`, primary, secondary, background, font, align: 'center', glow: 4, opacity: 1.0 }),
+        ]);
 
-        const files = [
-            new AttachmentBuilder(iconBuf,    { name: 'icon.png'    }),
-            new AttachmentBuilder(bannerBuf,  { name: 'banner.png'  }),
-            new AttachmentBuilder(paletteBuf, { name: 'palette.png' }),
-        ];
+        const iconFile   = new AttachmentBuilder(iconBuf,   { name: 'template-icon.png'   });
+        const bannerFile = new AttachmentBuilder(bannerBuf, { name: 'template-banner.png' });
+
+        const templateLabel = TEMPLATE_CHOICES.find(t => t.value === name)?.name ?? name;
 
         const embed = new EmbedBuilder()
-            .setTitle(`✦ ${brandName} — ${tpl.tag}`)
-            .setDescription(tpl.tagline)
-            .setImage('attachment://banner.png')
-            .setThumbnail('attachment://icon.png')
-            .setColor(tpl.primary)
+            .setTitle(`🎨 Template: ${templateLabel}`)
+            .setDescription(`Brand name: **${brandName}** · Tagline: *${tagline}*`)
+            .setImage('attachment://template-banner.png')
+            .setThumbnail('attachment://template-icon.png')
+            .setColor(primary)
             .addFields(
-                { name: 'Template',   value: tpl.name,           inline: true },
-                { name: 'Shape',      value: tpl.shape,          inline: true },
-                { name: 'Background', value: tpl.background,     inline: true },
-                { name: 'Border',     value: tpl.border,         inline: true },
-                { name: 'Font',       value: tpl.font,           inline: true },
-                { name: 'Glow',       value: String(tpl.glow),   inline: true },
-                { name: 'Primary',    value: tpl.primary,        inline: true },
-                { name: 'Secondary',  value: tpl.secondary,      inline: true },
+                { name: 'Primary',    value: primary,    inline: true },
+                { name: 'Secondary',  value: secondary,  inline: true },
+                { name: 'Border',     value: border,     inline: true },
+                { name: 'Font',       value: font,       inline: true },
             )
-            .setFooter({ text: 'Sigil • template — use /gui open to customise in the Visual Builder' });
+            .setFooter({ text: 'Sigil • template — use /brand kit to customise further' });
 
-        await interaction.editReply({ embeds: [embed], files });
-
-        saveEntry(interaction.user.id, {
-            command:         'template',
-            text:            iconText,
-            background:      tpl.background,
-            border:          tpl.border,
-            primary_color:   tpl.primary,
-            secondary_color: tpl.secondary,
-            font:            tpl.font,
-            glow:            tpl.glow,
-            shape:           tpl.shape,
-        });
+        await interaction.editReply({ embeds: [embed], files: [iconFile, bannerFile] });
+        saveEntry(interaction.user.id, { command: 'template', name, brand_name: brandName, icon_text: iconText });
     },
 };

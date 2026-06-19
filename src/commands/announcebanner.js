@@ -1,138 +1,73 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const { createCanvas } = require('canvas');
-const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
-const { getBackgroundById } = require('../utils/backgrounds.js');
+const { registerAllFonts, getAllFontFamilies, renderBanner } = require('../utils/canvas.js');
 const { getBackgroundChoices } = require('../utils/backgrounds.js');
 const { saveEntry } = require('../utils/history.js');
-const { getColorAutocomplete } = require('../utils/colors.js');
+const {
+    ANNOUNCE_TYPE_CHOICES,
+    dispatchAutocomplete,
+    autocompleteColor,
+    autocompleteBackground,
+    autocompleteAnnounceType,
+} = require('../utils/autocomplete.js');
 
 registerAllFonts();
 
-const W = 900, H = 300;
-
-const TYPE_CHOICES = [
-    { name: '📣 Announcement', value: 'announcement' },
-    { name: '⚠️  Important',    value: 'important'    },
-    { name: '🔔 Notice',       value: 'notice'       },
-    { name: '🎉 Celebration',  value: 'celebration'  },
-    { name: '🔧 Update',        value: 'update'       },
-    { name: '🚨 Alert',         value: 'alert'        },
-];
-
 const TYPE_COLORS = {
     announcement: '#5865F2',
-    important:    '#ff6600',
-    notice:       '#ffd700',
-    celebration:  '#39FF14',
-    update:       '#00ccff',
-    alert:        '#ff0033',
-};
-
-const TYPE_ICONS = {
-    announcement: '📣',
-    important:    '⚠️',
-    notice:       '🔔',
-    celebration:  '🎉',
-    update:       '🔧',
-    alert:        '🚨',
+    alert:        '#ED4245',
+    update:       '#3BA55C',
+    event:        '#FAA61A',
+    maintenance:  '#9B59B6',
+    celebration:  '#FF73FA',
 };
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('announcebanner')
-        .setDescription('Generate a professional announcement banner graphic for your server')
+        .setDescription('Generate a professional announcement graphic')
         .addStringOption(opt => opt.setName('title').setDescription('Announcement title').setRequired(true))
-        .addStringOption(opt => opt.setName('body').setDescription('Body text or details').setRequired(true))
-        .addStringOption(opt => opt.setName('type').setDescription('Announcement type').addChoices(...TYPE_CHOICES))
+        .addStringOption(opt => opt.setName('body').setDescription('Body / supporting text'))
+        .addStringOption(opt => opt.setName('type').setDescription('Announcement type').setAutocomplete(true))
+        .addStringOption(opt => opt.setName('primary_color').setDescription('Primary hex color').setAutocomplete(true))
+        .addStringOption(opt => opt.setName('secondary_color').setDescription('Secondary hex color').setAutocomplete(true))
         .addStringOption(opt => opt.setName('background').setDescription('Background style').addChoices(...getBackgroundChoices()))
-        .addStringOption(opt => opt.setName('accent_color').setDescription('Override accent color (hex)').setAutocomplete(true))
-        .addStringOption(opt => opt.setName('font').setDescription('Font').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f })))),
+        .addStringOption(opt => opt.setName('font').setDescription('Font family').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f })))),
 
     async autocomplete(interaction) {
-        const focused = interaction.options.getFocused();
-        const results = getColorAutocomplete(focused);
-        await interaction.respond(results);
+        await dispatchAutocomplete(interaction, {
+            type:            autocompleteAnnounceType,
+            primary_color:   autocompleteColor,
+            secondary_color: autocompleteColor,
+            background:      autocompleteBackground,
+        });
     },
 
     async execute(interaction) {
         await interaction.deferReply();
 
-        const title   = interaction.options.getString('title');
-        const body    = interaction.options.getString('body');
-        const type    = interaction.options.getString('type')        ?? 'announcement';
-        const bg      = interaction.options.getString('background')  ?? 'solid-dark';
-        const accent  = interaction.options.getString('accent_color') ?? TYPE_COLORS[type];
-        const font    = interaction.options.getString('font')        ?? getAllFontFamilies()[0] ?? 'Arial';
+        const title     = interaction.options.getString('title');
+        const body      = interaction.options.getString('body')      ?? '';
+        const type      = interaction.options.getString('type')      ?? 'announcement';
+        const primary   = interaction.options.getString('primary_color')   ?? TYPE_COLORS[type] ?? '#5865F2';
+        const secondary = interaction.options.getString('secondary_color') ?? '#ffffff';
+        const background= interaction.options.getString('background') ?? 'gradient-purple';
+        const font      = interaction.options.getString('font')       ?? getAllFontFamilies()[0];
 
-        const canvas = createCanvas(W, H);
-        const ctx    = canvas.getContext('2d');
+        const typeLabel = ANNOUNCE_TYPE_CHOICES.find(t => t.value === type)?.name ?? type;
+        const fullText  = body ? `${title}\n${body}` : title;
 
-        try { getBackgroundById(bg).draw(ctx, W, H); }
-        catch { ctx.fillStyle = '#111111'; ctx.fillRect(0, 0, W, H); }
-        ctx.fillStyle = '#000000aa'; ctx.fillRect(0, 0, W, H);
-
-        // Left accent bar
-        ctx.fillStyle = accent;
-        ctx.fillRect(0, 0, 8, H);
-
-        // Top accent line
-        ctx.fillRect(0, 0, W, 4);
-
-        // Type icon + label
-        const icon = TYPE_ICONS[type];
-        ctx.font = `bold 13px Arial`;
-        ctx.fillStyle = accent;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-        ctx.fillText(`${icon}  ${type.toUpperCase()}`, 36, H * 0.22);
-
-        // Title
-        ctx.font = `bold 44px "${font}"`;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = accent; ctx.shadowBlur = 6;
-        let titleSize = 44;
-        while (ctx.measureText(title).width > W - 80 && titleSize > 20) {
-            titleSize -= 2;
-            ctx.font = `bold ${titleSize}px "${font}"`;
-        }
-        ctx.fillText(title, 36, H * 0.22 + 52);
-        ctx.shadowBlur = 0;
-
-        // Body text with word wrap
-        ctx.font = `17px "${font}"`;
-        ctx.fillStyle = '#cccccc';
-        const words = body.split(' ');
-        let line = '', lines = [];
-        for (const w of words) {
-            const t = line ? line + ' ' + w : w;
-            if (ctx.measureText(t).width > W - 80) { lines.push(line); line = w; }
-            else line = t;
-        }
-        if (line) lines.push(line);
-        lines.slice(0, 3).forEach((l, i) => ctx.fillText(l, 36, H * 0.22 + 52 + 36 + i * 26));
-
-        // Bottom rule
-        ctx.fillStyle = accent + '55';
-        ctx.fillRect(36, H - 28, W - 72, 2);
-
-        // Watermark
-        ctx.font = '12px Arial'; ctx.fillStyle = '#ffffff18';
-        ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-        ctx.fillText('made with Sigil', W - 12, H - 8);
-
-        const buf = canvas.toBuffer('image/png');
-        const attachment = new AttachmentBuilder(buf, { name: 'announcement.png' });
-
-        const typeLabel = TYPE_CHOICES.find(t => t.value === type)?.name ?? type;
+        const buf = await renderBanner({ text: fullText, primary, secondary, background, font, align: 'center', glow: 0, opacity: 1.0 });
+        const attachment = new AttachmentBuilder(buf, { name: 'announcebanner.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle(`${TYPE_ICONS[type]} ${title}`)
-            .setDescription(body)
-            .setImage('attachment://announcement.png')
-            .setColor(accent)
+            .setTitle(`📢 ${typeLabel}: ${title}`)
+            .setDescription(body || null)
+            .setImage('attachment://announcebanner.png')
+            .setColor(primary)
             .addFields({ name: 'Type', value: typeLabel, inline: true })
-            .setFooter({ text: 'Sigil • announcebanner — 900×300 PNG' });
+            .setFooter({ text: 'Sigil • announcebanner' });
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
-        saveEntry(interaction.user.id, { command: 'announcebanner', title, body, type, background: bg, accent_color: accent, font });
+        saveEntry(interaction.user.id, { command: 'announcebanner', title, body, type, primary_color: primary, secondary_color: secondary, background, font });
     },
 };

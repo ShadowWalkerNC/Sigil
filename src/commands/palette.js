@@ -1,187 +1,103 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { loadHistory } = require('../utils/history.js');
-const { getColorAutocomplete } = require('../utils/colors.js');
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { createCanvas } = require('canvas');
+const { saveEntry } = require('../utils/history.js');
+const {
+    PALETTE_FORMAT_CHOICES,
+    dispatchAutocomplete,
+    autocompleteColor,
+    autocompletePaletteFormat,
+} = require('../utils/autocomplete.js');
 
-// ── Hex validation ────────────────────────────────────────────────────────
-function isHex(v) {
-    return /^#[0-9A-Fa-f]{6}$/.test(v);
-}
-
-function normalizeHex(v) {
-    if (!v) return null;
-    const s = v.trim();
-    return isHex(s) ? s.toUpperCase() : null;
-}
-
-// ── Derive a human-readable slug from a hex ───────────────────────────────
-function hexToSlug(hex) {
-    return 'color-' + hex.replace('#', '').toLowerCase();
-}
-
-// ── Format builders ───────────────────────────────────────────────────────
-function buildCssVars(colors) {
-    const lines = [':root {'];
+function buildSwatchImage(colors) {
+    const W = 600, H = 120;
+    const canvas = createCanvas(W, H);
+    const ctx = canvas.getContext('2d');
+    const sw = W / colors.length;
     colors.forEach((c, i) => {
-        const label = c.label || `color-${i + 1}`;
-        lines.push(`  --${label}: ${c.hex};`);
+        ctx.fillStyle = c;
+        ctx.fillRect(i * sw, 0, sw, H);
+        ctx.fillStyle = isLight(c) ? '#000' : '#fff';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(c.toUpperCase(), i * sw + sw / 2, H / 2);
     });
-    lines.push('}');
-    return lines.join('\n');
+    return canvas.toBuffer('image/png');
 }
 
-function buildTailwind(colors) {
-    const lines = [
-        '// tailwind.config.js',
-        'module.exports = {',
-        '  theme: {',
-        '    extend: {',
-        '      colors: {',
-    ];
-    colors.forEach(c => {
-        const key = (c.label || hexToSlug(c.hex)).replace(/[^a-z0-9-]/gi, '-').toLowerCase();
-        lines.push(`        '${key}': '${c.hex}',`);
-    });
-    lines.push('      },');
-    lines.push('    },');
-    lines.push('  },');
-    lines.push('};');
-    return lines.join('\n');
+function isLight(hex) {
+    const r = parseInt(hex.slice(1,3),16);
+    const g = parseInt(hex.slice(3,5),16);
+    const b = parseInt(hex.slice(5,7),16);
+    return (0.299*r + 0.587*g + 0.114*b) > 128;
 }
 
-function buildHexList(colors) {
-    return colors.map(c => {
-        const label = c.label ? `${c.label}: ` : '';
-        return `${label}${c.hex}`;
-    }).join('\n');
-}
-
-// ── Derive palette from a history entry ───────────────────────────────────
-function paletteFromEntry(entry) {
-    const colors = [];
-    if (entry.primary_color   && isHex(entry.primary_color))   colors.push({ hex: entry.primary_color.toUpperCase(),   label: 'primary' });
-    if (entry.secondary_color && isHex(entry.secondary_color)) colors.push({ hex: entry.secondary_color.toUpperCase(), label: 'secondary' });
-    if (Array.isArray(entry.palette)) {
-        entry.palette.forEach((h, i) => {
-            const norm = normalizeHex(h);
-            if (norm) colors.push({ hex: norm, label: `palette-${i + 1}` });
-        });
+function exportPalette(format, colors) {
+    const named = ['primary','secondary','accent','neutral','highlight'];
+    if (format === 'css') {
+        return ':root {\n' + colors.map((c,i) => `  --color-${named[i]}: ${c};`).join('\n') + '\n}';
     }
-    return colors;
+    if (format === 'tailwind') {
+        const obj = Object.fromEntries(colors.map((c,i) => [named[i], c]));
+        return `module.exports = {\n  theme: {\n    extend: {\n      colors: ${JSON.stringify(obj, null, 6)}\n    }\n  }\n};`;
+    }
+    return colors.join('\n');
 }
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('palette')
-        .setDescription('Export your brand palette as CSS variables, Tailwind config, or a hex list')
-        .addStringOption(opt =>
-            opt.setName('format')
-                .setDescription('Export format')
-                .setRequired(true)
-                .addChoices(
-                    { name: 'CSS Variables  (:root { --primary: … })',     value: 'css'      },
-                    { name: 'Tailwind Config (tailwind.config.js colors)', value: 'tailwind' },
-                    { name: 'Hex List  (one color per line)',               value: 'hex'      },
-                )
-        )
-        .addStringOption(opt =>
-            opt.setName('primary')
-                .setDescription('Primary hex color (uses last kit if omitted)')
-                .setAutocomplete(true)
-        )
-        .addStringOption(opt =>
-            opt.setName('secondary')
-                .setDescription('Secondary hex color')
-                .setAutocomplete(true)
-        )
-        .addStringOption(opt =>
-            opt.setName('color3')
-                .setDescription('Additional color 3')
-                .setAutocomplete(true)
-        )
-        .addStringOption(opt =>
-            opt.setName('color4')
-                .setDescription('Additional color 4')
-                .setAutocomplete(true)
-        )
-        .addStringOption(opt =>
-            opt.setName('color5')
-                .setDescription('Additional color 5')
-                .setAutocomplete(true)
+        .setDescription('Export a colour palette or generate one from inputs')
+        .addSubcommand(sub =>
+            sub.setName('export')
+               .setDescription('Export palette as CSS, Tailwind, or hex list')
+               .addStringOption(opt => opt.setName('format').setDescription('Output format').setRequired(true).setAutocomplete(true))
+               .addStringOption(opt => opt.setName('primary').setDescription('Primary color (hex)').setAutocomplete(true))
+               .addStringOption(opt => opt.setName('secondary').setDescription('Secondary color (hex)').setAutocomplete(true))
+               .addStringOption(opt => opt.setName('color3').setDescription('Third color (hex)').setAutocomplete(true))
+               .addStringOption(opt => opt.setName('color4').setDescription('Fourth color (hex)').setAutocomplete(true))
+               .addStringOption(opt => opt.setName('color5').setDescription('Fifth color (hex)').setAutocomplete(true))
         ),
 
     async autocomplete(interaction) {
-        const focused = interaction.options.getFocused();
-        const results = getColorAutocomplete(focused);
-        await interaction.respond(results);
+        await dispatchAutocomplete(interaction, {
+            format:    autocompletePaletteFormat,
+            primary:   autocompleteColor,
+            secondary: autocompleteColor,
+            color3:    autocompleteColor,
+            color4:    autocompleteColor,
+            color5:    autocompleteColor,
+        });
     },
 
     async execute(interaction) {
+        const sub = interaction.options.getSubcommand();
+        if (sub !== 'export') return;
+
         await interaction.deferReply({ ephemeral: true });
 
-        const format    = interaction.options.getString('format');
-        const rawP      = interaction.options.getString('primary');
-        const rawS      = interaction.options.getString('secondary');
-        const rawC3     = interaction.options.getString('color3');
-        const rawC4     = interaction.options.getString('color4');
-        const rawC5     = interaction.options.getString('color5');
+        const format = interaction.options.getString('format') ?? 'hex';
+        const colors = [
+            interaction.options.getString('primary')   ?? '#5865F2',
+            interaction.options.getString('secondary') ?? '#99AAB5',
+            interaction.options.getString('color3')    ?? '#2C2F33',
+            interaction.options.getString('color4')    ?? '#23272A',
+            interaction.options.getString('color5')    ?? '#ffffff',
+        ];
 
-        let colors = [];
-
-        const manualInputs = [rawP, rawS, rawC3, rawC4, rawC5];
-        const labels       = ['primary', 'secondary', 'color-3', 'color-4', 'color-5'];
-        const hasManual    = manualInputs.some(v => v);
-
-        if (hasManual) {
-            manualInputs.forEach((raw, i) => {
-                if (!raw) return;
-                const hex = normalizeHex(raw);
-                if (hex) colors.push({ hex, label: labels[i] });
-            });
-
-            if (!colors.length) {
-                return interaction.editReply('\u274c No valid hex colors provided. Use format `#RRGGBB` (e.g. `#8B0000`).');
-            }
-        } else {
-            const history = loadHistory(interaction.user.id);
-            if (!history.length) {
-                return interaction.editReply(
-                    '\u274c No saved kit found and no colors provided.\n' +
-                    'Either pass `primary` / `secondary` directly, or run `/brand kit`, `/template`, or `/icon` first.'
-                );
-            }
-            colors = paletteFromEntry(history[0]);
-            if (!colors.length) {
-                return interaction.editReply('\u274c Your last kit has no usable colors. Pass them manually using the `primary` / `secondary` options.');
-            }
-        }
-
-        let output, formatLabel, langHint;
-        if (format === 'css') {
-            output      = buildCssVars(colors);
-            formatLabel = 'CSS Variables';
-            langHint    = 'css';
-        } else if (format === 'tailwind') {
-            output      = buildTailwind(colors);
-            formatLabel = 'Tailwind Config';
-            langHint    = 'js';
-        } else {
-            output      = buildHexList(colors);
-            formatLabel = 'Hex List';
-            langHint    = '';
-        }
-
-        const swatches = colors.map(c => `\`${c.hex}\``).join('  ');
-        const source   = hasManual ? 'manual input' : 'last kit';
+        const formatLabel = PALETTE_FORMAT_CHOICES.find(f => f.value === format)?.name ?? format;
+        const exported = exportPalette(format, colors);
+        const swatchBuf = buildSwatchImage(colors);
+        const attachment = new AttachmentBuilder(swatchBuf, { name: 'palette.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle(`\uD83C\uDFA8 Palette Export \u2014 ${formatLabel}`)
-            .setColor(colors[0].hex)
-            .setDescription(
-                `**Colors (${source}):** ${swatches}\n\n` +
-                `\`\`\`${langHint}\n${output}\n\`\`\``
-            )
-            .setFooter({ text: `Sigil \u2022 palette export \u2014 ${colors.length} color${colors.length !== 1 ? 's' : ''} \u2022 use /palette export format:${format} to regenerate` });
+            .setTitle('🎨 Palette Export')
+            .setDescription(`**Format:** ${formatLabel}\n\`\`\`${format === 'hex' ? '' : format}\n${exported}\n\`\`\``)
+            .setImage('attachment://palette.png')
+            .setColor(colors[0])
+            .setFooter({ text: 'Sigil • palette export' });
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed], files: [attachment] });
+        saveEntry(interaction.user.id, { command: 'palette export', format, colors });
     },
 };

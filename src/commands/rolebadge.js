@@ -1,60 +1,62 @@
 const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const { createCanvas } = require('canvas');
 const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
 const { saveEntry } = require('../utils/history.js');
-const { getColorAutocomplete } = require('../utils/colors.js');
+const {
+    ROLE_BADGE_STYLE_CHOICES,
+    dispatchAutocomplete,
+    autocompleteColor,
+    autocompleteRoleBadgeStyle,
+} = require('../utils/autocomplete.js');
+const { createCanvas } = require('canvas');
 
 registerAllFonts();
 
-const STYLE_CHOICES = [
-    { name: 'Pill',      value: 'pill'      },
-    { name: 'Rounded',   value: 'rounded'   },
-    { name: 'Sharp',     value: 'sharp'     },
-    { name: 'Diamond',   value: 'diamond'   },
-    { name: 'Hexagon',   value: 'hexagon'   },
-];
-
-function drawBadge({ text, style, primary, secondary, font, glow }) {
-    const H  = 64;
-    const PAD = 28;
+async function renderRoleBadge({ text, style, primary, secondary, font }) {
+    const H = 60, PAD = 28;
     const tmp = createCanvas(1, 1);
     const tctx = tmp.getContext('2d');
-    tctx.font = `bold 28px "${font}"`;
+    tctx.font = `bold 24px "${font}"`;
     const tw = tctx.measureText(text).width;
-    const W  = Math.max(160, Math.ceil(tw + PAD * 2));
+    const W = Math.ceil(tw + PAD * 2);
 
     const canvas = createCanvas(W, H);
-    const ctx    = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');
 
-    const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, primary);
-    bg.addColorStop(1, secondary);
-    ctx.fillStyle = bg;
+    ctx.fillStyle = primary;
 
-    ctx.beginPath();
-    switch (style) {
-        case 'pill':    ctx.roundRect(0, 0, W, H, H / 2); break;
-        case 'rounded': ctx.roundRect(0, 0, W, H, 10);    break;
-        case 'diamond':
-            ctx.moveTo(W / 2, 0); ctx.lineTo(W, H / 2);
-            ctx.lineTo(W / 2, H); ctx.lineTo(0, H / 2);
-            ctx.closePath(); break;
-        case 'hexagon': {
-            const pts = [[0.50,0],[0.93,0.25],[0.93,0.75],[0.50,1],[0.07,0.75],[0.07,0.25]];
-            ctx.moveTo(pts[0][0]*W, pts[0][1]*H);
-            for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0]*W, pts[i][1]*H);
-            ctx.closePath(); break;
+    if (style === 'pill') {
+        ctx.beginPath();
+        ctx.roundRect(0, 0, W, H, H / 2);
+        ctx.fill();
+    } else if (style === 'rounded') {
+        ctx.beginPath();
+        ctx.roundRect(0, 0, W, H, 12);
+        ctx.fill();
+    } else if (style === 'hex') {
+        const cx = W / 2, cy = H / 2, r = H / 2 - 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i - Math.PI / 6;
+            const x = cx + r * Math.cos(angle);
+            const y = cy + r * Math.sin(angle);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-        default: ctx.rect(0, 0, W, H);
+        ctx.closePath();
+        ctx.fill();
+    } else {
+        ctx.beginPath();
+        ctx.moveTo(W / 2, 2);
+        ctx.lineTo(W - 2, H / 2);
+        ctx.lineTo(W / 2, H - 2);
+        ctx.lineTo(2, H / 2);
+        ctx.closePath();
+        ctx.fill();
     }
-    ctx.fill();
 
-    if (glow > 0) { ctx.shadowColor = primary; ctx.shadowBlur = glow * 2; }
-
-    ctx.font = `bold 28px "${font}"`;
-    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold 24px "${font}"`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.fillStyle = secondary || '#ffffff';
     ctx.fillText(text, W / 2, H / 2);
 
     return canvas.toBuffer('image/png');
@@ -63,18 +65,19 @@ function drawBadge({ text, style, primary, secondary, font, glow }) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('rolebadge')
-        .setDescription('Generate a custom role badge graphic — download and use as a channel icon or role image')
-        .addStringOption(opt => opt.setName('text').setDescription('Role name or label').setRequired(true))
-        .addStringOption(opt => opt.setName('style').setDescription('Badge shape style').addChoices(...STYLE_CHOICES))
-        .addStringOption(opt => opt.setName('primary_color').setDescription('Badge color (hex)').setAutocomplete(true))
-        .addStringOption(opt => opt.setName('secondary_color').setDescription('Gradient end color (hex)').setAutocomplete(true))
-        .addStringOption(opt => opt.setName('font').setDescription('Font family').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f }))))
-        .addNumberOption(opt => opt.setName('glow').setDescription('Glow intensity (0–25)').setMinValue(0).setMaxValue(25)),
+        .setDescription('Generate a styled role badge graphic')
+        .addStringOption(opt => opt.setName('text').setDescription('Role name').setRequired(true))
+        .addStringOption(opt => opt.setName('style').setDescription('Badge shape style').setAutocomplete(true))
+        .addStringOption(opt => opt.setName('primary_color').setDescription('Badge fill color').setAutocomplete(true))
+        .addStringOption(opt => opt.setName('secondary_color').setDescription('Text color').setAutocomplete(true))
+        .addStringOption(opt => opt.setName('font').setDescription('Font family').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f })))),
 
     async autocomplete(interaction) {
-        const focused = interaction.options.getFocused();
-        const results = getColorAutocomplete(focused);
-        await interaction.respond(results);
+        await dispatchAutocomplete(interaction, {
+            style:           autocompleteRoleBadgeStyle,
+            primary_color:   autocompleteColor,
+            secondary_color: autocompleteColor,
+        });
     },
 
     async execute(interaction) {
@@ -82,36 +85,27 @@ module.exports = {
 
         const text      = interaction.options.getString('text');
         const style     = interaction.options.getString('style')           ?? 'pill';
-        const primary   = interaction.options.getString('primary_color')   ?? '#6a0dad';
-        const secondary = interaction.options.getString('secondary_color') ?? '#0057e7';
+        const primary   = interaction.options.getString('primary_color')   ?? '#5865F2';
+        const secondary = interaction.options.getString('secondary_color') ?? '#ffffff';
         const font      = interaction.options.getString('font')            ?? getAllFontFamilies()[0];
-        const glow      = interaction.options.getNumber('glow')            ?? 0;
 
-        const buf = drawBadge({ text, style, primary, secondary, font, glow });
+        const styleLabel = ROLE_BADGE_STYLE_CHOICES.find(s => s.value === style)?.name ?? style;
+
+        const buf = await renderRoleBadge({ text, style, primary, secondary, font });
         const attachment = new AttachmentBuilder(buf, { name: 'rolebadge.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('🏷️ Role Badge Ready')
-            .setDescription(
-                `**${text}** badge generated!\n\n` +
-                '**How to use:**\n' +
-                '\u2022 Use as a **channel icon** in your server sidebar\n' +
-                '\u2022 Pin it in a **roles channel** as a visual role menu\n' +
-                '\u2022 Use it in **server guide** or welcome embeds'
-            )
+            .setTitle(`🏷️ Role Badge — ${text}`)
+            .setDescription('Use this badge graphic in role-selection channels or announcements.')
             .setImage('attachment://rolebadge.png')
             .setColor(primary)
             .addFields(
-                { name: 'Style', value: style.charAt(0).toUpperCase() + style.slice(1), inline: true },
-                { name: 'Format', value: 'PNG', inline: true },
+                { name: 'Style', value: styleLabel, inline: true },
+                { name: 'Font',  value: font,       inline: true },
             )
             .setFooter({ text: 'Sigil • rolebadge' });
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
-
-        saveEntry(interaction.user.id, {
-            command: 'rolebadge', text, style,
-            primary_color: primary, secondary_color: secondary, font, glow,
-        });
+        saveEntry(interaction.user.id, { command: 'rolebadge', text, style, primary_color: primary, secondary_color: secondary, font });
     },
 };
