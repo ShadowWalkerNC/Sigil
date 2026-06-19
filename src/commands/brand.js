@@ -8,10 +8,18 @@ const { dispatchAutocomplete, autocompleteColor } = require('../utils/autocomple
 
 registerAllFonts();
 
+const VALID_BACKGROUNDS = new Set([
+    'gradient-purple','gradient-blue','gradient-red','gradient-green','gradient-gold',
+    'gradient-teal','gradient-pink','gradient-orange','solid-black','solid-dark',
+    'noise-dark','grid-dark','dots-dark','radial-purple','radial-blue','bg-image-1','bg-image-2',
+]);
+const VALID_BORDERS = new Set(['none','solid','glow','gradient','double','dashed']);
+const VALID_FONTS   = new Set(['Another Danger','Bebas Neue','Oswald','Playfair Display','Source Code Pro','Dancing Script']);
+
 const HASH_KEYS = [
-    'brandName', 'tagline', 'description', 'iconText', 'bannerText',
-    'primaryHex', 'secondaryHex', 'background', 'border', 'glow',
-    'font', 'opacity', 'gradient', 'sizePreset', 'activeTemplate', 'shape',
+    'brandName','tagline','description','iconText','bannerText',
+    'primaryHex','secondaryHex','background','border','glow',
+    'font','opacity','gradient','sizePreset','activeTemplate','shape',
 ];
 
 function buildGuiLink(guiUrl, entry) {
@@ -76,6 +84,7 @@ module.exports = {
     async execute(interaction) {
         const sub = interaction.options.getSubcommand();
 
+        // ── SHARE ─────────────────────────────────────────────────────────────
         if (sub === 'share') {
             await interaction.deferReply({ ephemeral: true });
             const guiUrl  = process.env.GUI_URL || 'http://localhost:8080';
@@ -107,6 +116,7 @@ module.exports = {
 
         await interaction.deferReply();
 
+        // ── KIT ───────────────────────────────────────────────────────────────
         if (sub === 'kit') {
             const name       = interaction.options.getString('name');
             const tagline    = interaction.options.getString('tagline')          ?? '';
@@ -117,7 +127,14 @@ module.exports = {
             const font       = interaction.options.getString('font')             ?? getAllFontFamilies()[0];
             const glow       = interaction.options.getNumber('glow')             ?? 0;
 
-            const { iconBuf, bannerBuf, paletteBuf } = await renderKit({ text: name, subtitle: tagline, background, border, primary, secondary, font, glow });
+            let iconBuf, bannerBuf, paletteBuf;
+            try {
+                ({ iconBuf, bannerBuf, paletteBuf } = await renderKit({ text: name, subtitle: tagline, background, border, primary, secondary, font, glow }));
+            } catch (err) {
+                console.error('[brand kit] renderKit failed:', err);
+                return interaction.editReply('❌ Failed to render your brand kit. Check your color values and try again.');
+            }
+
             const files = [
                 new AttachmentBuilder(iconBuf,    { name: 'icon.png'    }),
                 new AttachmentBuilder(bannerBuf,  { name: 'banner.png'  }),
@@ -141,6 +158,7 @@ module.exports = {
             await interaction.editReply({ embeds: [embed], files });
             saveEntry(interaction.user.id, { command: 'brand', text: name, tagline, background, border, primary_color: primary, secondary_color: secondary, font, glow });
 
+        // ── AI ────────────────────────────────────────────────────────────────
         } else if (sub === 'ai') {
             const description  = interaction.options.getString('description');
             const customPrompt = interaction.options.getString('image_prompt');
@@ -170,14 +188,31 @@ Respond with ONLY valid JSON (no markdown, no explanation):
                 const raw = await geminiRequest(prompt);
                 brand = extractJson(raw);
             } catch (err) {
-                console.error('[brand ai] Gemini JSON error:', err);
-                return interaction.editReply('❌ Gemini returned an unexpected response. Please try again.');
+                console.error('[brand ai] Gemini error:', err);
+                return interaction.editReply(`❌ ${err.message ?? 'Gemini returned an unexpected response. Please try again.'}`);
             }
 
-            const { name, tagline, primary_color, secondary_color, background, border, font, glow, palette, image_prompt } = brand;
-            const { iconBuf, bannerBuf, paletteBuf } = await renderKit({ text: name, subtitle: tagline, background, border, primary: primary_color, secondary: secondary_color, font, glow, palette });
+            // Sanitise AI output — fall back to safe defaults if Gemini returns invalid values
+            const name            = brand.name           ?? 'Untitled';
+            const tagline         = brand.tagline        ?? '';
+            const primary_color   = /^#[0-9A-Fa-f]{6}$/.test(brand.primary_color)   ? brand.primary_color   : '#8B0000';
+            const secondary_color = /^#[0-9A-Fa-f]{6}$/.test(brand.secondary_color) ? brand.secondary_color : '#4B0082';
+            const background      = VALID_BACKGROUNDS.has(brand.background) ? brand.background : 'gradient-purple';
+            const border          = VALID_BORDERS.has(brand.border)         ? brand.border     : 'none';
+            const font            = VALID_FONTS.has(brand.font)             ? brand.font       : getAllFontFamilies()[0];
+            const glow            = typeof brand.glow === 'number' && brand.glow >= 0 && brand.glow <= 25 ? brand.glow : 0;
+            const palette         = Array.isArray(brand.palette) ? brand.palette : [];
+            const image_prompt    = brand.image_prompt ?? `Minimalist logo for: ${name}`;
 
-            const aiPrompt = customPrompt ?? image_prompt ?? `Minimalist logo for: ${name}`;
+            let iconBuf, bannerBuf, paletteBuf;
+            try {
+                ({ iconBuf, bannerBuf, paletteBuf } = await renderKit({ text: name, subtitle: tagline, background, border, primary: primary_color, secondary: secondary_color, font, glow, palette }));
+            } catch (err) {
+                console.error('[brand ai] renderKit failed:', err);
+                return interaction.editReply('❌ AI generated valid settings but the renderer failed. Please try again.');
+            }
+
+            const aiPrompt = customPrompt ?? image_prompt;
             let aiImageBuf = null;
             try {
                 const b64 = await geminiImageRequest(aiPrompt);
@@ -198,13 +233,13 @@ Respond with ONLY valid JSON (no markdown, no explanation):
                 .setThumbnail('attachment://icon.png')
                 .setColor(primary_color)
                 .addFields(
-                    { name: 'Background', value: background,               inline: true },
-                    { name: 'Border',     value: border,                   inline: true },
-                    { name: 'Font',       value: font,                     inline: true },
-                    { name: 'Primary',    value: primary_color,            inline: true },
-                    { name: 'Secondary',  value: secondary_color,          inline: true },
-                    { name: 'Glow',       value: String(glow),             inline: true },
-                    { name: 'Palette',    value: (palette ?? []).join('  '), inline: false },
+                    { name: 'Background', value: background,                inline: true },
+                    { name: 'Border',     value: border,                    inline: true },
+                    { name: 'Font',       value: font,                      inline: true },
+                    { name: 'Primary',    value: primary_color,             inline: true },
+                    { name: 'Secondary',  value: secondary_color,           inline: true },
+                    { name: 'Glow',       value: String(glow),              inline: true },
+                    { name: 'Palette',    value: palette.join('  ') || '—', inline: false },
                 )
                 .setFooter({ text: 'Sigil • brand ai — use /brand share to open this in the Visual Builder' });
             await interaction.editReply({ embeds: [embed], files });
