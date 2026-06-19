@@ -15,7 +15,6 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
-        // GatewayIntentBits.GuildPresences — privileged intent, not currently used
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildScheduledEvents,
@@ -45,7 +44,7 @@ for (const file of commandFiles) {
     }
 }
 
-// Load events — supports both single-export and array-export event files
+// Load events
 const eventFiles = readdirSync(join(__dirname, 'events')).filter(f => f.endsWith('.js'));
 for (const file of eventFiles) {
     const loaded = require(join(__dirname, 'events', file));
@@ -59,9 +58,8 @@ for (const file of eventFiles) {
     }
 }
 
-client.once('ready', () => {
+client.once('clientReady', () => {
     global.sigilClient = client;
-    console.log(`\x1b[32m\x1b[1m[Sigil] Logged in as ${client.user.tag}\x1b[0m`);
 
     const { startPollers }     = require('./services/pollers.js');
     const { startScheduler }   = require('./services/scheduler.js');
@@ -131,4 +129,4 @@ process.on('unhandledRejection', (error) => {
 });
 
 client.login(TOKEN);
-console.log('\x1b[32m\x1b[1m Sigil starting...\x1b[0m');
+console.log('\x1b[32m\x1b[1m[Sigil] Starting...\x1b[0m');
