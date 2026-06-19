@@ -126,6 +126,15 @@ db.exec(`
         host_id       TEXT NOT NULL,
         created_at    TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS auto_roles (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        guild_id    TEXT NOT NULL,
+        role_id     TEXT NOT NULL,
+        trigger     TEXT NOT NULL,
+        created_at  TEXT DEFAULT (datetime('now')),
+        UNIQUE(guild_id, role_id, trigger)
+    );
 `);
 
 // Runtime column migrations
@@ -154,7 +163,7 @@ for (const [col, sql] of migrations) {
     if (!existingCols.includes(col)) db.exec(sql);
 }
 
-// ── Guild config ──────────────────────────────────────────────────────────────
+// ── Guild config ────────────────────────────────────────────────────────────
 function getConfig(guildId) {
     let row = db.prepare('SELECT * FROM guild_config WHERE guild_id = ?').get(guildId);
     if (!row) {
@@ -174,7 +183,7 @@ function getGuildsWithFeature(column) {
     return db.prepare(`SELECT * FROM guild_config WHERE ${column} = 1`).all();
 }
 
-// ── Scheduled posts ───────────────────────────────────────────────────────────
+// ── Scheduled posts ──────────────────────────────────────────────────────────
 function addScheduledPost(guildId, channelId, postAt, payload) {
     return db.prepare('INSERT INTO scheduled_posts (guild_id, channel_id, post_at, payload) VALUES (?, ?, ?, ?)').run(guildId, channelId, postAt, JSON.stringify(payload));
 }
@@ -188,7 +197,7 @@ function getScheduledPosts(guildId) {
     return db.prepare('SELECT * FROM scheduled_posts WHERE guild_id = ? ORDER BY post_at ASC').all(guildId).map(r => ({ ...r, payload: JSON.parse(r.payload) }));
 }
 
-// ── Mod cases ─────────────────────────────────────────────────────────────────
+// ── Mod cases ────────────────────────────────────────────────────────────────
 function getNextCaseNumber(guildId) {
     const row = db.prepare('SELECT MAX(case_number) as max FROM mod_cases WHERE guild_id = ?').get(guildId);
     return (row?.max ?? 0) + 1;
@@ -205,7 +214,7 @@ function countModCases(guildId, userId) {
     return db.prepare('SELECT COUNT(*) as count FROM mod_cases WHERE guild_id = ? AND user_id = ?').get(guildId, userId)?.count ?? 0;
 }
 
-// ── XP ────────────────────────────────────────────────────────────────────────
+// ── XP ───────────────────────────────────────────────────────────────────────
 function getXP(guildId, userId) {
     let row = db.prepare('SELECT * FROM user_xp WHERE guild_id = ? AND user_id = ?').get(guildId, userId);
     if (!row) {
@@ -231,7 +240,7 @@ function getWeeklyTopXP(guildId, limit = 3) {
     return db.prepare('SELECT * FROM user_xp WHERE guild_id = ? AND last_xp_at >= ? ORDER BY xp DESC LIMIT ?').all(guildId, since, limit);
 }
 
-// ── Twitch ────────────────────────────────────────────────────────────────────
+// ── Twitch ───────────────────────────────────────────────────────────────────
 function getTwitchSubs(guildId) { return db.prepare('SELECT * FROM twitch_subs WHERE guild_id = ?').all(guildId); }
 function getAllTwitchSubs() { return db.prepare('SELECT * FROM twitch_subs').all(); }
 function addTwitchSub(guildId, streamerLogin, streamerName, postChannelId) {
@@ -244,7 +253,7 @@ function setTwitchLastStream(guildId, streamerLogin, streamId) {
     db.prepare('UPDATE twitch_subs SET last_stream_id = ? WHERE guild_id = ? AND streamer_login = ?').run(streamId, guildId, streamerLogin);
 }
 
-// ── YouTube ───────────────────────────────────────────────────────────────────
+// ── YouTube ──────────────────────────────────────────────────────────────────
 function getYoutubeSubs(guildId) { return db.prepare('SELECT * FROM youtube_subs WHERE guild_id = ?').all(guildId); }
 function getAllYoutubeSubs() { return db.prepare('SELECT * FROM youtube_subs').all(); }
 function addYoutubeSub(guildId, ytChannelId, channelName, postChannelId) {
@@ -257,7 +266,7 @@ function setYoutubeLastVideo(guildId, ytChannelId, videoId) {
     db.prepare('UPDATE youtube_subs SET last_video_id = ? WHERE guild_id = ? AND yt_channel_id = ?').run(videoId, guildId, ytChannelId);
 }
 
-// ── Polls ─────────────────────────────────────────────────────────────────────
+// ── Polls ────────────────────────────────────────────────────────────────────
 function createPoll(guildId, channelId, question, options, endsAt, createdBy) {
     return db.prepare('INSERT INTO polls (guild_id, channel_id, question, options, votes, ends_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)').run(guildId, channelId, question, JSON.stringify(options), '{}', endsAt, createdBy);
 }
@@ -285,7 +294,7 @@ function getActiveGuildPolls(guildId) {
     return db.prepare('SELECT * FROM polls WHERE guild_id = ? AND closed = 0 ORDER BY created_at DESC').all(guildId).map(r => ({ ...r, options: JSON.parse(r.options), votes: JSON.parse(r.votes) }));
 }
 
-// ── Giveaways ─────────────────────────────────────────────────────────────────
+// ── Giveaways ────────────────────────────────────────────────────────────────
 function createGiveaway(guildId, channelId, prize, winnerCount, endsAt, hostId) {
     return db.prepare('INSERT INTO giveaways (guild_id, channel_id, prize, winner_count, ends_at, host_id) VALUES (?, ?, ?, ?, ?, ?)').run(guildId, channelId, prize, winnerCount, endsAt, hostId);
 }
@@ -316,6 +325,23 @@ function getActiveGuildGiveaways(guildId) {
     return db.prepare('SELECT * FROM giveaways WHERE guild_id = ? AND ended = 0 ORDER BY created_at DESC').all(guildId).map(r => ({ ...r, entries: JSON.parse(r.entries), winners: JSON.parse(r.winners) }));
 }
 
+// ── Auto Roles ───────────────────────────────────────────────────────────────
+function addAutoRole(guildId, roleId, trigger) {
+    return db.prepare('INSERT OR IGNORE INTO auto_roles (guild_id, role_id, trigger) VALUES (?, ?, ?)').run(guildId, roleId, trigger);
+}
+function removeAutoRole(guildId, roleId, trigger) {
+    return db.prepare('DELETE FROM auto_roles WHERE guild_id = ? AND role_id = ? AND trigger = ?').run(guildId, roleId, trigger).changes;
+}
+function getAutoRoles(guildId) {
+    return db.prepare('SELECT * FROM auto_roles WHERE guild_id = ? ORDER BY trigger, created_at').all(guildId);
+}
+function getAutoRolesByTrigger(guildId, trigger) {
+    return db.prepare('SELECT * FROM auto_roles WHERE guild_id = ? AND trigger = ?').all(guildId, trigger);
+}
+function getLevelAutoRoles(guildId, level) {
+    return db.prepare('SELECT * FROM auto_roles WHERE guild_id = ? AND trigger = ?').all(guildId, `level:${level}`);
+}
+
 module.exports = {
     getConfig, setConfig, getGuildsWithFeature,
     addScheduledPost, getDueScheduledPosts, deleteScheduledPost, getScheduledPosts,
@@ -325,4 +351,5 @@ module.exports = {
     getYoutubeSubs, getAllYoutubeSubs, addYoutubeSub, removeYoutubeSub, setYoutubeLastVideo,
     createPoll, setPollMessageId, getPoll, getPollByMessageId, updatePollVotes, closePoll, getExpiredPolls, getActiveGuildPolls,
     createGiveaway, setGiveawayMessageId, getGiveaway, toggleGiveawayEntry, endGiveaway, getExpiredGiveaways, getActiveGuildGiveaways,
+    addAutoRole, removeAutoRole, getAutoRoles, getAutoRolesByTrigger, getLevelAutoRoles,
 };
