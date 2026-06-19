@@ -1,7 +1,7 @@
 const { Events } = require('discord.js');
 const { createCanvas, loadImage } = require('canvas');
 const { AttachmentBuilder } = require('discord.js');
-const { getConfig, getXP, setXP, updateLastXpAt, getUserRank } = require('../utils/db.js');
+const { getConfig, getXP, setXP, updateLastXpAt, getUserRank, getLevelAutoRoles } = require('../utils/db.js');
 const { calculateLevel, xpForLevel } = require('../utils/xp.js');
 const { getBackgroundById } = require('../utils/backgrounds.js');
 const { registerAllFonts } = require('../utils/canvas.js');
@@ -28,7 +28,7 @@ module.exports = {
         cooldowns.set(key, now);
 
         const rate   = cfg.xp_rate ?? 15;
-        const award  = Math.floor(rate * 0.8 + Math.random() * rate * 0.4); // slight variance
+        const award  = Math.floor(rate * 0.8 + Math.random() * rate * 0.4);
         const row    = getXP(message.guild.id, message.author.id);
         const newXp  = row.xp + award;
 
@@ -38,6 +38,27 @@ module.exports = {
         setXP(message.guild.id, message.author.id, newXp, after.level);
 
         if (after.level <= before.level) return;
+
+        // Level auto-roles
+        try {
+            const member = message.member ?? await message.guild.members.fetch(message.author.id).catch(() => null);
+            if (member) {
+                // Assign roles for every level crossed (handles multi-level jumps)
+                for (let lvl = before.level + 1; lvl <= after.level; lvl++) {
+                    const levelRoles = getLevelAutoRoles(message.guild.id, lvl);
+                    for (const rule of levelRoles) {
+                        try {
+                            await member.roles.add(rule.role_id, `Auto-role: level:${lvl} trigger`);
+                        } catch (err) {
+                            console.error(`[AutoRole] Failed to assign role ${rule.role_id} at level ${lvl}:`, err.message);
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('[AutoRole] Level auto-role error:', err.message);
+        }
+
         if (!cfg.xp_channel) return;
 
         // Level-up! Render rank card and post
@@ -45,11 +66,11 @@ module.exports = {
             const channel = await message.guild.channels.fetch(cfg.xp_channel);
             if (!channel?.isTextBased()) return;
 
-            const rank    = getUserRank(message.guild.id, message.author.id);
-            const member  = message.member ?? await message.guild.members.fetch(message.author.id).catch(() => null);
+            const rank      = getUserRank(message.guild.id, message.author.id);
+            const member    = message.member ?? await message.guild.members.fetch(message.author.id).catch(() => null);
             const avatarURL = message.author.displayAvatarURL({ extension: 'png', size: 128 });
-            const primary = '#39FF14';
-            const font    = 'Arial';
+            const primary   = '#39FF14';
+            const font      = 'Arial';
 
             const W = 800, H = 200;
             const canvas = createCanvas(W, H);
@@ -87,7 +108,6 @@ module.exports = {
             ctx.fillStyle = '#ffffff';
             ctx.fillText(member?.displayName ?? message.author.username, TX, H * 0.28 + 26);
 
-            // LEVEL UP label
             ctx.textAlign = 'right';
             ctx.font = `bold 13px Arial`;
             ctx.fillStyle = primary;
