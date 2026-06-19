@@ -2,6 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 const { getPanel, getPanelButtons } = require('../utils/db.js');
 const rsvpCommand = require('../commands/rsvp.js');
 const lfgCommand  = require('../commands/lfg.js');
+const pollCommand = require('../commands/poll.js');
 
 // Slash command routing is handled in src/index.js.
 // This file handles all button interactions.
@@ -12,17 +13,22 @@ module.exports = {
 
         const { customId } = interaction;
 
-        // ── RSVP buttons ───────────────────────────────────────────
+        // ── RSVP buttons ─────────────────────────────────────────
         if (customId.startsWith('rsvp_')) {
             return rsvpCommand.handleButton(interaction);
         }
 
-        // ── LFG buttons ────────────────────────────────────────────
+        // ── LFG buttons ─────────────────────────────────────────
         if (customId.startsWith('lfg_')) {
             return lfgCommand.handleButton(interaction);
         }
 
-        // ── Setup wizard buttons ──────────────────────────────────
+        // ── Poll buttons ─────────────────────────────────────────
+        if (customId.startsWith('poll_')) {
+            return pollCommand.handleButton(interaction);
+        }
+
+        // ── Setup wizard buttons ────────────────────────────────
         if (customId === 'setup_brand') {
             return interaction.reply({
                 embeds: [new EmbedBuilder().setColor('#00FF00').setTitle('✓ Step 1 — Brand')
