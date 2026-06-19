@@ -6,6 +6,7 @@ const pollCommand      = require('../commands/poll.js');
 const ticketCommand    = require('../commands/ticket.js');
 const prayerCommand    = require('../commands/prayer.js');
 const volunteerCommand = require('../commands/volunteer.js');
+const shiftCommand     = require('../commands/shift.js');
 
 module.exports = {
     name: 'interactionCreate',
@@ -20,6 +21,7 @@ module.exports = {
         if (customId.startsWith('ticket_'))    return ticketCommand.handleButton(interaction);
         if (customId.startsWith('prayer_'))    return prayerCommand.handleButton(interaction);
         if (customId.startsWith('vol_'))       return volunteerCommand.handleButton(interaction);
+        if (customId.startsWith('shift_'))     return shiftCommand.handleButton(interaction);
 
         // ── Setup wizard buttons ────────────────────────────────
         if (customId === 'setup_brand') {
