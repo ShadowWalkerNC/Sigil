@@ -106,10 +106,6 @@
     .status-bar.err{display:block;color:var(--error);background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);}
     .status-bar.info{display:block;color:var(--muted);background:var(--surface2);border:1px solid var(--border);}
 
-    /* ── Toast ── */
-    #toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);opacity:0;transition:all 320ms var(--ease);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:.55rem 1.1rem;font-size:.82rem;font-weight:700;pointer-events:none;z-index:200;white-space:nowrap;}
-    #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
-
     /* ── Responsive ── */
     @media(max-width:899px){
       .controls{border-right:none;border-bottom:1px solid var(--border);}
@@ -123,7 +119,7 @@
   <div class="nav-sep"></div>
   <span class="nav-subtitle">Community Tools</span>
   <div id="serverPill" class="nav-pill"><span class="dot"></span><span id="serverLabel">Offline</span></div>
-  <div class="nav-actions">
+  <div class="nav-actions nav-links">
     <a class="nav-btn" href="/brand">&#127912; Brand Builder</a>
     <a class="nav-btn active" href="/community">&#127942; Community Tools</a>
     <a class="nav-btn" href="/developers">&#128279; Developers</a>
@@ -136,8 +132,6 @@
   <button class="stab" role="tab" data-panel="rank">&#127942; Rank Card</button>
   <button class="stab" role="tab" data-panel="stats">&#128202; Server Stats</button>
 </div>
-
-<div id="toast">&#10003; Copied!</div>
 
 <div class="page">
 
@@ -316,7 +310,7 @@ const SERVER = window.location.origin;
 const $ = id => document.getElementById(id);
 let serverAlive = false;
 
-// ── Server health ping ────────────────────────────────────────────────────
+// ── Server health ping ────────────────────────────────────────────────
 async function pingServer() {
   try { const r = await fetch(`${SERVER}/health`, { signal: AbortSignal.timeout(2500) }); serverAlive = r.ok; } catch { serverAlive = false; }
   const pill = $('serverPill'), lbl = $('serverLabel');
@@ -325,19 +319,13 @@ async function pingServer() {
 }
 pingServer(); setInterval(pingServer, 9000);
 
-// ── Theme toggle ─────────────────────────────────────────────────────────
+// ── Theme toggle ───────────────────────────────────────────────────
 $('themeBtn').addEventListener('click', () => {
-  const r = document.documentElement;
-  r.setAttribute('data-theme', r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  if (typeof sigilSetTheme === 'function') { sigilSetTheme(theme); } else { document.documentElement.setAttribute('data-theme', theme); }
 });
 
-// ── Toast ─────────────────────────────────────────────────────────────────
-function showToast(msg = '✓ Copied!') {
-  const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-// ── Tab switching ─────────────────────────────────────────────────────────
+// ── Tab switching ──────────────────────────────────────────────────
 const PANELS = ['welcome', 'rank', 'stats'];
 document.querySelectorAll('.stab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -351,7 +339,7 @@ document.querySelectorAll('.stab').forEach(tab => {
   });
 });
 
-// ── Backgrounds ───────────────────────────────────────────────────────────
+// ── Backgrounds ───────────────────────────────────────────────────
 const BACKGROUNDS = [
   { k: 'gradient-purple', l: 'Purple',    css: 'linear-gradient(135deg,#1a0a2e,#2a0a3a)' },
   { k: 'midnight-gradient', l: 'Midnight', css: 'linear-gradient(135deg,#0a0a1a,#1a0a2e)' },
@@ -381,7 +369,7 @@ const bgState = { wc: 'gradient-purple', rc: 'solid-dark' };
 buildBgChips('wc-bg-chips', 'wc', () => debounce(renderWelcome, 'wc')());
 buildBgChips('rc-bg-chips', 'rc', () => debounce(renderRank, 'rc')());
 
-// ── Debounce ──────────────────────────────────────────────────────────────
+// ── Debounce ─────────────────────────────────────────────────────────────
 const timers = {};
 function debounce(fn, key, delay = 350) {
   return (...args) => {
@@ -390,7 +378,7 @@ function debounce(fn, key, delay = 350) {
   };
 }
 
-// ── Color pickers sync ────────────────────────────────────────────────────
+// ── Color pickers sync ────────────────────────────────────────────────
 function syncColor(pickerId, hexId, callback) {
   const picker = $(pickerId), hex = $(hexId);
   picker.addEventListener('input', e => { hex.value = e.target.value.toUpperCase(); callback(); });
@@ -421,7 +409,7 @@ function dlBlob(b64, name) {
   a.download = name; a.click();
 }
 
-// ── Welcome Card ──────────────────────────────────────────────────────────
+// ── Welcome Card ────────────────────────────────────────────────────────────
 let wcB64 = null;
 
 function updateWcCmd() {
@@ -440,7 +428,7 @@ function updateWcCmd() {
 }
 
 async function renderWelcome() {
-  if (!serverAlive) { setStatus('wc-status', '⚠ Server offline', 'err'); return; }
+  if (!serverAlive) { setStatus('wc-status', '⚠ Server offline', 'err'); showToast('Server offline — start the GUI server', 'error'); return; }
   updateWcCmd();
   showSpinner('wc-spinner', true);
   setStatus('wc-status', 'Rendering…', 'info');
@@ -463,20 +451,23 @@ async function renderWelcome() {
     setImg('wc-body', wcB64);
     $('wc-dl').disabled = false;
     setStatus('wc-status', '✓ Rendered', 'ok');
+    showToast('Welcome card rendered!', 'success');
   } catch (e) {
-    setStatus('wc-status', '⚠ ' + String(e.message || e).slice(0, 80), 'err');
+    const msg = String(e.message || e).slice(0, 80);
+    setStatus('wc-status', '⚠ ' + msg, 'err');
+    showToast(msg, 'error');
   } finally { showSpinner('wc-spinner', false); }
 }
 
 $('wc-render').addEventListener('click', renderWelcome);
 $('wc-dl').addEventListener('click', () => wcB64 && dlBlob(wcB64, `welcome-${$('wc-username').value.trim() || 'card'}.png`));
-$('wc-copy-cmd').addEventListener('click', () => { navigator.clipboard.writeText($('wc-cmd').textContent); showToast('✓ Command copied!'); });
+$('wc-copy-cmd').addEventListener('click', () => { navigator.clipboard.writeText($('wc-cmd').textContent); showToast('✓ Command copied!', 'success'); });
 
 ['wc-username', 'wc-message', 'wc-count', 'wc-font'].forEach(id =>
   $(id).addEventListener('input', () => { updateWcCmd(); debounce(renderWelcome, 'wc')(); })
 );
 
-// ── Rank Card ─────────────────────────────────────────────────────────────
+// ── Rank Card ────────────────────────────────────────────────────────────
 let rcB64 = null;
 
 function updateRcCmd() {
@@ -496,7 +487,7 @@ function updateRcCmd() {
 }
 
 async function renderRank() {
-  if (!serverAlive) { setStatus('rc-status', '⚠ Server offline', 'err'); return; }
+  if (!serverAlive) { setStatus('rc-status', '⚠ Server offline', 'err'); showToast('Server offline — start the GUI server', 'error'); return; }
   updateRcCmd();
   showSpinner('rc-spinner', true);
   setStatus('rc-status', 'Rendering…', 'info');
@@ -521,14 +512,17 @@ async function renderRank() {
     setImg('rc-body', rcB64);
     $('rc-dl').disabled = false;
     setStatus('rc-status', '✓ Rendered', 'ok');
+    showToast('Rank card rendered!', 'success');
   } catch (e) {
-    setStatus('rc-status', '⚠ ' + String(e.message || e).slice(0, 80), 'err');
+    const msg = String(e.message || e).slice(0, 80);
+    setStatus('rc-status', '⚠ ' + msg, 'err');
+    showToast(msg, 'error');
   } finally { showSpinner('rc-spinner', false); }
 }
 
 $('rc-render').addEventListener('click', renderRank);
 $('rc-dl').addEventListener('click', () => rcB64 && dlBlob(rcB64, `rankcard-${$('rc-username').value.trim() || 'card'}.png`));
-$('rc-copy-cmd').addEventListener('click', () => { navigator.clipboard.writeText($('rc-cmd').textContent); showToast('✓ Command copied!'); });
+$('rc-copy-cmd').addEventListener('click', () => { navigator.clipboard.writeText($('rc-cmd').textContent); showToast('✓ Command copied!', 'success'); });
 
 ['rc-username', 'rc-level', 'rc-rank', 'rc-xp-cur', 'rc-xp-req', 'rc-font'].forEach(id =>
   $(id).addEventListener('input', () => { updateRcCmd(); debounce(renderRank, 'rc')(); })
@@ -542,7 +536,7 @@ function updateSsCmd() {
 }
 
 async function renderStats() {
-  if (!serverAlive) { setStatus('ss-status', '⚠ Server offline', 'err'); return; }
+  if (!serverAlive) { setStatus('ss-status', '⚠ Server offline', 'err'); showToast('Server offline — start the GUI server', 'error'); return; }
   updateSsCmd();
   showSpinner('ss-spinner', true);
   setStatus('ss-status', 'Rendering…', 'info');
@@ -568,20 +562,23 @@ async function renderStats() {
     setImg('ss-body', ssB64);
     $('ss-dl').disabled = false;
     setStatus('ss-status', '✓ Rendered', 'ok');
+    showToast('Server stats rendered!', 'success');
   } catch (e) {
-    setStatus('ss-status', '⚠ ' + String(e.message || e).slice(0, 80), 'err');
+    const msg = String(e.message || e).slice(0, 80);
+    setStatus('ss-status', '⚠ ' + msg, 'err');
+    showToast(msg, 'error');
   } finally { showSpinner('ss-spinner', false); }
 }
 
 $('ss-render').addEventListener('click', renderStats);
 $('ss-dl').addEventListener('click', () => ssB64 && dlBlob(ssB64, `serverstats-${$('ss-name').value.trim().replace(/\s+/g,'-') || 'card'}.png`));
-$('ss-copy-cmd').addEventListener('click', () => { navigator.clipboard.writeText($('ss-cmd').textContent); showToast('✓ Command copied!'); });
+$('ss-copy-cmd').addEventListener('click', () => { navigator.clipboard.writeText($('ss-cmd').textContent); showToast('✓ Command copied!', 'success'); });
 
 ['ss-name','ss-members','ss-channels','ss-roles','ss-emoji','ss-boost-level','ss-boost-count','ss-age'].forEach(id =>
   $(id).addEventListener('input', () => { updateSsCmd(); debounce(renderStats, 'ss')(); })
 );
 
-// ── Boot: auto-render all panels ──────────────────────────────────────────
+// ── Boot: auto-render all panels ────────────────────────────────────────────
 pingServer().then(() => {
   if (serverAlive) {
     renderWelcome();
@@ -590,5 +587,9 @@ pingServer().then(() => {
   }
 });
 </script>
+
+<!-- Sigil shared UX: toast notifications, loading overlay, mobile hamburger nav -->
+<script src="/js/shared.js"></script>
+
 </body>
 </html>
