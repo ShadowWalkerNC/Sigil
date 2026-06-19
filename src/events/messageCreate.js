@@ -2,7 +2,7 @@ const { Events, EmbedBuilder } = require('discord.js');
 const { createCanvas, loadImage } = require('canvas');
 const { AttachmentBuilder } = require('discord.js');
 const {
-    getConfig, getXP, setXP, updateLastXpAt, getUserRank, getLevelAutoRoles,
+    getConfig, getXP, addXP, updateLastXpAt, getUserRank, getLevelAutoRoles,
     getCustomCommand,
 } = require('../utils/db.js');
 const { calculateLevel, xpForLevel } = require('../utils/xp.js');
@@ -66,12 +66,14 @@ module.exports = {
         const rate   = cfg.xp_rate ?? 15;
         const award  = Math.floor(rate * 0.8 + Math.random() * rate * 0.4);
         const row    = getXP(message.guild.id, message.author.id);
-        const newXp  = row.xp + award;
 
         const before = calculateLevel(row.xp);
-        const after  = calculateLevel(newXp);
 
-        setXP(message.guild.id, message.author.id, newXp, after.level);
+        // addXP increments both lifetime xp and weekly_xp atomically
+        addXP(message.guild.id, message.author.id, award);
+
+        const newXp = row.xp + award;
+        const after = calculateLevel(newXp);
 
         if (after.level <= before.level) return;
 

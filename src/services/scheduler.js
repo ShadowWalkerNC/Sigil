@@ -1,15 +1,46 @@
 /**
- * Scheduled post runner + poll auto-closer + giveaway auto-closer + bump reminder. Fires every 60s.
+ * Scheduled post runner + poll auto-closer + giveaway auto-closer + bump reminder + weekly XP reset.
+ * Main loop fires every 60s. Weekly XP reset fires once at Sunday midnight (UTC).
  */
 const { EmbedBuilder } = require('discord.js');
 const {
     getDueScheduledPosts, deleteScheduledPost,
     getExpiredPolls, getExpiredGiveaways,
     getGuildsWithFeature, getConfig, setConfig,
+    resetWeeklyXP,
 } = require('../utils/db.js');
 
 const BUMP_COOLDOWN_MS  = 2 * 60 * 60 * 1000; // 2 hours
 const DISBOARD_BOT_ID   = '302050872383242240';
+
+/**
+ * Returns ms until the next Sunday 00:00:00 UTC.
+ */
+function msUntilSundayMidnightUTC() {
+    const now  = new Date();
+    const day  = now.getUTCDay(); // 0 = Sunday
+    const daysUntilSunday = day === 0 ? 7 : 7 - day;
+    const next = new Date(Date.UTC(
+        now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysUntilSunday,
+        0, 0, 0, 0,
+    ));
+    return next.getTime() - now.getTime();
+}
+
+function scheduleWeeklyXpReset() {
+    const delay = msUntilSundayMidnightUTC();
+    setTimeout(() => {
+        try {
+            resetWeeklyXP();
+            console.log('[Scheduler] Weekly XP reset complete.');
+        } catch (err) {
+            console.error('[Scheduler] Weekly XP reset failed:', err.message);
+        }
+        scheduleWeeklyXpReset();
+    }, delay);
+    const daysAway = Math.round(delay / 86_400_000 * 10) / 10;
+    console.log(`[Scheduler] Weekly XP reset scheduled in ${daysAway}d (next Sunday 00:00 UTC).`);
+}
 
 async function runBumpReminders(client) {
     const guilds = getGuildsWithFeature('bump_enabled');
@@ -20,7 +51,6 @@ async function runBumpReminders(client) {
         const lastReminded = cfg.bump_last_reminded_at ? new Date(cfg.bump_last_reminded_at).getTime() : 0;
         const now          = Date.now();
 
-        // Only remind once per bump cycle: 2h must have passed since bump AND not yet reminded after this bump
         if (now - lastBump < BUMP_COOLDOWN_MS) continue;
         if (lastReminded > lastBump) continue;
 
@@ -94,6 +124,7 @@ function startScheduler(client) {
         runScheduler(client);
         setInterval(() => runScheduler(client), 60_000);
     }, 3_000);
+    scheduleWeeklyXpReset();
     console.log('[Scheduler] Scheduled post + poll + giveaway + bump reminder runner started (60s interval).');
 }
 
