@@ -181,6 +181,18 @@ db.exec(`
         created_at    TEXT DEFAULT (datetime('now')),
         PRIMARY KEY (guild_id, message_id)
     );
+    CREATE TABLE IF NOT EXISTS custom_commands (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        guild_id        TEXT NOT NULL,
+        trigger         TEXT NOT NULL,
+        response        TEXT NOT NULL,
+        embed           INTEGER NOT NULL DEFAULT 0,
+        embed_color     TEXT DEFAULT '#5865F2',
+        delete_trigger  INTEGER NOT NULL DEFAULT 0,
+        created_by      TEXT NOT NULL,
+        created_at      TEXT DEFAULT (datetime('now')),
+        UNIQUE(guild_id, trigger)
+    );
 `);
 
 const existingCols = db.prepare('PRAGMA table_info(guild_config)').all().map(r => r.name);
@@ -424,6 +436,22 @@ function setStarboardEntry(guildId, messageId, sbMessageId) {
     db.prepare('INSERT OR REPLACE INTO starboard_entries (guild_id, message_id, sb_message_id) VALUES (?, ?, ?)').run(guildId, messageId, sbMessageId);
 }
 
+// ── Custom Commands ────────────────────────────────────────────────────
+function addCustomCommand(guildId, trigger, response, embed, embedColor, deleteTrigger, createdBy) {
+    return db.prepare(
+        'INSERT OR REPLACE INTO custom_commands (guild_id, trigger, response, embed, embed_color, delete_trigger, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(guildId, trigger.toLowerCase(), response, embed ? 1 : 0, embedColor ?? '#5865F2', deleteTrigger ? 1 : 0, createdBy);
+}
+function removeCustomCommand(guildId, trigger) {
+    return db.prepare('DELETE FROM custom_commands WHERE guild_id = ? AND trigger = ?').run(guildId, trigger.toLowerCase()).changes;
+}
+function getCustomCommand(guildId, trigger) {
+    return db.prepare('SELECT * FROM custom_commands WHERE guild_id = ? AND trigger = ?').get(guildId, trigger.toLowerCase()) ?? null;
+}
+function getCustomCommands(guildId) {
+    return db.prepare('SELECT * FROM custom_commands WHERE guild_id = ? ORDER BY trigger ASC').all(guildId);
+}
+
 module.exports = {
     getConfig, setConfig, getGuildsWithFeature,
     addScheduledPost, getDueScheduledPosts, deleteScheduledPost, getScheduledPosts,
@@ -437,4 +465,5 @@ module.exports = {
     createPanel, getPanel, getGuildPanels, setPanelMessageId, deletePanel, addPanelButton, removePanelButton, getPanelButtons,
     createTicket, getTicket, getTicketByThread, setTicketThreadId, closeTicket, getGuildTickets,
     getStarboardEntry, setStarboardEntry,
+    addCustomCommand, removeCustomCommand, getCustomCommand, getCustomCommands,
 };

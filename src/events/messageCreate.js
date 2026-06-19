@@ -1,21 +1,57 @@
-const { Events } = require('discord.js');
+const { Events, EmbedBuilder } = require('discord.js');
 const { createCanvas, loadImage } = require('canvas');
 const { AttachmentBuilder } = require('discord.js');
-const { getConfig, getXP, setXP, updateLastXpAt, getUserRank, getLevelAutoRoles } = require('../utils/db.js');
+const {
+    getConfig, getXP, setXP, updateLastXpAt, getUserRank, getLevelAutoRoles,
+    getCustomCommand,
+} = require('../utils/db.js');
 const { calculateLevel, xpForLevel } = require('../utils/xp.js');
 const { getBackgroundById } = require('../utils/backgrounds.js');
 const { registerAllFonts } = require('../utils/canvas.js');
 
 registerAllFonts();
 
-// In-memory cooldown map: `${guildId}:${userId}` -> timestamp
 const cooldowns = new Map();
+
+function resolveTemplate(text, message) {
+    return text
+        .replace(/\{user\}/gi,     `<@${message.author.id}>`)
+        .replace(/\{username\}/gi,  message.author.username)
+        .replace(/\{server\}/gi,   message.guild?.name ?? 'this server')
+        .replace(/\{count\}/gi,    String(message.guild?.memberCount ?? ''));
+}
 
 module.exports = {
     name: Events.MessageCreate,
     async execute(message) {
         if (message.author.bot || !message.guild) return;
 
+        // ── Custom Commands ────────────────────────────────────────────
+        const content = message.content.trim();
+        if (content.length > 0) {
+            const firstWord = content.split(/\s+/)[0].toLowerCase();
+            const cmd = getCustomCommand(message.guild.id, firstWord)
+                     ?? getCustomCommand(message.guild.id, content.toLowerCase());
+
+            if (cmd) {
+                const resolved = resolveTemplate(cmd.response, message);
+                if (cmd.delete_trigger) await message.delete().catch(() => {});
+                if (cmd.embed) {
+                    await message.channel.send({
+                        embeds: [
+                            new EmbedBuilder()
+                                .setDescription(resolved)
+                                .setColor(cmd.embed_color ?? '#5865F2'),
+                        ],
+                    }).catch(() => {});
+                } else {
+                    await message.channel.send(resolved).catch(() => {});
+                }
+                // intentionally fall through — still award XP
+            }
+        }
+
+        // ── XP System ─────────────────────────────────────────────────
         const cfg = getConfig(message.guild.id);
         if (!cfg.xp_enabled) return;
 
@@ -43,7 +79,6 @@ module.exports = {
         try {
             const member = message.member ?? await message.guild.members.fetch(message.author.id).catch(() => null);
             if (member) {
-                // Assign roles for every level crossed (handles multi-level jumps)
                 for (let lvl = before.level + 1; lvl <= after.level; lvl++) {
                     const levelRoles = getLevelAutoRoles(message.guild.id, lvl);
                     for (const rule of levelRoles) {
@@ -61,7 +96,7 @@ module.exports = {
 
         if (!cfg.xp_channel) return;
 
-        // Level-up! Render rank card and post
+        // Level-up card
         try {
             const channel = await message.guild.channels.fetch(cfg.xp_channel);
             if (!channel?.isTextBased()) return;
@@ -100,7 +135,7 @@ module.exports = {
             const TX = AX + AR * 2 + 24;
             ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 
-            ctx.font = `bold 13px Arial`;
+            ctx.font = 'bold 13px Arial';
             ctx.fillStyle = primary;
             ctx.fillText(`RANK #${rank}`, TX, H * 0.28);
 
@@ -109,7 +144,7 @@ module.exports = {
             ctx.fillText(member?.displayName ?? message.author.username, TX, H * 0.28 + 26);
 
             ctx.textAlign = 'right';
-            ctx.font = `bold 13px Arial`;
+            ctx.font = 'bold 13px Arial';
             ctx.fillStyle = primary;
             ctx.fillText('LEVEL UP!', W - 20, H * 0.28);
             ctx.font = `bold 32px "${font}"`;
