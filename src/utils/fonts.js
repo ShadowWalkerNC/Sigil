@@ -6,6 +6,7 @@ const FONTS_DIR = path.join(__dirname, '../fonts');
 
 // Map family names → font file names (relative to src/fonts/)
 const FONT_MAP = [
+    { family: 'SigilSans',       file: 'font.otf'                  }, // always-present fallback
     { family: 'Another Danger',  file: 'another-danger/font.otf'   },
     { family: 'Bebas Neue',      file: 'BebasNeue-Regular.ttf'     },
     { family: 'Oswald',          file: 'Oswald-Regular.ttf'        },
@@ -17,10 +18,7 @@ const FONT_MAP = [
 function registerAllFonts() {
     for (const { family, file } of FONT_MAP) {
         const fullPath = path.join(FONTS_DIR, file);
-        if (!fs.existsSync(fullPath)) {
-            // silently skip missing fonts — stubs/placeholders not loaded
-            continue;
-        }
+        if (!fs.existsSync(fullPath)) continue;
         try {
             registerFont(fullPath, { family });
         } catch (err) {
@@ -37,4 +35,7 @@ function getAllFontFamilies() {
         .map(({ family }) => family);
 }
 
-module.exports = { registerAllFonts, getAllFontFamilies, FONT_MAP };
+// The guaranteed fallback — always bundled in the repo
+const DEFAULT_FONT = 'SigilSans';
+
+module.exports = { registerAllFonts, getAllFontFamilies, FONT_MAP, DEFAULT_FONT };

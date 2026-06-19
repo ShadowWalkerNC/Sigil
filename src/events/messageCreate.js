@@ -8,6 +8,7 @@ const {
 const { calculateLevel, xpForLevel } = require('../utils/xp.js');
 const { getBackgroundById } = require('../utils/backgrounds.js');
 const { registerAllFonts } = require('../utils/canvas.js');
+const { DEFAULT_FONT } = require('../utils/fonts.js');
 
 registerAllFonts();
 
@@ -47,7 +48,6 @@ module.exports = {
                 } else {
                     await message.channel.send(resolved).catch(() => {});
                 }
-                // intentionally fall through — still award XP
             }
         }
 
@@ -105,7 +105,7 @@ module.exports = {
             const member    = message.member ?? await message.guild.members.fetch(message.author.id).catch(() => null);
             const avatarURL = message.author.displayAvatarURL({ extension: 'png', size: 128 });
             const primary   = '#39FF14';
-            const font      = 'Arial';
+            const F         = DEFAULT_FONT;
 
             const W = 800, H = 200;
             const canvas = createCanvas(W, H);
@@ -135,19 +135,19 @@ module.exports = {
             const TX = AX + AR * 2 + 24;
             ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
 
-            ctx.font = 'bold 13px Arial';
+            ctx.font = `bold 13px "${F}"`;
             ctx.fillStyle = primary;
             ctx.fillText(`RANK #${rank}`, TX, H * 0.28);
 
-            ctx.font = `bold 28px "${font}"`;
+            ctx.font = `bold 28px "${F}"`;
             ctx.fillStyle = '#ffffff';
             ctx.fillText(member?.displayName ?? message.author.username, TX, H * 0.28 + 26);
 
             ctx.textAlign = 'right';
-            ctx.font = 'bold 13px Arial';
+            ctx.font = `bold 13px "${F}"`;
             ctx.fillStyle = primary;
             ctx.fillText('LEVEL UP!', W - 20, H * 0.28);
-            ctx.font = `bold 32px "${font}"`;
+            ctx.font = `bold 32px "${F}"`;
             ctx.fillStyle = primary;
             ctx.shadowColor = primary; ctx.shadowBlur = 12;
             ctx.fillText(`${after.level}`, W - 20, H * 0.28 + 30);
@@ -170,11 +170,11 @@ module.exports = {
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            ctx.font = '13px Arial'; ctx.fillStyle = '#aaaaaa';
+            ctx.font = `13px "${F}"`; ctx.fillStyle = '#aaaaaa';
             ctx.textAlign = 'left';
             ctx.fillText(`${after.currentXp} / ${after.requiredXp} XP`, barX, barY + barH + 18);
 
-            ctx.font = '12px Arial'; ctx.fillStyle = '#ffffff18';
+            ctx.font = `12px "${F}"`; ctx.fillStyle = '#ffffff18';
             ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
             ctx.fillText('made with Sigil', W - 12, H - 6);
 
@@ -182,7 +182,7 @@ module.exports = {
             const attachment = new AttachmentBuilder(buf, { name: 'levelup.png' });
 
             await channel.send({
-                content: `🎉 <@${message.author.id}> leveled up to **Level ${after.level}**!`,
+                content: `\uD83C\uDF89 <@${message.author.id}> leveled up to **Level ${after.level}**!`,
                 files: [attachment],
             });
         } catch (err) {

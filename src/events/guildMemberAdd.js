@@ -1,12 +1,17 @@
 const { getConfig, getAutoRolesByTrigger } = require('../utils/db.js');
 const { createCanvas, loadImage } = require('canvas');
-const { AttachmentBuilder, EmbedBuilder } = require('discord.js');
+const { AttachmentBuilder } = require('discord.js');
+const { registerAllFonts } = require('../utils/canvas.js');
+const { DEFAULT_FONT } = require('../utils/fonts.js');
+
+registerAllFonts();
 
 module.exports = {
     name: 'guildMemberAdd',
     async execute(member) {
         const { guild } = member;
         const config = getConfig(guild.id);
+        const F      = DEFAULT_FONT;
 
         // Auto-roles: join
         const joinRoles = getAutoRolesByTrigger(guild.id, 'join');
@@ -47,15 +52,15 @@ module.exports = {
             ctx.drawImage(avatar, 35, 50, 150, 150);
             ctx.restore();
 
-            ctx.font = 'bold 36px Arial';
+            ctx.font = `bold 36px "${F}"`;
             ctx.fillStyle = '#ffffff';
             ctx.fillText(`Welcome, ${member.user.username}!`, 210, 110);
 
-            ctx.font = '22px Arial';
+            ctx.font = `22px "${F}"`;
             ctx.fillStyle = '#aaaaaa';
             ctx.fillText(`You are member #${guild.memberCount}`, 210, 150);
 
-            ctx.font = '18px Arial';
+            ctx.font = `18px "${F}"`;
             ctx.fillStyle = config.welcome_color || '#39FF14';
             ctx.fillText(guild.name, 210, 185);
 
