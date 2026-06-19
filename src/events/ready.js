@@ -1,5 +1,7 @@
 const { handleWeeklyReport }        = require('../automation/weeklyReportHandler.js');
 const { startScheduledPostRunner }  = require('../automation/scheduledPostRunner.js');
+const { startTwitchPoller }         = require('../automation/twitchPoller.js');
+const { startYouTubePoller }        = require('../automation/youtubePoller.js');
 
 module.exports = {
     name: 'clientReady',
@@ -8,6 +10,8 @@ module.exports = {
         console.log(`[Sigil] Logged in as ${client.user.tag}`);
         startWeeklyCron(client);
         startScheduledPostRunner(client);
+        startTwitchPoller(client);
+        startYouTubePoller(client);
     },
 };
 

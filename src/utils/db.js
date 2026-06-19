@@ -15,24 +15,32 @@ const db = new Database(DB_PATH);
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS guild_config (
-        guild_id              TEXT PRIMARY KEY,
-        welcome_enabled       INTEGER DEFAULT 0,
-        welcome_channel       TEXT,
-        welcome_color         TEXT DEFAULT '#39FF14',
-        welcome_bg            TEXT DEFAULT 'gradient-purple',
-        welcome_font          TEXT DEFAULT 'Arial',
-        goodbye_enabled       INTEGER DEFAULT 0,
-        goodbye_channel       TEXT,
-        milestone_enabled     INTEGER DEFAULT 0,
-        milestone_channel     TEXT,
-        boost_enabled         INTEGER DEFAULT 0,
-        boost_channel         TEXT,
-        stats_channel         TEXT,
-        event_banner_enabled  INTEGER DEFAULT 0,
-        event_banner_channel  TEXT,
-        webhook_channel       TEXT,
-        webhook_secret        TEXT,
-        updated_at            TEXT DEFAULT (datetime('now'))
+        guild_id                TEXT PRIMARY KEY,
+        welcome_enabled         INTEGER DEFAULT 0,
+        welcome_channel         TEXT,
+        welcome_color           TEXT DEFAULT '#39FF14',
+        welcome_bg              TEXT DEFAULT 'gradient-purple',
+        welcome_font            TEXT DEFAULT 'Arial',
+        goodbye_enabled         INTEGER DEFAULT 0,
+        goodbye_channel         TEXT,
+        milestone_enabled       INTEGER DEFAULT 0,
+        milestone_channel       TEXT,
+        boost_enabled           INTEGER DEFAULT 0,
+        boost_channel           TEXT,
+        stats_channel           TEXT,
+        event_banner_enabled    INTEGER DEFAULT 0,
+        event_banner_channel    TEXT,
+        webhook_channel         TEXT,
+        webhook_secret          TEXT,
+        twitch_enabled          INTEGER DEFAULT 0,
+        twitch_channel          TEXT,
+        twitch_streamers        TEXT,
+        twitch_last_stream_id   TEXT,
+        youtube_enabled         INTEGER DEFAULT 0,
+        youtube_channel         TEXT,
+        youtube_handles         TEXT,
+        youtube_last_video_id   TEXT,
+        updated_at              TEXT DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS scheduled_posts (
@@ -48,10 +56,18 @@ db.exec(`
 // Runtime migration -- adds columns to existing DBs that predate this schema
 const existingCols = db.prepare('PRAGMA table_info(guild_config)').all().map(r => r.name);
 const migrations = [
-    ['event_banner_enabled', 'ALTER TABLE guild_config ADD COLUMN event_banner_enabled INTEGER DEFAULT 0'],
-    ['event_banner_channel', 'ALTER TABLE guild_config ADD COLUMN event_banner_channel TEXT'],
-    ['webhook_channel',      'ALTER TABLE guild_config ADD COLUMN webhook_channel TEXT'],
-    ['webhook_secret',       'ALTER TABLE guild_config ADD COLUMN webhook_secret TEXT'],
+    ['event_banner_enabled',  'ALTER TABLE guild_config ADD COLUMN event_banner_enabled  INTEGER DEFAULT 0'],
+    ['event_banner_channel',  'ALTER TABLE guild_config ADD COLUMN event_banner_channel  TEXT'],
+    ['webhook_channel',       'ALTER TABLE guild_config ADD COLUMN webhook_channel        TEXT'],
+    ['webhook_secret',        'ALTER TABLE guild_config ADD COLUMN webhook_secret         TEXT'],
+    ['twitch_enabled',        'ALTER TABLE guild_config ADD COLUMN twitch_enabled         INTEGER DEFAULT 0'],
+    ['twitch_channel',        'ALTER TABLE guild_config ADD COLUMN twitch_channel         TEXT'],
+    ['twitch_streamers',      'ALTER TABLE guild_config ADD COLUMN twitch_streamers       TEXT'],
+    ['twitch_last_stream_id', 'ALTER TABLE guild_config ADD COLUMN twitch_last_stream_id  TEXT'],
+    ['youtube_enabled',       'ALTER TABLE guild_config ADD COLUMN youtube_enabled        INTEGER DEFAULT 0'],
+    ['youtube_channel',       'ALTER TABLE guild_config ADD COLUMN youtube_channel        TEXT'],
+    ['youtube_handles',       'ALTER TABLE guild_config ADD COLUMN youtube_handles        TEXT'],
+    ['youtube_last_video_id', 'ALTER TABLE guild_config ADD COLUMN youtube_last_video_id  TEXT'],
 ];
 for (const [col, sql] of migrations) {
     if (!existingCols.includes(col)) db.exec(sql);
@@ -73,6 +89,11 @@ function setConfig(guildId, fields) {
     const cols    = Object.keys(merged).filter(k => k !== 'guild_id');
     const sets    = cols.map(c => `${c} = @${c}`).join(', ');
     db.prepare(`UPDATE guild_config SET ${sets} WHERE guild_id = @guild_id`).run(merged);
+}
+
+// Retrieve all guilds that have a specific feature enabled
+function getGuildsWithFeature(column) {
+    return db.prepare(`SELECT * FROM guild_config WHERE ${column} = 1`).all();
 }
 
 // Scheduled posts helpers
@@ -97,4 +118,4 @@ function getScheduledPosts(guildId) {
         .map(r => ({ ...r, payload: JSON.parse(r.payload) }));
 }
 
-module.exports = { getConfig, setConfig, addScheduledPost, getDueScheduledPosts, deleteScheduledPost, getScheduledPosts };
+module.exports = { getConfig, setConfig, getGuildsWithFeature, addScheduledPost, getDueScheduledPosts, deleteScheduledPost, getScheduledPosts };
