@@ -3,6 +3,7 @@ const { registerAllFonts, getAllFontFamilies, renderIcon } = require('../utils/c
 const { getBackgroundChoices } = require('../utils/backgrounds.js');
 const { getBorderChoices } = require('../utils/borders.js');
 const { saveEntry } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
@@ -26,8 +27,9 @@ module.exports = {
         .addNumberOption(opt => opt.setName('glow').setDescription('Glow intensity (0–25)').setMinValue(0).setMaxValue(25)),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
@@ -46,7 +48,7 @@ module.exports = {
         const attachment = new AttachmentBuilder(buf, { name: 'sticker.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('\uD83C\uDFF7\uFE0F Sticker Ready')
+            .setTitle('🏷️ Sticker Ready')
             .setDescription(
                 `Your **${text}** sticker is ready!\n\n` +
                 '**To use it:**\n' +
@@ -61,7 +63,7 @@ module.exports = {
                 { name: 'Format', value: 'PNG', inline: true },
                 { name: 'Shape', value: shape.charAt(0).toUpperCase() + shape.slice(1), inline: true },
             )
-            .setFooter({ text: 'Sigil \u2022 sticker \u2014 Discord stickers are free to upload for server admins' });
+            .setFooter({ text: 'Sigil • sticker — Discord stickers are free to upload for server admins' });
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
 

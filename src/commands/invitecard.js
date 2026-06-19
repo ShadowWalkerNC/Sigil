@@ -4,22 +4,19 @@ const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
 const { getBackgroundById } = require('../utils/backgrounds.js');
 const { getBackgroundChoices } = require('../utils/backgrounds.js');
 const { saveEntry } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
 const W = 800, H = 420;
 
-// Minimal QR matrix generator (no external lib)
 function buildQRMatrix(text) {
-    // Simple placeholder 21x21 pattern seeded from text charCodes
-    // Real QR requires a library — this renders a styled placeholder
     const size = 21;
     const hash = [...text].reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xFFFFFF, 0);
     const matrix = [];
     for (let r = 0; r < size; r++) {
         matrix.push([]);
         for (let c = 0; c < size; c++) {
-            // Finder patterns (top-left, top-right, bottom-left corners)
             const inFinder =
                 (r < 8 && c < 8) || (r < 8 && c >= size - 8) || (r >= size - 8 && c < 8);
             if (inFinder) {
@@ -64,8 +61,9 @@ module.exports = {
         .addStringOption(opt => opt.setName('icon_url').setDescription('Server icon URL (optional)')),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
@@ -87,15 +85,12 @@ module.exports = {
         catch { ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, W, H); }
         ctx.fillStyle = '#000000aa'; ctx.fillRect(0, 0, W, H);
 
-        // Left info panel
         ctx.fillStyle = '#00000055';
         ctx.beginPath(); ctx.roundRect(0, 0, W - 220, H, [12, 0, 0, 12]); ctx.fill();
 
-        // Accent bar
         ctx.fillStyle = primary;
         ctx.fillRect(0, 0, 6, H);
 
-        // Server icon
         const IR = 52, IX = 36, IY = 90;
         ctx.save();
         ctx.beginPath(); ctx.arc(IX + IR, IY, IR, 0, Math.PI * 2); ctx.clip();
@@ -114,14 +109,12 @@ module.exports = {
         ctx.beginPath(); ctx.arc(IX + IR, IY, IR + 3, 0, Math.PI * 2);
         ctx.strokeStyle = primary; ctx.lineWidth = 2.5; ctx.stroke();
 
-        // Server name
         const TX = IX + IR * 2 + 20;
         ctx.font = `bold 32px "${font}"`;
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.fillText(serverName, TX, IY + 10);
 
-        // Description
         ctx.font = `16px "${font}"`;
         ctx.fillStyle = '#cccccc';
         const words = description.split(' ');
@@ -134,19 +127,16 @@ module.exports = {
         if (line) lines.push(line);
         lines.slice(0, 4).forEach((l, i) => ctx.fillText(l, 36, dy + i * 26));
 
-        // Member count
         if (memberCount) {
             ctx.font = `bold 14px "${font}"`;
             ctx.fillStyle = primary;
             ctx.fillText('👥  ' + memberCount, 36, H - 56);
         }
 
-        // Invite URL
         ctx.font = `bold 15px Arial`;
         ctx.fillStyle = '#ffffff88';
         ctx.fillText(inviteURL, 36, H - 32);
 
-        // QR code panel
         const QR_X = W - 200, QR_Y = 40, QR_SIZE = 160;
         ctx.fillStyle = '#ffffff0a';
         ctx.beginPath(); ctx.roundRect(QR_X - 10, QR_Y - 10, 200, H - 60, 12); ctx.fill();
@@ -160,7 +150,6 @@ module.exports = {
         ctx.textBaseline = 'alphabetic';
         ctx.fillText('SCAN TO JOIN', QR_X + 90, QR_Y + QR_SIZE + 44);
 
-        // Watermark
         ctx.font = '12px Arial'; ctx.fillStyle = '#ffffff18';
         ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
         ctx.fillText('made with Sigil', W - 12, H - 6);
@@ -169,7 +158,7 @@ module.exports = {
         const attachment = new AttachmentBuilder(buf, { name: 'invitecard.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle(`📮 Invite Card — ${serverName}`)
+            .setTitle(`📥 Invite Card — ${serverName}`)
             .setDescription('Share this on Reddit, Twitter, TikTok, or anywhere to recruit members.')
             .setImage('attachment://invitecard.png')
             .setColor(primary)

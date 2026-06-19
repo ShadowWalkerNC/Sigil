@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discor
 const { createCanvas, loadImage } = require('canvas');
 const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
 const { saveEntry } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
@@ -48,8 +49,9 @@ module.exports = {
         .addStringOption(opt => opt.setName('font').setDescription('Font').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f })))),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
@@ -69,17 +71,14 @@ module.exports = {
         const canvas = createCanvas(W, H);
         const ctx    = canvas.getContext('2d');
 
-        // Parchment-style background
         ctx.fillStyle = '#0d0d0d';
         ctx.fillRect(0, 0, W, H);
-        // Subtle texture gradient
         const bgGrad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.7);
         bgGrad.addColorStop(0, '#1a1506');
         bgGrad.addColorStop(1, '#0d0d0d');
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, W, H);
 
-        // Outer border frame
         ctx.strokeStyle = primary;
         ctx.lineWidth = 4;
         ctx.strokeRect(20, 20, W - 40, H - 40);
@@ -87,7 +86,6 @@ module.exports = {
         ctx.lineWidth = 1.5;
         ctx.strokeRect(30, 30, W - 60, H - 60);
 
-        // Corner decorations
         const corners = [[36,36],[W-36,36],[36,H-36],[W-36,H-36]];
         corners.forEach(([cx, cy]) => {
             ctx.beginPath();
@@ -96,12 +94,10 @@ module.exports = {
             ctx.fill();
         });
 
-        // Top icon
         ctx.font = `52px Arial`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
         ctx.fillText(icon, W / 2, 110);
 
-        // Certificate title
         ctx.font = `bold 13px Arial`;
         ctx.fillStyle = primary + 'aa';
         ctx.fillText('C E R T I F I C A T E', W / 2, 140);
@@ -112,28 +108,23 @@ module.exports = {
         ctx.fillText(certTitle, W / 2, 188);
         ctx.shadowBlur = 0;
 
-        // Divider
         const dg = ctx.createLinearGradient(120, 0, W - 120, 0);
         dg.addColorStop(0, 'transparent'); dg.addColorStop(0.5, primary); dg.addColorStop(1, 'transparent');
         ctx.fillStyle = dg;
         ctx.fillRect(120, 204, W - 240, 1.5);
 
-        // This is awarded to
         ctx.font = `18px "${font}"`;
         ctx.fillStyle = '#aaaaaa';
         ctx.fillText('This certificate is proudly awarded to', W / 2, 248);
 
-        // Recipient name
         ctx.font = `bold 54px "${font}"`;
         ctx.fillStyle = '#ffffff';
         ctx.shadowColor = primary; ctx.shadowBlur = 16;
         ctx.fillText(recipient, W / 2, 318);
         ctx.shadowBlur = 0;
 
-        // Reason
         ctx.font = `17px "${font}"`;
         ctx.fillStyle = '#cccccc';
-        // Word wrap reason
         const words = reason.split(' ');
         let line = '', lines = [], ry = 360;
         for (const w of words) {
@@ -144,11 +135,9 @@ module.exports = {
         if (line) lines.push(line);
         lines.slice(0, 3).forEach((l, i) => ctx.fillText(l, W / 2, ry + i * 26));
 
-        // Divider
         ctx.fillStyle = dg;
         ctx.fillRect(120, H - 160, W - 240, 1.5);
 
-        // Issuer + date
         ctx.font = `bold 16px "${font}"`;
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left';
@@ -165,7 +154,6 @@ module.exports = {
         ctx.fillStyle = '#888888';
         ctx.fillText('Date awarded', W - 100, H - 138);
 
-        // Sigil watermark
         ctx.font = '12px Arial'; ctx.fillStyle = '#ffffff18';
         ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
         ctx.fillText('made with Sigil', W / 2, H - 8);

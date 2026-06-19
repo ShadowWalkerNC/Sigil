@@ -5,6 +5,7 @@ const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
 const { getBackgroundById } = require('../utils/backgrounds.js');
 const { getBackgroundChoices } = require('../utils/backgrounds.js');
 const { saveEntry } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
@@ -30,11 +31,9 @@ function renderReaction({ emoji, primary, secondary, bg, font, size = 128 }) {
     const canvas = createCanvas(size, size);
     const ctx    = canvas.getContext('2d');
 
-    // Background fill
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, size, size);
 
-    // Gradient circle background
     const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
     grad.addColorStop(0, primary + '44');
     grad.addColorStop(1, secondary + '11');
@@ -43,12 +42,10 @@ function renderReaction({ emoji, primary, secondary, bg, font, size = 128 }) {
     ctx.arc(size/2, size/2, size/2 - 4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Thin ring
     ctx.strokeStyle = primary + '88';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Emoji / text
     const fontSize = Math.round(size * 0.45);
     ctx.font = `bold ${fontSize}px "${font}"`;
     ctx.fillStyle = primary;
@@ -76,8 +73,9 @@ module.exports = {
         .addStringOption(opt => opt.setName('font').setDescription('Font family').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f })))),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
@@ -97,10 +95,8 @@ module.exports = {
         const theme = { ...THEME_COLORS[themeKey] ?? THEME_COLORS.neon };
         if (themeKey === 'custom' && customColor) theme.primary = customColor;
 
-        // Render all 5 reactions
         const buffers = emojis.map(emoji => renderReaction({ emoji, ...theme, font }));
 
-        // Build preview (5 icons side by side, 128px each)
         const PREVIEW_W = 128 * 5 + 16 * 4;
         const PREVIEW_H = 128;
         const preview = createCanvas(PREVIEW_W, PREVIEW_H);
@@ -114,7 +110,6 @@ module.exports = {
         }
         const previewBuf = preview.toBuffer('image/png');
 
-        // Zip individual pngs
         const zip = new JSZip();
         emojis.forEach((emoji, i) => {
             const safeName = emoji.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 20) || `reaction_${i+1}`;
@@ -127,13 +122,13 @@ module.exports = {
         const zipAttachment     = new AttachmentBuilder(zipBuf,     { name: 'reactionpack.zip' });
 
         const embed = new EmbedBuilder()
-            .setTitle('\uD83D\uDE04 Reaction Pack Ready')
+            .setTitle('😄 Reaction Pack Ready')
             .setDescription(
                 `**${emojis.join('  ')}** — themed pack generated!\n\n` +
                 '**To use:**\n' +
                 '1. Download the ZIP below\n' +
                 '2. Extract the PNG files\n' +
-                '3. Go to **Server Settings → Emoji** and upload each one\n' +
+                '3. Go to **Server Settings \u2192 Emoji** and upload each one\n' +
                 '4. All servers get free emoji slots — no Nitro needed'
             )
             .setImage('attachment://reactionpack-preview.png')

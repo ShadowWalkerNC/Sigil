@@ -3,13 +3,14 @@ const { registerAllFonts, getAllFontFamilies, renderBanner } = require('../utils
 const { getBackgroundChoices } = require('../utils/backgrounds.js');
 const { getBorderChoices } = require('../utils/borders.js');
 const { saveEntry } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
 const SIZE_CHOICES = [
-    { name: 'Invite Splash (1920\u00d71080)', value: '1920x1080' },
-    { name: 'Discovery Splash (1920\u00d7480)', value: '1920x480' },
-    { name: 'Wide Banner (1500\u00d7500)', value: '1500x500' },
+    { name: 'Invite Splash (1920×1080)', value: '1920x1080' },
+    { name: 'Discovery Splash (1920×480)', value: '1920x480' },
+    { name: 'Wide Banner (1500×500)', value: '1500x500' },
 ];
 
 module.exports = {
@@ -24,11 +25,12 @@ module.exports = {
         .addStringOption(opt => opt.setName('primary_color').setDescription('Primary color (hex)').setAutocomplete(true))
         .addStringOption(opt => opt.setName('secondary_color').setDescription('Secondary color (hex)').setAutocomplete(true))
         .addStringOption(opt => opt.setName('font').setDescription('Font').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f }))))
-        .addNumberOption(opt => opt.setName('glow').setDescription('Glow (0\u201325)').setMinValue(0).setMaxValue(25)),
+        .addNumberOption(opt => opt.setName('glow').setDescription('Glow (0–25)').setMinValue(0).setMaxValue(25)),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
@@ -52,7 +54,7 @@ module.exports = {
         const sizeLabel = SIZE_CHOICES.find(s => s.value === sizeVal)?.name ?? sizeVal;
 
         const embed = new EmbedBuilder()
-            .setTitle('\uD83C\uDF05 Splash Screen Ready')
+            .setTitle('🌅 Splash Screen Ready')
             .setDescription(
                 `**${sizeLabel}** splash generated!\n\n` +
                 '**To use it:**\n' +

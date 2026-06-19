@@ -4,6 +4,7 @@ const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
 const { getBackgroundById } = require('../utils/backgrounds.js');
 const { getBackgroundChoices } = require('../utils/backgrounds.js');
 const { saveEntry } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
@@ -23,8 +24,9 @@ module.exports = {
         .addStringOption(opt => opt.setName('icon_url').setDescription('Server icon URL (optional)')),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
@@ -42,18 +44,14 @@ module.exports = {
         const canvas = createCanvas(W, H);
         const ctx    = canvas.getContext('2d');
 
-        // Background
         try { getBackgroundById(background).draw(ctx, W, H); } catch { ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, W, H); }
 
-        // Subtle dark overlay for readability
         ctx.fillStyle = '#00000055';
         ctx.fillRect(0, 0, W, H);
 
-        // Accent bar top
         ctx.fillStyle = primary;
         ctx.fillRect(0, 0, W, 5);
 
-        // Server icon
         const ICON_X = 48, ICON_Y = H / 2, ICON_R = 64;
         ctx.save();
         ctx.beginPath();
@@ -77,24 +75,20 @@ module.exports = {
         }
         ctx.restore();
 
-        // Icon ring
         ctx.beginPath();
         ctx.arc(ICON_X + ICON_R, ICON_Y, ICON_R + 3, 0, Math.PI * 2);
         ctx.strokeStyle = primary;
         ctx.lineWidth = 3;
         ctx.stroke();
 
-        // Text content
         const textX = ICON_X + ICON_R * 2 + 36;
 
-        // Server name
         ctx.font = `bold 36px "${font}"`;
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         ctx.fillText(name, textX, H * 0.33);
 
-        // Description — word wrap at ~65 chars
         ctx.font = `18px "${font}"`;
         ctx.fillStyle = '#cccccc';
         const words = description.split(' ');
@@ -107,15 +101,13 @@ module.exports = {
         if (line) lines.push(line);
         lines.slice(0, 3).forEach((l, i) => ctx.fillText(l, textX, H * 0.33 + 34 + i * 26));
 
-        // Meta row — member count + category
-        const meta = [memberCount, category].filter(Boolean).join('  \u2022  ');
+        const meta = [memberCount, category].filter(Boolean).join('  •  ');
         if (meta) {
             ctx.font = `bold 15px "${font}"`;
             ctx.fillStyle = primary;
             ctx.fillText(meta, textX, H * 0.82);
         }
 
-        // Discord-style join button hint
         const btnW = 120, btnH = 34, btnX = W - btnW - 32, btnY = H - btnH - 24;
         ctx.fillStyle = primary;
         ctx.beginPath();
@@ -127,7 +119,6 @@ module.exports = {
         ctx.textBaseline = 'middle';
         ctx.fillText('Join Server', btnX + btnW / 2, btnY + btnH / 2);
 
-        // Watermark
         ctx.font = '13px Arial';
         ctx.fillStyle = '#ffffff22';
         ctx.textAlign = 'right';
@@ -138,11 +129,11 @@ module.exports = {
         const attachment = new AttachmentBuilder(buf, { name: 'servercard.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle(`\uD83D\uDDC2\uFE0F ${name} \u2014 Server Card`)
+            .setTitle(`🗂️ ${name} — Server Card`)
             .setDescription('Share this to recruit members anywhere outside Discord.')
             .setImage('attachment://servercard.png')
             .setColor(primary)
-            .setFooter({ text: 'Sigil \u2022 servercard \u2014 900\u00d7320 px PNG' });
+            .setFooter({ text: 'Sigil • servercard — 900×320 px PNG' });
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
 

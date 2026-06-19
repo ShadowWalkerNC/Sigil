@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discor
 const { createCanvas } = require('canvas');
 const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
 const { saveEntry } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
@@ -16,7 +17,6 @@ const STYLE_CHOICES = [
 function drawBadge({ text, style, primary, secondary, font, glow }) {
     const H  = 64;
     const PAD = 28;
-    // Measure text width first on a temp canvas
     const tmp = createCanvas(1, 1);
     const tctx = tmp.getContext('2d');
     tctx.font = `bold 28px "${font}"`;
@@ -26,7 +26,6 @@ function drawBadge({ text, style, primary, secondary, font, glow }) {
     const canvas = createCanvas(W, H);
     const ctx    = canvas.getContext('2d');
 
-    // Background fill with shape
     const bg = ctx.createLinearGradient(0, 0, W, H);
     bg.addColorStop(0, primary);
     bg.addColorStop(1, secondary);
@@ -50,10 +49,8 @@ function drawBadge({ text, style, primary, secondary, font, glow }) {
     }
     ctx.fill();
 
-    // Glow
     if (glow > 0) { ctx.shadowColor = primary; ctx.shadowBlur = glow * 2; }
 
-    // Text
     ctx.font = `bold 28px "${font}"`;
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
@@ -75,8 +72,9 @@ module.exports = {
         .addNumberOption(opt => opt.setName('glow').setDescription('Glow intensity (0–25)').setMinValue(0).setMaxValue(25)),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
@@ -93,7 +91,7 @@ module.exports = {
         const attachment = new AttachmentBuilder(buf, { name: 'rolebadge.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('\uD83C\uDFF7\uFE0F Role Badge Ready')
+            .setTitle('🏷️ Role Badge Ready')
             .setDescription(
                 `**${text}** badge generated!\n\n` +
                 '**How to use:**\n' +
@@ -107,7 +105,7 @@ module.exports = {
                 { name: 'Style', value: style.charAt(0).toUpperCase() + style.slice(1), inline: true },
                 { name: 'Format', value: 'PNG', inline: true },
             )
-            .setFooter({ text: 'Sigil \u2022 rolebadge' });
+            .setFooter({ text: 'Sigil • rolebadge' });
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
 

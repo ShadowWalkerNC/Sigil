@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discor
 const { createCanvas } = require('canvas');
 const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
 const { saveEntry } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
@@ -24,8 +25,9 @@ module.exports = {
         .addStringOption(opt => opt.setName('font').setDescription('Font family').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f })))),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
@@ -39,24 +41,18 @@ module.exports = {
         const canvas = createCanvas(W, H);
         const ctx    = canvas.getContext('2d');
 
-        // ── Discord Dark theme base ────────────────────────────────────
-        // Server list sidebar (72px)
         ctx.fillStyle = '#1e1f22';
         ctx.fillRect(0, 0, 72, H);
 
-        // Channel sidebar (240px)
         ctx.fillStyle = '#2b2d31';
         ctx.fillRect(72, 0, 240, H);
 
-        // Main chat area
         ctx.fillStyle = '#313338';
         ctx.fillRect(312, 0, W - 312, H);
 
-        // Member list (200px right)
         ctx.fillStyle = '#2b2d31';
         ctx.fillRect(W - 200, 0, 200, H);
 
-        // ── Server icon in sidebar ─────────────────────────────────────
         const grad = ctx.createLinearGradient(0, 8, 0, 56);
         grad.addColorStop(0, accent);
         grad.addColorStop(1, secondary);
@@ -70,13 +66,11 @@ module.exports = {
         ctx.textBaseline = 'middle';
         ctx.fillText(serverName.slice(0,2).toUpperCase(), 36, 32);
 
-        // Active server indicator
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.roundRect(0, 20, 4, 24, [0,4,4,0]);
         ctx.fill();
 
-        // Other server dots
         for (let i = 1; i <= 4; i++) {
             ctx.fillStyle = '#36393f';
             ctx.beginPath();
@@ -84,8 +78,6 @@ module.exports = {
             ctx.fill();
         }
 
-        // ── Channel sidebar content ────────────────────────────────────
-        // Server name header
         ctx.fillStyle = '#1e1f22';
         ctx.fillRect(72, 0, 240, 48);
         ctx.font = `bold 15px "${font}"`;
@@ -94,7 +86,6 @@ module.exports = {
         ctx.textBaseline = 'middle';
         ctx.fillText(serverName, 88, 24);
 
-        // Category labels
         const cats = ['TEXT CHANNELS', 'VOICE CHANNELS', 'ANNOUNCEMENTS'];
         cats.forEach((cat, i) => {
             const cy = 68 + i * 110;
@@ -102,7 +93,6 @@ module.exports = {
             ctx.fillStyle = '#949ba4';
             ctx.fillText(cat, 88, cy);
 
-            // Channels under category
             const channels = ['# general', '# off-topic', '# showcase'];
             channels.slice(0, 2).forEach((ch, j) => {
                 const isActive = i === 0 && j === 0;
@@ -124,8 +114,6 @@ module.exports = {
             });
         });
 
-        // ── Chat area ─────────────────────────────────────────────────
-        // Top bar
         ctx.fillStyle = '#2b2d31';
         ctx.fillRect(312, 0, W - 312 - 200, 48);
         ctx.font = `bold 15px "${font}"`;
@@ -134,7 +122,6 @@ module.exports = {
         ctx.textBaseline = 'middle';
         ctx.fillText('# general', 332, 24);
 
-        // Message bubbles
         const msgs = [
             { user: 'ShadowWalker', color: accent,    text: 'Welcome to the server! 🎉', time: 'Today at 10:00 AM' },
             { user: 'Sigil Bot',    color: secondary, text: 'Hello! Type /help to see all commands.', time: 'Today at 10:01 AM' },
@@ -143,7 +130,6 @@ module.exports = {
 
         msgs.forEach((msg, i) => {
             const my = 72 + i * 80;
-            // Avatar dot
             ctx.beginPath();
             ctx.arc(336, my + 16, 16, 0, Math.PI * 2);
             ctx.fillStyle = msg.color + '55';
@@ -153,22 +139,18 @@ module.exports = {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(msg.user.slice(0,2).toUpperCase(), 336, my + 16);
-            // Username
             ctx.font = `bold 14px "${font}"`;
             ctx.fillStyle = msg.color;
             ctx.textAlign = 'left';
             ctx.fillText(msg.user, 360, my + 8);
-            // Timestamp
             ctx.font = `11px Arial`;
             ctx.fillStyle = '#72767d';
             ctx.fillText(msg.time, 360 + ctx.measureText(msg.user).width + 8, my + 8);
-            // Message text
             ctx.font = `14px "${font}"`;
             ctx.fillStyle = '#dbdee1';
             ctx.fillText(msg.text, 360, my + 28);
         });
 
-        // Message input box
         ctx.fillStyle = '#383a40';
         ctx.beginPath();
         ctx.roundRect(324, H - 56, W - 324 - 208, 36, 8);
@@ -178,7 +160,6 @@ module.exports = {
         ctx.textBaseline = 'middle';
         ctx.fillText('Message #general', 344, H - 38);
 
-        // ── Member list ───────────────────────────────────────────────
         ctx.fillStyle = '#1e1f22';
         ctx.fillRect(W - 200, 0, 200, 48);
         ctx.font = `bold 11px Arial`;
@@ -198,7 +179,6 @@ module.exports = {
             ctx.arc(W - 180, my, 14, 0, Math.PI * 2);
             ctx.fillStyle = m.color + '55';
             ctx.fill();
-            // Online dot
             ctx.beginPath();
             ctx.arc(W - 170, my + 10, 5, 0, Math.PI * 2);
             ctx.fillStyle = '#23a55a';
@@ -210,7 +190,6 @@ module.exports = {
             ctx.fillText(m.name, W - 162, my);
         });
 
-        // ── Color palette strip at bottom ──────────────────────────────
         ctx.fillStyle = '#1e1f22';
         ctx.fillRect(312, H - 8, W - 312, 8);
         const grad2 = ctx.createLinearGradient(312, 0, W, 0);
@@ -219,7 +198,6 @@ module.exports = {
         ctx.fillStyle = grad2;
         ctx.fillRect(312, H - 8, W - 312, 8);
 
-        // Watermark
         ctx.font = '12px Arial';
         ctx.fillStyle = '#ffffff18';
         ctx.textAlign = 'right';
@@ -230,7 +208,7 @@ module.exports = {
         const attachment = new AttachmentBuilder(buf, { name: 'themepreview.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle(`\uD83C\uDFA8 Theme Preview — ${serverName}`)
+            .setTitle(`🎨 Theme Preview — ${serverName}`)
             .setDescription(`A Discord UI mockup with your **${accent}** / **${secondary}** color scheme applied.`)
             .setImage('attachment://themepreview.png')
             .setColor(accent)
