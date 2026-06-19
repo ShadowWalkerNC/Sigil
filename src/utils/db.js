@@ -62,6 +62,11 @@ db.exec(`
         starboard_threshold     INTEGER DEFAULT 3,
         starboard_emoji         TEXT DEFAULT '⭐',
         starboard_ignored       TEXT,
+        bump_enabled            INTEGER DEFAULT 0,
+        bump_channel            TEXT,
+        bump_message            TEXT,
+        bump_last_bump_at       TEXT,
+        bump_last_reminded_at   TEXT,
         updated_at              TEXT DEFAULT (datetime('now'))
     );
     CREATE TABLE IF NOT EXISTS scheduled_posts (
@@ -235,6 +240,11 @@ const migrations = [
     ['starboard_threshold',     'ALTER TABLE guild_config ADD COLUMN starboard_threshold     INTEGER DEFAULT 3'],
     ['starboard_emoji',         "ALTER TABLE guild_config ADD COLUMN starboard_emoji         TEXT DEFAULT '⭐'"],
     ['starboard_ignored',       'ALTER TABLE guild_config ADD COLUMN starboard_ignored       TEXT'],
+    ['bump_enabled',            'ALTER TABLE guild_config ADD COLUMN bump_enabled            INTEGER DEFAULT 0'],
+    ['bump_channel',            'ALTER TABLE guild_config ADD COLUMN bump_channel            TEXT'],
+    ['bump_message',            'ALTER TABLE guild_config ADD COLUMN bump_message            TEXT'],
+    ['bump_last_bump_at',       'ALTER TABLE guild_config ADD COLUMN bump_last_bump_at       TEXT'],
+    ['bump_last_reminded_at',   'ALTER TABLE guild_config ADD COLUMN bump_last_reminded_at   TEXT'],
 ];
 for (const [col, sql] of migrations) {
     if (!existingCols.includes(col)) db.exec(sql);
