@@ -4,6 +4,7 @@ const { getBackgroundChoices } = require('../utils/backgrounds.js');
 const { getBorderChoices } = require('../utils/borders.js');
 const { geminiRequest, geminiImageRequest, extractJson } = require('../utils/gemini.js');
 const { saveEntry, loadHistory } = require('../utils/history.js');
+const { getColorAutocomplete } = require('../utils/colors.js');
 
 registerAllFonts();
 
@@ -67,8 +68,9 @@ module.exports = {
         ),
 
     async autocomplete(interaction) {
-        const { colorAutocomplete } = require('../utils/colors.js');
-        await colorAutocomplete(interaction);
+        const focused = interaction.options.getFocused();
+        const results = getColorAutocomplete(focused);
+        await interaction.respond(results);
     },
 
     async execute(interaction) {
