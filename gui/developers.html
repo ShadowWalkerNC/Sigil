@@ -182,7 +182,7 @@ pm2 startup</code></pre>
     <p>A Dockerfile is not included in the repo yet, but you can create one:</p>
     <pre><code>FROM node:20-slim
 WORKDIR /app
-RUN apt-get update && apt-get install -y \
+RUN apt-get update &amp;&amp; apt-get install -y \
     libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
 COPY package*.json ./
 RUN npm ci --omit=dev
@@ -244,6 +244,9 @@ docker run -d --env-file .env -p 8080:8080 sigil</code></pre>
 <footer style="border-top:1px solid var(--border);padding:1.5rem;text-align:center;color:var(--faint);font-size:.8rem;">
   <a href="https://github.com/ShadowWalkerNC/Sigil" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;">github.com/ShadowWalkerNC/Sigil</a> &mdash; Sigil is open source.
 </footer>
+
+<!-- Sigil shared UX: toast notifications, loading overlay, mobile hamburger nav -->
+<script src="/js/shared.js"></script>
 
 </body>
 </html>
