@@ -54,6 +54,14 @@ module.exports = {
             .addChannelOption(opt => opt.setName('channel').setDescription('Channel to post mod cases in (leave blank to disable)').addChannelTypes(ChannelType.GuildText))
         )
         .addSubcommand(sub => sub
+            .setName('xp')
+            .setDescription('Configure the XP/leveling system')
+            .addBooleanOption(opt => opt.setName('enabled').setDescription('Enable XP leveling').setRequired(true))
+            .addChannelOption(opt => opt.setName('channel').setDescription('Channel to post level-up cards in').addChannelTypes(ChannelType.GuildText))
+            .addIntegerOption(opt => opt.setName('rate').setDescription('Base XP per message (default 15)').setMinValue(1).setMaxValue(100))
+            .addIntegerOption(opt => opt.setName('cooldown').setDescription('Seconds between XP awards per user (default 60)').setMinValue(5).setMaxValue(3600))
+        )
+        .addSubcommand(sub => sub
             .setName('webhook')
             .setDescription('Configure the external webhook trigger channel and secret')
             .addChannelOption(opt => opt.setName('channel').setDescription('Channel to post webhook notifications in').addChannelTypes(ChannelType.GuildText))
@@ -94,6 +102,7 @@ module.exports = {
                     { name: '📊 Weekly Stats', value: cfg.stats_channel        ? `🟢 On — <#${cfg.stats_channel}>`        : '🔴 Off', inline: true },
                     { name: '🔗 Webhooks',     value: cfg.webhook_channel      ? `🟢 On — <#${cfg.webhook_channel}>${cfg.webhook_secret ? ' 🔒 HMAC set' : ' ⚠️ No secret'}` : '🔴 Off', inline: true },
                     { name: '🛡️ Mod Log',      value: cfg.mod_log_channel      ? `🟢 On — <#${cfg.mod_log_channel}>`      : '🔴 Off', inline: true },
+                    { name: '⭐ XP / Levels',  value: cfg.xp_enabled           ? `🟢 On — ${cfg.xp_channel ? `<#${cfg.xp_channel}>` : 'no channel set'} • rate: ${cfg.xp_rate ?? 15} • cd: ${cfg.xp_cooldown ?? 60}s` : '🔴 Off', inline: false },
                 )
                 .setFooter({ text: 'Sigil • sigilconfig status' });
             return interaction.reply({ embeds: [embed], ephemeral: true });
@@ -124,6 +133,27 @@ module.exports = {
                     : 'Mod log channel has been **disabled**.')
                 .setColor(channel ? '#39FF14' : '#ff4444')
                 .setFooter({ text: 'Sigil • sigilconfig mod' });
+            return interaction.reply({ embeds: [embed], ephemeral: true });
+        }
+
+        // ── XP ───────────────────────────────────────────────────────────────
+        if (sub === 'xp') {
+            const enabled  = interaction.options.getBoolean('enabled');
+            const channel  = interaction.options.getChannel('channel');
+            const rate     = interaction.options.getInteger('rate');
+            const cooldown = interaction.options.getInteger('cooldown');
+            const update   = { xp_enabled: enabled ? 1 : 0 };
+            if (channel)  update.xp_channel  = channel.id;
+            if (rate)     update.xp_rate     = rate;
+            if (cooldown) update.xp_cooldown = cooldown;
+            setConfig(guildId, update);
+            const embed = new EmbedBuilder()
+                .setTitle('✅ Sigil — XP Updated')
+                .setDescription(enabled
+                    ? `XP leveling is now **enabled**${channel ? ` — level-ups post in <#${channel.id}>` : ''}.`
+                    : 'XP leveling has been **disabled**.')
+                .setColor(enabled ? '#39FF14' : '#ff4444')
+                .setFooter({ text: 'Sigil • sigilconfig xp' });
             return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 

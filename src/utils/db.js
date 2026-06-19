@@ -1,6 +1,6 @@
 /**
  * Lightweight SQLite wrapper using better-sqlite3.
- * Stores per-guild automation config, scheduled posts, and mod cases.
+ * Stores per-guild automation config, scheduled posts, mod cases, and XP.
  */
 const Database = require('better-sqlite3');
 const path     = require('path');
@@ -41,6 +41,10 @@ db.exec(`
         youtube_handles         TEXT,
         youtube_last_video_id   TEXT,
         mod_log_channel         TEXT,
+        xp_enabled              INTEGER DEFAULT 0,
+        xp_channel              TEXT,
+        xp_rate                 INTEGER DEFAULT 15,
+        xp_cooldown             INTEGER DEFAULT 60,
         updated_at              TEXT DEFAULT (datetime('now'))
     );
 
@@ -65,9 +69,18 @@ db.exec(`
         reason      TEXT NOT NULL,
         created_at  TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS user_xp (
+        guild_id    TEXT NOT NULL,
+        user_id     TEXT NOT NULL,
+        xp          INTEGER DEFAULT 0,
+        level       INTEGER DEFAULT 0,
+        last_xp_at  TEXT DEFAULT (datetime('now')),
+        PRIMARY KEY (guild_id, user_id)
+    );
 `);
 
-// Runtime migrations — adds columns to existing DBs that predate this schema
+// Runtime migrations
 const existingCols = db.prepare('PRAGMA table_info(guild_config)').all().map(r => r.name);
 const migrations = [
     ['event_banner_enabled',  'ALTER TABLE guild_config ADD COLUMN event_banner_enabled  INTEGER DEFAULT 0'],
@@ -83,6 +96,10 @@ const migrations = [
     ['youtube_handles',       'ALTER TABLE guild_config ADD COLUMN youtube_handles        TEXT'],
     ['youtube_last_video_id', 'ALTER TABLE guild_config ADD COLUMN youtube_last_video_id  TEXT'],
     ['mod_log_channel',       'ALTER TABLE guild_config ADD COLUMN mod_log_channel        TEXT'],
+    ['xp_enabled',            'ALTER TABLE guild_config ADD COLUMN xp_enabled             INTEGER DEFAULT 0'],
+    ['xp_channel',            'ALTER TABLE guild_config ADD COLUMN xp_channel             TEXT'],
+    ['xp_rate',               'ALTER TABLE guild_config ADD COLUMN xp_rate                INTEGER DEFAULT 15'],
+    ['xp_cooldown',           'ALTER TABLE guild_config ADD COLUMN xp_cooldown            INTEGER DEFAULT 60'],
 ];
 for (const [col, sql] of migrations) {
     if (!existingCols.includes(col)) db.exec(sql);
@@ -156,8 +173,43 @@ function countModCases(guildId, userId) {
     return db.prepare('SELECT COUNT(*) as count FROM mod_cases WHERE guild_id = ? AND user_id = ?').get(guildId, userId)?.count ?? 0;
 }
 
+// ── XP helpers ───────────────────────────────────────────────────────────────
+function getXP(guildId, userId) {
+    let row = db.prepare('SELECT * FROM user_xp WHERE guild_id = ? AND user_id = ?').get(guildId, userId);
+    if (!row) {
+        db.prepare('INSERT OR IGNORE INTO user_xp (guild_id, user_id) VALUES (?, ?)').run(guildId, userId);
+        row = db.prepare('SELECT * FROM user_xp WHERE guild_id = ? AND user_id = ?').get(guildId, userId);
+    }
+    return row;
+}
+
+function setXP(guildId, userId, xp, level) {
+    db.prepare(
+        'INSERT INTO user_xp (guild_id, user_id, xp, level, last_xp_at) VALUES (?, ?, ?, ?, datetime(\'now\')) ' +
+        'ON CONFLICT(guild_id, user_id) DO UPDATE SET xp = ?, level = ?, last_xp_at = datetime(\'now\')'
+    ).run(guildId, userId, xp, level, xp, level);
+}
+
+function updateLastXpAt(guildId, userId) {
+    db.prepare("UPDATE user_xp SET last_xp_at = datetime('now') WHERE guild_id = ? AND user_id = ?").run(guildId, userId);
+}
+
+function getLeaderboard(guildId, limit = 10) {
+    return db.prepare(
+        'SELECT * FROM user_xp WHERE guild_id = ? ORDER BY xp DESC LIMIT ?'
+    ).all(guildId, limit);
+}
+
+function getUserRank(guildId, userId) {
+    const row = db.prepare(
+        'SELECT COUNT(*) + 1 as rank FROM user_xp WHERE guild_id = ? AND xp > (SELECT xp FROM user_xp WHERE guild_id = ? AND user_id = ?)'
+    ).get(guildId, guildId, userId);
+    return row?.rank ?? 1;
+}
+
 module.exports = {
     getConfig, setConfig, getGuildsWithFeature,
     addScheduledPost, getDueScheduledPosts, deleteScheduledPost, getScheduledPosts,
     addModCase, getModCases, countModCases,
+    getXP, setXP, updateLastXpAt, getLeaderboard, getUserRank,
 };

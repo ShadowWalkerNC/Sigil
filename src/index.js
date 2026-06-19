@@ -14,10 +14,11 @@ if (!TOKEN || !CLIENT_ID) {
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,          // Required for guildMemberAdd / Remove / Update
-        GatewayIntentBits.GuildPresences,        // Required for online member counts
-        GatewayIntentBits.GuildMessages,         // Required for future message-based features
-        GatewayIntentBits.GuildScheduledEvents,  // Required for event-banner and event-recap automation
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,        // Required for XP message handling
+        GatewayIntentBits.GuildScheduledEvents,
     ],
 });
 
