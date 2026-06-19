@@ -15,7 +15,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildPresences,
+        // GatewayIntentBits.GuildPresences — privileged intent, not currently used
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildScheduledEvents,
@@ -45,14 +45,17 @@ for (const file of commandFiles) {
     }
 }
 
-// Load events
+// Load events — supports both single-export and array-export event files
 const eventFiles = readdirSync(join(__dirname, 'events')).filter(f => f.endsWith('.js'));
 for (const file of eventFiles) {
-    const event = require(join(__dirname, 'events', file));
-    if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args, client));
-    } else {
-        client.on(event.name, (...args) => event.execute(...args, client));
+    const loaded = require(join(__dirname, 'events', file));
+    const events = Array.isArray(loaded) ? loaded : [loaded];
+    for (const event of events) {
+        if (event.once) {
+            client.once(event.name, (...args) => event.execute(...args, client));
+        } else {
+            client.on(event.name, (...args) => event.execute(...args, client));
+        }
     }
 }
 
