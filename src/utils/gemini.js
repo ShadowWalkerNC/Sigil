@@ -10,29 +10,44 @@ function getAI() {
     return _genAI;
 }
 
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 /**
  * Send a text prompt to Gemini and return the response string.
+ * Retries once after 1 s on transient 503 errors.
  * Throws a user-friendly Error on failure.
  */
 async function geminiRequest(prompt, opts = {}) {
-    try {
-        const model = getAI().getGenerativeModel({
-            model: opts.model ?? 'gemini-2.0-flash',
-            generationConfig: {
-                temperature:     opts.temperature ?? 0.9,
-                maxOutputTokens: opts.maxTokens   ?? 1024,
-                thinkingConfig:  { thinkingBudget: 0 },
-            },
-        });
-        const result = await model.generateContent(prompt);
-        return result.response.text();
-    } catch (err) {
-        const msg = err?.message ?? '';
-        if (msg.includes('API_KEY') || msg.includes('not set')) throw new Error('Gemini API key is missing or invalid.');
-        if (msg.includes('quota') || msg.includes('429'))       throw new Error('Gemini quota exceeded. Try again later.');
-        if (msg.includes('SAFETY'))                             throw new Error('Gemini blocked the request due to safety filters.');
-        throw new Error(`Gemini request failed: ${msg}`);
+    const MAX_ATTEMPTS = 2;
+    let lastErr;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            const model = getAI().getGenerativeModel({
+                model: opts.model ?? 'gemini-2.0-flash',
+                generationConfig: {
+                    temperature:     opts.temperature ?? 0.9,
+                    maxOutputTokens: opts.maxTokens   ?? 1024,
+                    thinkingConfig:  { thinkingBudget: 0 },
+                },
+            });
+            const result = await model.generateContent(prompt);
+            return result.response.text();
+        } catch (err) {
+            lastErr = err;
+            const msg = err?.message ?? '';
+            if (msg.includes('API_KEY') || msg.includes('not set')) throw new Error('Gemini API key is missing or invalid.');
+            if (msg.includes('quota') || msg.includes('429'))       throw new Error('Gemini quota exceeded. Try again later.');
+            if (msg.includes('SAFETY'))                             throw new Error('Gemini blocked the request due to safety filters.');
+            // Retry once on transient 503 / server errors
+            const isTransient = msg.includes('503') || msg.includes('Service Unavailable') || msg.includes('overloaded');
+            if (isTransient && attempt < MAX_ATTEMPTS) {
+                await sleep(1000);
+                continue;
+            }
+            throw new Error(`Gemini request failed: ${msg}`);
+        }
     }
+    throw new Error(`Gemini request failed: ${lastErr?.message ?? 'unknown error'}`);
 }
 
 /**

@@ -10,6 +10,8 @@ const BANNER_H_DEFAULT  = 400;
 const PALETTE_W = 600;
 const PALETTE_H = 100;
 
+const HEX_RE = /^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/;
+
 let _fontsRegistered = false;
 function registerAllFonts() {
     if (_fontsRegistered) return;
@@ -93,7 +95,6 @@ async function renderIcon(opts = {}) {
     const ctx    = canvas.getContext('2d');
     ctx.__fontFamily = font;
 
-    // Apply shape clip before drawing background + text
     ctx.save();
     applyShapeClip(ctx, W, H, shape);
 
@@ -114,9 +115,8 @@ async function renderIcon(opts = {}) {
     ctx.fillText(text, W / 2, H / 2);
     ctx.shadowBlur = 0;
 
-    ctx.restore(); // release clip so border draws outside it
+    ctx.restore();
 
-    // Border drawn outside shape clip so it traces the silhouette edge
     try { getBorderById(border).draw(ctx, W, H, primary, secondary, glow, shape); } catch {}
 
     return canvas.toBuffer('image/png');
@@ -173,7 +173,6 @@ async function renderBanner(opts = {}) {
         ctx.fillText(subtitle, x, H * 0.65);
     }
 
-    // Banners are always rectangular; shape not passed
     try { getBorderById(border).draw(ctx, W, H, primary, secondary, glow, 'square'); } catch {}
 
     return canvas.toBuffer('image/png');
@@ -181,9 +180,14 @@ async function renderBanner(opts = {}) {
 
 /**
  * Render a color palette strip and return a PNG Buffer.
+ * Invalid or non-hex color strings are silently skipped.
  */
 async function renderPalette(colors = []) {
-    const palette = colors.length ? colors : ['#6a0dad', '#0057e7', '#cc0000', '#ffd700', '#00cccc'];
+    const fallback = ['#6a0dad', '#0057e7', '#cc0000', '#ffd700', '#00cccc'];
+    const valid = (Array.isArray(colors) ? colors : [])
+        .filter(c => typeof c === 'string' && HEX_RE.test(c.trim()));
+    const palette = valid.length ? valid : fallback;
+
     const canvas = createCanvas(PALETTE_W, PALETTE_H);
     const ctx    = canvas.getContext('2d');
     const sw     = PALETTE_W / palette.length;

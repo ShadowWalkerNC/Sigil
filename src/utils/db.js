@@ -86,6 +86,7 @@ db.exec(`
         user_id    TEXT NOT NULL,
         xp         INTEGER DEFAULT 0,
         level      INTEGER DEFAULT 0,
+        weekly_xp  INTEGER DEFAULT 0,
         last_xp_at TEXT DEFAULT (datetime('now')),
         PRIMARY KEY (guild_id, user_id)
     );
@@ -194,6 +195,7 @@ db.exec(`
     -- Indexes for high-frequency guild_id lookups
     CREATE INDEX IF NOT EXISTS idx_mod_cases_guild_user    ON mod_cases (guild_id, user_id);
     CREATE INDEX IF NOT EXISTS idx_user_xp_guild           ON user_xp (guild_id, xp DESC);
+    CREATE INDEX IF NOT EXISTS idx_user_xp_guild_weekly    ON user_xp (guild_id, weekly_xp DESC);
     CREATE INDEX IF NOT EXISTS idx_scheduled_posts_guild   ON scheduled_posts (guild_id);
     CREATE INDEX IF NOT EXISTS idx_polls_guild             ON polls (guild_id, closed);
     CREATE INDEX IF NOT EXISTS idx_giveaways_guild         ON giveaways (guild_id, ended);
@@ -244,6 +246,13 @@ const migrations = [
 ];
 for (const [col, sql] of migrations) {
     if (!existingCols.includes(col)) db.exec(sql);
+}
+
+// ── user_xp column migrations ────────────────────────────────────────────────
+const xpCols = db.prepare('PRAGMA table_info(user_xp)').all().map(r => r.name);
+if (!xpCols.includes('weekly_xp')) {
+    db.exec('ALTER TABLE user_xp ADD COLUMN weekly_xp INTEGER DEFAULT 0');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_user_xp_guild_weekly ON user_xp (guild_id, weekly_xp DESC)');
 }
 
 // ── Drop dead integration config columns (requires SQLite >= 3.35) ──────────
@@ -312,6 +321,27 @@ function getXP(guildId, userId) {
 function setXP(guildId, userId, xp, level) {
     db.prepare("INSERT INTO user_xp (guild_id, user_id, xp, level, last_xp_at) VALUES (?, ?, ?, ?, datetime('now')) ON CONFLICT(guild_id, user_id) DO UPDATE SET xp = ?, level = ?, last_xp_at = datetime('now')").run(guildId, userId, xp, level, xp, level);
 }
+/**
+ * Increment both lifetime XP and weekly_xp in one statement.
+ * weekly_xp is reset to 0 by resetWeeklyXP() — call that from a Sunday midnight cron.
+ */
+function addXP(guildId, userId, amount) {
+    db.prepare(`
+        INSERT INTO user_xp (guild_id, user_id, xp, weekly_xp, last_xp_at)
+        VALUES (?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(guild_id, user_id) DO UPDATE SET
+            xp        = xp + excluded.xp,
+            weekly_xp = weekly_xp + excluded.weekly_xp,
+            last_xp_at = datetime('now')
+    `).run(guildId, userId, amount, amount);
+}
+function resetWeeklyXP(guildId) {
+    if (guildId) {
+        db.prepare('UPDATE user_xp SET weekly_xp = 0 WHERE guild_id = ?').run(guildId);
+    } else {
+        db.prepare('UPDATE user_xp SET weekly_xp = 0').run();
+    }
+}
 function updateLastXpAt(guildId, userId) {
     db.prepare("UPDATE user_xp SET last_xp_at = datetime('now') WHERE guild_id = ? AND user_id = ?").run(guildId, userId);
 }
@@ -321,13 +351,12 @@ function getLeaderboard(guildId, limit = 10) {
 function getUserRank(guildId, userId) {
     return db.prepare('SELECT COUNT(*) + 1 as rank FROM user_xp WHERE guild_id = ? AND xp > (SELECT xp FROM user_xp WHERE guild_id = ? AND user_id = ?)').get(guildId, guildId, userId)?.rank ?? 1;
 }
-// NOTE: getWeeklyTopXP filters by last_xp_at, not weekly-accumulated XP.
-// A user who earned all their XP last month but gained 1 XP this week still
-// ranks above someone who earned 500 XP this week. To fix properly, add a
-// weekly_xp column that resets on a cron, or a separate xp_history table.
+/**
+ * Returns the top N users by XP earned this week (weekly_xp column).
+ * weekly_xp is incremented by addXP() and reset every Sunday via resetWeeklyXP().
+ */
 function getWeeklyTopXP(guildId, limit = 3) {
-    const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
-    return db.prepare('SELECT * FROM user_xp WHERE guild_id = ? AND last_xp_at >= ? ORDER BY xp DESC LIMIT ?').all(guildId, since, limit);
+    return db.prepare('SELECT * FROM user_xp WHERE guild_id = ? AND weekly_xp > 0 ORDER BY weekly_xp DESC LIMIT ?').all(guildId, limit);
 }
 function getTwitchSubs(guildId) { return db.prepare('SELECT * FROM twitch_subs WHERE guild_id = ?').all(guildId); }
 function getAllTwitchSubs() { return db.prepare('SELECT * FROM twitch_subs').all(); }
@@ -476,7 +505,7 @@ module.exports = {
     getConfig, setConfig, getGuildsWithFeature,
     addScheduledPost, getDueScheduledPosts, deleteScheduledPost, getScheduledPosts,
     addModCase, getModCases, countModCases,
-    getXP, setXP, updateLastXpAt, getLeaderboard, getUserRank, getWeeklyTopXP,
+    getXP, setXP, addXP, updateLastXpAt, getLeaderboard, getUserRank, getWeeklyTopXP, resetWeeklyXP,
     getTwitchSubs, getAllTwitchSubs, addTwitchSub, removeTwitchSub, setTwitchLastStream,
     getYoutubeSubs, getAllYoutubeSubs, addYoutubeSub, removeYoutubeSub, setYoutubeLastVideo,
     createPoll, setPollMessageId, getPoll, getPollByMessageId, updatePollVotes, closePoll, getExpiredPolls, getActiveGuildPolls,
