@@ -54,14 +54,26 @@ Shift management, devotionals, sermon posts, and scheduled content.
 - Scheduled post engine — queue any message to any channel
 
 ### 🔗 Integrations
-YouTube, Twitch, CulinaryOS, and custom commands.
+YouTube upload alerts, Twitch live notifications, and custom server-specific slash commands.
 
-`/youtube` `/twitch` `/menu` `/recipe` `/inventory` `/customcmd`
+`/youtube` `/twitch` `/customcmd` `/integrations`
 
 - YouTube upload alerts — polls every 15 min via Data API v3
 - Twitch live notifications
-- CulinaryOS bridge: sync menus, recipes, inventory to Discord
-- Custom slash commands per server
+- Custom slash commands per server with text or embed responses
+
+### 🍻 CulinaryOS Bridge *(in development)*
+
+A dedicated Discord integration for **CulinaryOS** — a separate personal restaurant management platform currently in development. The bridge connects CulinaryOS data to Discord channels, enabling menu posts, recipe lookups, inventory views, and automated low-stock alerts.
+
+`/menu` `/recipe` `/inventory` `/lowstock` `/culinaryos`
+
+- Built as a first-party bridge, not a generic third-party integration
+- Syncs menus, recipes, and inventory from CulinaryOS directly into Discord
+- Automatic low-stock webhook alerts to a designated channel
+- Designed to evolve alongside the CulinaryOS platform
+
+> See [CULINARYOS_BRIDGE.md](CULINARYOS_BRIDGE.md) for full architecture and setup details.
 
 ---
 
@@ -86,6 +98,7 @@ Set these environment variables in Railway:
 | `TWITCH_CLIENT_ID` | Optional | Enables Twitch live alerts |
 | `TWITCH_CLIENT_SECRET` | Optional | Enables Twitch live alerts |
 | `BIBLE_API_KEY` | Optional | Enables API.Bible devotional verse fetch |
+| `CULINARYOS_API_URL` | Optional | CulinaryOS backend URL for the bridge |
 
 Push to GitHub → Railway auto-deploys via Nixpacks.
 
@@ -119,15 +132,15 @@ Sigil/
 │   ├── utils/           # DB, canvas, Gemini, history helpers
 │   └── index.js         # Bot entry point
 ├── gui/
-│   ├── index.html           # Landing page (this file)
-│   ├── sigil-gui-builder.html  # Brand builder GUI
-│   ├── sigil-community.html    # Community tools GUI
-│   ├── developers.html         # Developer docs
-│   └── gui-server.js           # Express web server
+│   ├── index.html               # Landing page
+│   ├── sigil-gui-builder.html   # Brand builder GUI
+│   ├── sigil-community.html     # Community tools GUI
+│   ├── developers.html          # Developer docs
+│   └── gui-server.js            # Express web server
 ├── data/               # SQLite database (auto-created)
 ├── .env.example        # All supported env vars documented
 ├── ecosystem.config.js # PM2 config for self-hosting
-├── DEPLOY.md           # Detailed deployment guide
+├── DEPLOY.md
 ├── CULINARYOS_BRIDGE.md
 └── SCHEDULER_INTEGRATION.md
 ```
