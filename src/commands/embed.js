@@ -57,8 +57,8 @@ module.exports = {
         .addSubcommand(sub =>
             sub.setName('quick')
                 .setDescription('Send a simple embed immediately without the builder UI')
-                .addStringOption(opt => opt.setName('title').setDescription('Embed title').setRequired(false))
                 .addStringOption(opt => opt.setName('description').setDescription('Embed body').setRequired(true))
+                .addStringOption(opt => opt.setName('title').setDescription('Embed title').setRequired(false))
                 .addStringOption(opt => opt.setName('color').setDescription('Hex color').setRequired(false))
                 .addChannelOption(opt => opt.setName('channel').setDescription('Where to send').setRequired(false))
                 .addRoleOption(opt => opt.setName('ping').setDescription('Role to ping').setRequired(false))
@@ -105,7 +105,7 @@ module.exports = {
                 preview.setDescription('*Your embed preview will appear here.*\nClick **\u270F\uFE0F Edit Content** to start.');
 
             return interaction.reply({
-                content: '**\uD83D\uDCE6 Embed Builder** — this is your live preview. Use the buttons below.',
+                content: '**\uD83D\uDCE6 Embed Builder** \u2014 this is your live preview. Use the buttons below.',
                 embeds: [preview],
                 components: [controlRow(userId)],
                 ephemeral: true,
