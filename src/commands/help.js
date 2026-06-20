@@ -549,9 +549,34 @@ const CATEGORIES = [
             },
             {
                 name: '/status',
-                desc: 'Bot uptime, version, and server count',
-                params: ['No parameters'],
-                tip: null,
+                desc: 'Full 3-layer health check — bot, GUI server, and ASCILINE stream server',
+                params: [
+                    'No parameters — ephemeral reply, only visible to you',
+                    'Shows: bot latency & guild count · gui-server version & uptime · ASCILINE playback state',
+                    'Color-coded embed: 🟢 all ok · 🟡 degraded · 🔴 unreachable',
+                    'Also surfaces the most recent `error`-level log entry if one exists',
+                ].join('\n'),
+                tip: '💡 Run this first when something feels off — it tells you which layer is broken',
+            },
+            {
+                name: '/restart',
+                desc: 'Soft-restart the GUI server and ASCILINE stream server (bot owner only)',
+                params: [
+                    '`target` *(required)* — `gui` · `asciline` · `all`',
+                    'Sends a `POST /api/restart` to gui-server; gui-server relays to ASCILINE if needed',
+                    'Bot process itself is **not** restarted — use your process manager (PM2/systemd) for that',
+                ].join('\n'),
+                tip: '💡 Use `target:all` after deploying new ASCILINE configs; use `target:gui` for gui-server-only changes',
+            },
+            {
+                name: '/logs',
+                desc: 'Fetch recent log entries from the GUI server (bot owner only)',
+                params: [
+                    '`count` — number of entries to return, default 20, max 50',
+                    '`level` — filter by severity: `all` *(default)* · `info` · `warn` · `error`',
+                    'Returns a code-block embed; entries are ordered newest-first',
+                ].join('\n'),
+                tip: '💡 Use `level:error` to quickly find the last failure without scrolling through info noise',
             },
         ],
     },
