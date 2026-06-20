@@ -1,8 +1,9 @@
-// gui-server.js — Sigil GUI bridge server v2.1
+// gui-server.js — Sigil GUI bridge server v2.2
 // Run with: node gui/gui-server.js
 
 const express    = require('express');
 const path       = require('path');
+const http       = require('http');
 const rateLimit  = require('express-rate-limit');
 const { createCanvas, loadImage } = require('canvas');
 const { renderKit, registerAllFonts } = require('../src/utils/canvas.js');
@@ -17,6 +18,10 @@ registerAllFonts();
 
 const app  = express();
 const PORT = Number(process.env.PORT) || 8080;
+
+// ── ASCILINE stream_server.py base URL (co-hosted, local only) ───────────────
+// Set STREAM_SERVER_URL in .env to override (e.g. for a different port).
+const STREAM_URL = (process.env.STREAM_SERVER_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
 // AI generation is disabled until further notice
 const AI_ENABLED = false;
@@ -61,6 +66,13 @@ const apiLimiter = rateLimit({
     legacyHeaders: false,
     message: { ok: false, error: 'Rate limit exceeded.' },
 });
+const mediaLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { ok: false, error: 'Media rate limit exceeded.' },
+});
 
 // ── Static pages ─────────────────────────────────────────────────────────────
 app.get('/',            (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -69,12 +81,9 @@ app.get('/community',   (req, res) => res.sendFile(path.join(__dirname, 'sigil-c
 app.get('/developers',  (req, res) => res.sendFile(path.join(__dirname, 'developers.html')));
 app.get('/packages',    (req, res) => res.sendFile(path.join(__dirname, 'packages.html')));
 app.get('/setup',       (req, res) => res.sendFile(path.join(__dirname, '..', 'setup.html')));
-app.get('/health',      (req, res) => res.json({ ok: true, version: '2.1.0', ai_enabled: AI_ENABLED }));
+app.get('/health',      (req, res) => res.json({ ok: true, version: '2.2.0', ai_enabled: AI_ENABLED }));
 
 // ── GET /api/packages?guild_id=... ───────────────────────────────────────────
-//
-// Returns the package states for a guild.
-// Response: { ok: true, disabled: string[], packages: Array<{key, label, emoji, description, commands, enabled}> }
 app.get('/api/packages', apiLimiter, (req, res) => {
     try {
         const guildId = String(req.query.guild_id || '').trim();
@@ -91,14 +100,9 @@ app.get('/api/packages', apiLimiter, (req, res) => {
 });
 
 // ── POST /api/packages ────────────────────────────────────────────────────────
-//
-// Enable or disable a single package for a guild.
-// Body: { guild_id: string, package: string, enabled: boolean }
-// Response: { ok: true, package: string, enabled: boolean }
 app.post('/api/packages', apiLimiter, (req, res) => {
     try {
         const { guild_id, package: pkgKey, enabled } = req.body || {};
-
         if (!guild_id || !/^\d{17,20}$/.test(String(guild_id))) {
             return res.status(400).json({ ok: false, error: 'Invalid or missing guild_id.' });
         }
@@ -108,20 +112,198 @@ app.post('/api/packages', apiLimiter, (req, res) => {
         if (typeof enabled !== 'boolean') {
             return res.status(400).json({ ok: false, error: '"enabled" must be a boolean.' });
         }
-
         const result = enabled
             ? enablePackage(String(guild_id), pkgKey)
             : disablePackage(String(guild_id), pkgKey);
-
         if (result === 'unknown') {
             return res.status(400).json({ ok: false, error: `Unknown package: "${pkgKey}".` });
         }
-
-        // 'already_on' / 'already_off' are still successes — idempotent
         res.json({ ok: true, package: pkgKey, enabled, result });
     } catch (err) {
         console.error('[POST /api/packages]', err);
         res.status(500).json({ ok: false, error: 'Internal error.' });
+    }
+});
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║                  MEDIA PACKAGE — /api/media/*                   ║
+// ║  Proxy namespace that forwards commands to stream_server.py.    ║
+// ║  stream_server.py runs locally on STREAM_URL (default :8000).  ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+/**
+ * Thin proxy helper — forwards a JSON body to stream_server.py
+ * and pipes the response back. Times out after 8 s.
+ */
+function proxyToStream(streamPath, body) {
+    return new Promise((resolve, reject) => {
+        const payload = JSON.stringify(body);
+        const url     = new URL(streamPath, STREAM_URL);
+        const options = {
+            method:   'POST',
+            hostname: url.hostname,
+            port:     url.port || 8000,
+            path:     url.pathname,
+            headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+        };
+        const req = http.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => { data += chunk; });
+            res.on('end', () => {
+                try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
+                catch { resolve({ status: res.statusCode, body: { ok: false, error: 'Non-JSON response from stream server.' } }); }
+            });
+        });
+        req.setTimeout(8000, () => { req.destroy(); reject(new Error('Stream server timeout')); });
+        req.on('error', reject);
+        req.write(payload);
+        req.end();
+    });
+}
+
+function proxyGetToStream(streamPath) {
+    return new Promise((resolve, reject) => {
+        const url     = new URL(streamPath, STREAM_URL);
+        const options = {
+            method:   'GET',
+            hostname: url.hostname,
+            port:     url.port || 8000,
+            path:     url.pathname + (url.search || ''),
+        };
+        const req = http.request(options, (res) => {
+            let data = '';
+            res.on('data', chunk => { data += chunk; });
+            res.on('end', () => {
+                try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
+                catch { resolve({ status: res.statusCode, body: { ok: false, error: 'Non-JSON response.' } }); }
+            });
+        });
+        req.setTimeout(8000, () => { req.destroy(); reject(new Error('Stream server timeout')); });
+        req.on('error', reject);
+        req.end();
+    });
+}
+
+/**
+ * POST /api/media/enqueue
+ * Body: { url: string, mode?: 1-5, cols?: number, vol?: 0-5, pixel?: boolean, loop?: boolean }
+ * Enqueues a video URL (or local path) into stream_server.py.
+ */
+app.post('/api/media/enqueue', mediaLimiter, async (req, res) => {
+    try {
+        const { url, mode = 1, cols, vol = 1, pixel = false, loop = false } = req.body || {};
+        if (!url || typeof url !== 'string' || !url.trim()) {
+            return res.status(400).json({ ok: false, error: 'Missing or invalid "url".' });
+        }
+        const result = await proxyToStream('/api/enqueue', { url: url.trim(), mode, cols, vol, pixel, loop });
+        res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('[POST /api/media/enqueue]', err);
+        res.status(503).json({ ok: false, error: 'Stream server unreachable. Is ASCILINE running?' });
+    }
+});
+
+/**
+ * POST /api/media/skip
+ * Skips to the next video in the queue.
+ */
+app.post('/api/media/skip', mediaLimiter, async (req, res) => {
+    try {
+        const result = await proxyToStream('/api/skip', {});
+        res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('[POST /api/media/skip]', err);
+        res.status(503).json({ ok: false, error: 'Stream server unreachable.' });
+    }
+});
+
+/**
+ * POST /api/media/stop
+ * Stops playback and clears the queue.
+ */
+app.post('/api/media/stop', mediaLimiter, async (req, res) => {
+    try {
+        const result = await proxyToStream('/api/stop', {});
+        res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('[POST /api/media/stop]', err);
+        res.status(503).json({ ok: false, error: 'Stream server unreachable.' });
+    }
+});
+
+/**
+ * POST /api/media/seek
+ * Body: { time: number }  — seconds to seek to
+ */
+app.post('/api/media/seek', mediaLimiter, async (req, res) => {
+    try {
+        const time = Number(req.body?.time ?? -1);
+        if (time < 0) return res.status(400).json({ ok: false, error: '"time" must be >= 0.' });
+        const result = await proxyToStream('/api/seek', { time });
+        res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('[POST /api/media/seek]', err);
+        res.status(503).json({ ok: false, error: 'Stream server unreachable.' });
+    }
+});
+
+/**
+ * POST /api/media/volume
+ * Body: { vol: 0-5 }
+ */
+app.post('/api/media/volume', mediaLimiter, async (req, res) => {
+    try {
+        const vol = Number(req.body?.vol ?? -1);
+        if (vol < 0 || vol > 5) return res.status(400).json({ ok: false, error: '"vol" must be 0-5.' });
+        const result = await proxyToStream('/api/volume', { vol });
+        res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('[POST /api/media/volume]', err);
+        res.status(503).json({ ok: false, error: 'Stream server unreachable.' });
+    }
+});
+
+/**
+ * POST /api/media/loop
+ * Body: { enabled: boolean }
+ */
+app.post('/api/media/loop', mediaLimiter, async (req, res) => {
+    try {
+        const enabled = req.body?.enabled;
+        if (typeof enabled !== 'boolean') return res.status(400).json({ ok: false, error: '"enabled" must be a boolean.' });
+        const result = await proxyToStream('/api/loop', { enabled });
+        res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('[POST /api/media/loop]', err);
+        res.status(503).json({ ok: false, error: 'Stream server unreachable.' });
+    }
+});
+
+/**
+ * GET /api/media/status
+ * Returns now-playing info: current video, queue length, fps, mode, etc.
+ */
+app.get('/api/media/status', mediaLimiter, async (req, res) => {
+    try {
+        const result = await proxyGetToStream('/api/status');
+        res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('[GET /api/media/status]', err);
+        res.status(503).json({ ok: false, error: 'Stream server unreachable. Is ASCILINE running?' });
+    }
+});
+
+/**
+ * GET /api/media/queue
+ * Returns the full current queue.
+ */
+app.get('/api/media/queue', mediaLimiter, async (req, res) => {
+    try {
+        const result = await proxyGetToStream('/api/queue');
+        res.status(result.status).json(result.body);
+    } catch (err) {
+        console.error('[GET /api/media/queue]', err);
+        res.status(503).json({ ok: false, error: 'Stream server unreachable.' });
     }
 });
 
@@ -130,28 +312,22 @@ app.post('/webhook/trigger', webhookLimiter, async (req, res) => {
     try {
         const guildId   = req.headers['x-sigil-guild-id'];
         const signature = req.headers['x-sigil-signature'];
-
         if (!guildId) return res.status(400).json({ ok: false, error: 'Missing x-sigil-guild-id header.' });
-
         const config = getConfig(guildId);
-
         if (config.webhook_secret) {
             if (!verifyHmac(req.rawBody, config.webhook_secret, signature || '')) {
                 return res.status(401).json({ ok: false, error: 'Invalid signature.' });
             }
         }
-
         if (!config.webhook_channel) {
             return res.status(400).json({ ok: false, error: 'No webhook channel configured for this guild. Use /sigilconfig webhook.' });
         }
-
         const { type, ...payload } = req.body;
         payload.guildId = guildId;
         payload.client  = global.sigilClient;
         if (!payload.client) {
             return res.status(503).json({ ok: false, error: 'Bot client not ready yet.' });
         }
-
         switch (type) {
             case 'twitch.live':      await handleTwitchLive(payload);    break;
             case 'youtube.upload':   await handleYouTubeUpload(payload); break;
@@ -159,7 +335,6 @@ app.post('/webhook/trigger', webhookLimiter, async (req, res) => {
             default:
                 return res.status(400).json({ ok: false, error: `Unknown event type: ${type}` });
         }
-
         res.json({ ok: true, type });
     } catch (err) {
         console.error('[/webhook/trigger]', err);
@@ -198,13 +373,11 @@ app.post('/preview/welcome', renderLimiter, async (req, res) => {
         const primary  = safeHex(b.primary_color, '#39FF14');
         const bg       = String(b.background || 'gradient-purple');
         const font     = String(b.font || 'Arial');
-
         const canvas = createCanvas(W, H);
         const ctx    = canvas.getContext('2d');
         try { getBackgroundById(bg).draw(ctx, W, H); } catch { ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0, 0, W, H); }
         ctx.fillStyle = '#00000055'; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = primary; ctx.fillRect(0, 0, 6, H);
-
         const AR = 90, AX = 36, AY = H / 2;
         ctx.save(); ctx.beginPath(); ctx.arc(AX + AR, AY, AR, 0, Math.PI * 2);
         ctx.fillStyle = primary + '33'; ctx.fill(); ctx.restore();
@@ -213,7 +386,6 @@ app.post('/preview/welcome', renderLimiter, async (req, res) => {
         ctx.fillText(username.slice(0, 2).toUpperCase(), AX + AR, AY);
         ctx.beginPath(); ctx.arc(AX + AR, AY, AR + 4, 0, Math.PI * 2);
         ctx.strokeStyle = primary; ctx.lineWidth = 3; ctx.stroke();
-
         const TX = AX + AR * 2 + 36;
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.font = `bold 13px Arial`; ctx.fillStyle = primary; ctx.fillText('W E L C O M E', TX, H * 0.30);
@@ -227,7 +399,6 @@ app.post('/preview/welcome', renderLimiter, async (req, res) => {
         }
         ctx.font = '12px Arial'; ctx.fillStyle = '#ffffff18'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
         ctx.fillText('made with Sigil', W - 12, H - 8);
-
         res.json({ ok: true, image_b64: canvas.toBuffer('image/png').toString('base64') });
     } catch (err) { console.error('[/preview/welcome]', err); res.status(500).json({ ok: false, error: classifyError(err) }); }
 });
@@ -246,13 +417,11 @@ app.post('/preview/rankcard', renderLimiter, async (req, res) => {
         const bg          = String(b.background || 'solid-dark');
         const font        = String(b.font || 'Arial');
         const progress    = Math.min(1, current_xp / required_xp);
-
         const canvas = createCanvas(W, H);
         const ctx    = canvas.getContext('2d');
         try { getBackgroundById(bg).draw(ctx, W, H); } catch { ctx.fillStyle = '#1e1f22'; ctx.fillRect(0, 0, W, H); }
         ctx.fillStyle = '#00000066'; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = primary; ctx.fillRect(0, 0, 6, H);
-
         const AR = 60, AX = 24, AY = H / 2;
         ctx.save(); ctx.beginPath(); ctx.arc(AX + AR, AY, AR, 0, Math.PI * 2);
         ctx.fillStyle = primary + '33'; ctx.fill(); ctx.restore();
@@ -261,14 +430,12 @@ app.post('/preview/rankcard', renderLimiter, async (req, res) => {
         ctx.fillText(username.slice(0, 2).toUpperCase(), AX + AR, AY);
         ctx.beginPath(); ctx.arc(AX + AR, AY, AR + 3, 0, Math.PI * 2);
         ctx.strokeStyle = primary; ctx.lineWidth = 2.5; ctx.stroke();
-
         const TX = AX + AR * 2 + 28;
         ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.font = `bold 26px "${font}"`; ctx.fillStyle = '#ffffff';
         ctx.fillText(username, TX, H * 0.36);
         ctx.font = `bold 14px Arial`; ctx.fillStyle = primary;
         ctx.fillText(`RANK #${rank}  •  LEVEL ${level}`, TX, H * 0.36 + 26);
-
         const BAR_X = TX, BAR_Y = H * 0.68, BAR_W = W - TX - 24, BAR_H = 16;
         ctx.fillStyle = '#ffffff22'; ctx.beginPath(); ctx.roundRect(BAR_X, BAR_Y, BAR_W, BAR_H, 8); ctx.fill();
         if (progress > 0) {
@@ -281,7 +448,6 @@ app.post('/preview/rankcard', renderLimiter, async (req, res) => {
         ctx.fillText(`${current_xp.toLocaleString()} / ${required_xp.toLocaleString()} XP`, W - 24, BAR_Y + BAR_H + 4);
         ctx.font = '12px Arial'; ctx.fillStyle = '#ffffff18'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
         ctx.fillText('made with Sigil', W - 12, H - 8);
-
         res.json({ ok: true, image_b64: canvas.toBuffer('image/png').toString('base64') });
     } catch (err) { console.error('[/preview/rankcard]', err); res.status(500).json({ ok: false, error: classifyError(err) }); }
 });
@@ -300,7 +466,6 @@ app.post('/preview/serverstats', renderLimiter, async (req, res) => {
         const boost_count  = clamp(b.boost_count,   0, 9999);
         const age_days     = clamp(b.age_days,       0, 9999);
         const accent       = safeHex(b.accent_color, '#5865F2');
-
         const canvas = createCanvas(W, H);
         const ctx    = canvas.getContext('2d');
         ctx.fillStyle = '#1e1f22'; ctx.fillRect(0, 0, W, H);
@@ -310,13 +475,11 @@ app.post('/preview/serverstats', renderLimiter, async (req, res) => {
         const topGrad = ctx.createLinearGradient(0, 0, W, 0);
         topGrad.addColorStop(0, accent); topGrad.addColorStop(1, accent + '00');
         ctx.fillStyle = topGrad; ctx.fillRect(0, 0, W, 5);
-
         ctx.font = `bold 28px Arial`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.fillText(server_name, 24, 58);
         ctx.font = `bold 13px Arial`; ctx.fillStyle = '#ff73fa';
         ctx.fillText(`\uD83D\uDE80 Level ${boost_level} • ${boost_count} Boosts`, 24, 82);
         ctx.fillStyle = '#ffffff22'; ctx.fillRect(24, 100, W - 48, 1);
-
         const stats = [
             { label: 'MEMBERS',  value: member_count.toLocaleString(), icon: '\uD83D\uDC65' },
             { label: 'CHANNELS', value: channel_count.toString(),       icon: '\uD83D\uDCAC' },
@@ -342,7 +505,6 @@ app.post('/preview/serverstats', renderLimiter, async (req, res) => {
         ctx.fillStyle = topGrad; ctx.fillRect(0, H - 5, W, 5);
         ctx.font = '12px Arial'; ctx.fillStyle = '#ffffff18'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
         ctx.fillText('made with Sigil', W - 12, H - 8);
-
         res.json({ ok: true, image_b64: canvas.toBuffer('image/png').toString('base64') });
     } catch (err) { console.error('[/preview/serverstats]', err); res.status(500).json({ ok: false, error: classifyError(err) }); }
 });
@@ -375,4 +537,4 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`[GUI] Sigil GUI server v2.1.0 on http://localhost:${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`[GUI] Sigil GUI server v2.2.0 on http://localhost:${PORT}`));
