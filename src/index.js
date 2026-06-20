@@ -61,17 +61,19 @@ for (const file of eventFiles) {
 client.once('clientReady', () => {
     global.sigilClient = client;
 
-    const { startPollers }                    = require('./services/pollers.js');
-    const { startScheduler }                  = require('./services/scheduler.js');
-    const { startStatsRunner }                = require('./services/statsRunner.js');
-    const { startScheduler: startDevotional } = require('./commands/devotional.js');
-    const { startShiftScheduler }             = require('./commands/shift.js');
+    const { startPollers }                        = require('./services/pollers.js');
+    const { startScheduler }                      = require('./services/scheduler.js');
+    const { startStatsRunner }                    = require('./services/statsRunner.js');
+    const { startScheduler: startDevotional }     = require('./commands/devotional.js');
+    const { startShiftScheduler }                 = require('./commands/shift.js');
+    const { startMyShiftScheduler }               = require('./commands/myshift.js');
 
     startPollers(client);
     startScheduler(client);
     startStatsRunner(client);
     startDevotional(client);
     startShiftScheduler(client);
+    startMyShiftScheduler(client);
 
     console.log(`\x1b[32m\x1b[1m[Sigil] Ready! Logged in as ${client.user.tag}\x1b[0m`);
 });
