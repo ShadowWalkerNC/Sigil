@@ -1,99 +1,129 @@
-const { EmbedBuilder } = require('discord.js');
-const { getPanel, getPanelButtons } = require('../utils/db.js');
-const rsvpCommand      = require('../commands/rsvp.js');
-const lfgCommand       = require('../commands/lfg.js');
-const pollCommand      = require('../commands/poll.js');
-const ticketCommand    = require('../commands/ticket.js');
-const prayerCommand    = require('../commands/prayer.js');
-const volunteerCommand = require('../commands/volunteer.js');
-const shiftCommand     = require('../commands/shift.js');
+const { Events } = require('discord.js');
+const giveaway = require('../commands/giveaway.js');
+const embed    = require('../commands/embed.js');
 
 module.exports = {
-    name: 'interactionCreate',
-    async execute(interaction) {
-        if (!interaction.isButton()) return;
+    name: Events.InteractionCreate,
+    async execute(interaction, client) {
 
-        const { customId } = interaction;
+        // ── Slash commands ─────────────────────────────────────────────────────
+        if (interaction.isChatInputCommand()) {
+            const command = client.commands.get(interaction.commandName);
+            if (!command) return;
 
-        if (customId.startsWith('rsvp_'))      return rsvpCommand.handleButton(interaction);
-        if (customId.startsWith('lfg_'))       return lfgCommand.handleButton(interaction);
-        if (customId.startsWith('poll_'))      return pollCommand.handleButton(interaction);
-        if (customId.startsWith('ticket_'))    return ticketCommand.handleButton(interaction);
-        if (customId.startsWith('prayer_'))    return prayerCommand.handleButton(interaction);
-        if (customId.startsWith('vol_'))       return volunteerCommand.handleButton(interaction);
-        if (customId.startsWith('shift_'))     return shiftCommand.handleButton(interaction);
+            const { cooldowns } = client;
+            if (!cooldowns.has(command.data.name)) cooldowns.set(command.data.name, new Map());
+            const timestamps = cooldowns.get(command.data.name);
+            const cooldownMs = (command.cooldown ?? 3) * 1000;
+            const now        = Date.now();
 
-        // ── Setup wizard buttons ────────────────────────────────
-        if (customId === 'setup_brand') {
-            return interaction.reply({
-                embeds: [new EmbedBuilder().setColor('#00FF00').setTitle('✓ Step 1 — Brand')
-                    .setDescription('Run `/brand ai` or `/brand kit` to design your brand, then `/brand share` to open it in the Visual Builder.')],
-                ephemeral: true,
-            });
-        }
-        if (customId === 'setup_emoji') {
-            return interaction.reply({
-                embeds: [new EmbedBuilder().setColor('#00FF00').setTitle('✓ Step 2 — Emoji')
-                    .setDescription('Upload custom emoji via Server Settings → Emoji.')],
-                ephemeral: true,
-            });
-        }
-        if (customId === 'setup_roles') {
-            return interaction.reply({
-                embeds: [new EmbedBuilder().setColor('#00FF00').setTitle('✓ Step 3 — Roles')
-                    .setDescription('Create and assign roles via Server Settings → Roles.')],
-                ephemeral: true,
-            });
-        }
-        if (customId === 'setup_auto') {
-            return interaction.reply({
-                embeds: [new EmbedBuilder().setColor('#00FF00').setTitle('✓ Step 4 — Automation')
-                    .setDescription('Automation settings enabled.')],
-                ephemeral: true,
-            });
-        }
-
-        // ── Reaction role panels — rr_<panelId>_<roleId> ─────────────
-        if (customId.startsWith('rr_')) {
-            const parts   = customId.split('_');
-            if (parts.length < 3) return;
-            const panelId = parseInt(parts[1], 10);
-            const roleId  = parts.slice(2).join('_');
-
-            const panel = getPanel(panelId);
-            if (!panel) return interaction.reply({ content: 'This panel no longer exists.', ephemeral: true });
-
-            const buttons = getPanelButtons(panelId);
-            if (!buttons.find(b => b.role_id === roleId))
-                return interaction.reply({ content: 'This role button is no longer configured.', ephemeral: true });
-
-            const guild     = interaction.guild;
-            const member    = interaction.member;
-            const botMember = guild.members.me;
-            const role      = guild.roles.cache.get(roleId);
-
-            if (!role)
-                return interaction.reply({ content: '❌ That role no longer exists.', ephemeral: true });
-            if (role.position >= botMember.roles.highest.position)
-                return interaction.reply({ content: "❌ I don't have permission to assign that role.", ephemeral: true });
-
-            try {
-                if (member.roles.cache.has(roleId)) {
-                    await member.roles.remove(roleId, 'Reaction role panel');
+            if (timestamps.has(interaction.user.id)) {
+                const expiresAt = timestamps.get(interaction.user.id) + cooldownMs;
+                if (now < expiresAt) {
+                    const remaining = ((expiresAt - now) / 1000).toFixed(1);
                     return interaction.reply({
-                        embeds: [new EmbedBuilder().setDescription(`➖ Removed <@&${roleId}>.`).setColor('#F04747')],
-                        ephemeral: true,
-                    });
-                } else {
-                    await member.roles.add(roleId, 'Reaction role panel');
-                    return interaction.reply({
-                        embeds: [new EmbedBuilder().setDescription(`➕ Gave you <@&${roleId}>.`).setColor('#43B581')],
+                        content: `Please wait **${remaining}s** before using \`/${command.data.name}\` again.`,
                         ephemeral: true,
                     });
                 }
-            } catch (err) {
-                console.error(`[RR] Failed to toggle role ${roleId}:`, err.message);
-                return interaction.reply({ content: '❌ Failed to update your roles. Check my permissions.', ephemeral: true });
+            }
+
+            timestamps.set(interaction.user.id, now);
+            setTimeout(() => timestamps.delete(interaction.user.id), cooldownMs);
+
+            try {
+                await command.execute(interaction);
+            } catch (error) {
+                console.error(`[ERROR] /${interaction.commandName}:`, error);
+                const reply = { content: 'Something went wrong.', ephemeral: true };
+                if (interaction.replied || interaction.deferred) await interaction.followUp(reply);
+                else await interaction.reply(reply);
+            }
+            return;
+        }
+
+        // ── Autocomplete ──────────────────────────────────────────────────
+        if (interaction.isAutocomplete()) {
+            const command = client.commands.get(interaction.commandName);
+            if (!command?.autocomplete) return;
+            try { await command.autocomplete(interaction); }
+            catch (e) { try { await interaction.respond([]); } catch (_) {} }
+            return;
+        }
+
+        // ── Button interactions ─────────────────────────────────────────────
+        if (interaction.isButton()) {
+            const id = interaction.customId;
+
+            // Giveaway buttons
+            if (id.startsWith('gw_')) {
+                await giveaway.handleButton(interaction).catch(e =>
+                    console.error('[Giveaway] Button error:', e.message)
+                );
+                return;
+            }
+
+            // Embed builder buttons
+            if (id.startsWith('emb_')) {
+                await embed.handleButton(interaction).catch(e =>
+                    console.error('[Embed] Button error:', e.message)
+                );
+                return;
+            }
+
+            // Route to command's own handleButton if defined
+            const command = [...client.commands.values()].find(c => c.handleButton);
+            // Fallback: try all commands that export handleButton
+            for (const cmd of client.commands.values()) {
+                if (cmd.handleButton) {
+                    try {
+                        const handled = await cmd.handleButton(interaction);
+                        if (handled) return;
+                    } catch (e) {
+                        console.error(`[Button] Error in ${cmd.data?.name}:`, e.message);
+                    }
+                }
+            }
+            return;
+        }
+
+        // ── Modal submissions ──────────────────────────────────────────────
+        if (interaction.isModalSubmit()) {
+            const id = interaction.customId;
+
+            // Embed builder modals
+            if (id.startsWith('embm_')) {
+                await embed.handleModal(interaction).catch(e =>
+                    console.error('[Embed] Modal error:', e.message)
+                );
+                return;
+            }
+
+            // Route to command's own handleModal if defined
+            for (const cmd of client.commands.values()) {
+                if (cmd.handleModal) {
+                    try {
+                        const handled = await cmd.handleModal(interaction);
+                        if (handled) return;
+                    } catch (e) {
+                        console.error(`[Modal] Error in ${cmd.data?.name}:`, e.message);
+                    }
+                }
+            }
+            return;
+        }
+
+        // ── Select menus ──────────────────────────────────────────────────
+        if (interaction.isAnySelectMenu()) {
+            for (const cmd of client.commands.values()) {
+                if (cmd.handleSelect) {
+                    try {
+                        const handled = await cmd.handleSelect(interaction);
+                        if (handled) return;
+                    } catch (e) {
+                        console.error(`[Select] Error in ${cmd.data?.name}:`, e.message);
+                    }
+                }
             }
         }
     },

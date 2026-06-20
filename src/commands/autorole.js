@@ -1,146 +1,86 @@
 const {
-    SlashCommandBuilder,
-    EmbedBuilder,
-    PermissionFlagsBits,
+    SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits,
 } = require('discord.js');
-const { addAutoRole, removeAutoRole, getAutoRoles } = require('../utils/db.js');
+const Database = require('better-sqlite3');
+const path     = require('path');
 
-const VALID_TRIGGERS = ['join', 'boost'];
+const db = new Database(path.join(__dirname, '../../data/sigil.db'));
+db.exec(`
+    CREATE TABLE IF NOT EXISTS autorole_config (
+        guild_id TEXT NOT NULL,
+        role_id  TEXT NOT NULL,
+        PRIMARY KEY (guild_id, role_id)
+    );
+`);
 
-function parseTrigger(raw) {
-    const t = raw.trim().toLowerCase();
-    if (VALID_TRIGGERS.includes(t)) return t;
-    const lvl = t.match(/^level:(\d+)$/);
-    if (lvl) {
-        const n = parseInt(lvl[1], 10);
-        if (n >= 1 && n <= 500) return `level:${n}`;
+const addRole    = db.prepare('INSERT OR IGNORE INTO autorole_config (guild_id, role_id) VALUES (?,?)');
+const removeRole = db.prepare('DELETE FROM autorole_config WHERE guild_id = ? AND role_id = ?');
+const getRoles   = db.prepare('SELECT role_id FROM autorole_config WHERE guild_id = ?');
+const clearAll   = db.prepare('DELETE FROM autorole_config WHERE guild_id = ?');
+
+async function applyAutoRoles(member) {
+    const rows = getRoles.all(member.guild.id);
+    if (!rows.length) return;
+    for (const row of rows) {
+        const role = member.guild.roles.cache.get(row.role_id);
+        if (role) await member.roles.add(role).catch(() => {});
     }
-    return null;
 }
 
-module.exports.data = new SlashCommandBuilder()
-    .setName('autorole')
-    .setDescription('Manage automatic role assignment')
-    .addSubcommand(sub => sub
-        .setName('add')
-        .setDescription('Add an auto-role rule')
-        .addRoleOption(opt => opt.setName('role').setDescription('Role to assign').setRequired(true))
-        .addStringOption(opt => opt
-            .setName('trigger')
-            .setDescription('When to assign: join | boost | level:<n> (e.g. level:5)')
-            .setRequired(true)
+module.exports = {
+    applyAutoRoles,
+
+    data: new SlashCommandBuilder()
+        .setName('autorole')
+        .setDescription('Assign roles automatically when someone joins')
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+        .addSubcommand(sub =>
+            sub.setName('add')
+                .setDescription('Add a role to be auto-assigned on join')
+                .addRoleOption(opt => opt.setName('role').setDescription('Role to add').setRequired(true))
         )
-    )
-    .addSubcommand(sub => sub
-        .setName('remove')
-        .setDescription('Remove an auto-role rule')
-        .addRoleOption(opt => opt.setName('role').setDescription('Role to remove').setRequired(true))
-        .addStringOption(opt => opt
-            .setName('trigger')
-            .setDescription('Trigger to remove: join | boost | level:<n>')
-            .setRequired(true)
+        .addSubcommand(sub =>
+            sub.setName('remove')
+                .setDescription('Remove a role from auto-assign')
+                .addRoleOption(opt => opt.setName('role').setDescription('Role to remove').setRequired(true))
         )
-    )
-    .addSubcommand(sub => sub
-        .setName('list')
-        .setDescription('List all auto-role rules in this server')
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles);
+        .addSubcommand(sub => sub.setName('list').setDescription('View all auto-assigned roles'))
+        .addSubcommand(sub => sub.setName('clear').setDescription('Remove all auto-assigned roles')),
 
-module.exports.execute = async function execute(interaction) {
-    const sub = interaction.options.getSubcommand();
-    const guildId = interaction.guild.id;
+    async execute(interaction) {
+        const sub  = interaction.options.getSubcommand();
+        const gId  = interaction.guild.id;
 
-    if (sub === 'add') {
-        const role = interaction.options.getRole('role');
-        const triggerRaw = interaction.options.getString('trigger');
-        const trigger = parseTrigger(triggerRaw);
+        if (sub === 'add') {
+            const role = interaction.options.getRole('role');
+            if (role.managed) return interaction.reply({ content: '\u274C Cannot auto-assign bot-managed roles.', ephemeral: true });
+            addRole.run(gId, role.id);
+            return interaction.reply({ content: `\u2705 <@&${role.id}> will now be assigned to all new members.`, ephemeral: true });
+        }
 
-        if (!trigger) {
+        if (sub === 'remove') {
+            const role = interaction.options.getRole('role');
+            removeRole.run(gId, role.id);
+            return interaction.reply({ content: `\u2705 <@&${role.id}> removed from auto-assign.`, ephemeral: true });
+        }
+
+        if (sub === 'clear') {
+            clearAll.run(gId);
+            return interaction.reply({ content: '\u2705 All auto-assign roles cleared.', ephemeral: true });
+        }
+
+        if (sub === 'list') {
+            const rows = getRoles.all(gId);
+            if (!rows.length) return interaction.reply({ content: 'No auto-assign roles configured.', ephemeral: true });
+            const lines = rows.map(r => `<@&${r.role_id}>`);
             return interaction.reply({
-                content: '❌ Invalid trigger. Use `join`, `boost`, or `level:<n>` (e.g. `level:5`). Level must be 1–500.',
+                embeds: [new EmbedBuilder()
+                    .setTitle('\uD83C\uDF9F\uFE0F Auto-Assigned Roles')
+                    .setDescription(lines.join('\n'))
+                    .setColor('#5865F2')
+                    .setFooter({ text: `Sigil \u2022 ${interaction.guild.name}` })],
                 ephemeral: true,
             });
         }
-
-        if (role.managed || role.id === interaction.guild.id) {
-            return interaction.reply({ content: '❌ That role cannot be assigned by the bot.', ephemeral: true });
-        }
-
-        const botMember = interaction.guild.members.me;
-        if (role.position >= botMember.roles.highest.position) {
-            return interaction.reply({ content: '❌ That role is higher than my highest role. Please move my role above it.', ephemeral: true });
-        }
-
-        const existing = getAutoRoles(guildId).find(r => r.role_id === role.id && r.trigger === trigger);
-        if (existing) {
-            return interaction.reply({ content: `❌ <@&${role.id}> is already set to auto-assign on **${trigger}**.`, ephemeral: true });
-        }
-
-        addAutoRole(guildId, role.id, trigger);
-        return interaction.reply({
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle('✅ Auto-Role Added')
-                    .setDescription(`<@&${role.id}> will be assigned on trigger: **${trigger}**`)
-                    .setColor('#43B581')
-                    .setTimestamp(),
-            ],
-            ephemeral: true,
-        });
-    }
-
-    if (sub === 'remove') {
-        const role = interaction.options.getRole('role');
-        const triggerRaw = interaction.options.getString('trigger');
-        const trigger = parseTrigger(triggerRaw);
-
-        if (!trigger) {
-            return interaction.reply({
-                content: '❌ Invalid trigger. Use `join`, `boost`, or `level:<n>`.',
-                ephemeral: true,
-            });
-        }
-
-        const removed = removeAutoRole(guildId, role.id, trigger);
-        if (!removed) {
-            return interaction.reply({ content: `❌ No auto-role rule found for <@&${role.id}> on trigger **${trigger}**.`, ephemeral: true });
-        }
-
-        return interaction.reply({
-            embeds: [
-                new EmbedBuilder()
-                    .setTitle('🗑️ Auto-Role Removed')
-                    .setDescription(`<@&${role.id}> will no longer be assigned on trigger: **${trigger}**`)
-                    .setColor('#F04747')
-                    .setTimestamp(),
-            ],
-            ephemeral: true,
-        });
-    }
-
-    if (sub === 'list') {
-        const rules = getAutoRoles(guildId);
-        if (!rules.length) {
-            return interaction.reply({ content: 'No auto-role rules configured for this server.', ephemeral: true });
-        }
-
-        const grouped = {};
-        for (const r of rules) {
-            if (!grouped[r.trigger]) grouped[r.trigger] = [];
-            grouped[r.trigger].push(`<@&${r.role_id}>`);
-        }
-
-        const embed = new EmbedBuilder()
-            .setTitle('⚙️ Auto-Role Rules')
-            .setColor('#5865F2')
-            .setFooter({ text: `Sigil • ${rules.length} rule${rules.length !== 1 ? 's' : ''}` })
-            .setTimestamp();
-
-        for (const [trigger, roles] of Object.entries(grouped)) {
-            embed.addFields({ name: `Trigger: ${trigger}`, value: roles.join(', '), inline: false });
-        }
-
-        return interaction.reply({ embeds: [embed], ephemeral: true });
-    }
+    },
 };
