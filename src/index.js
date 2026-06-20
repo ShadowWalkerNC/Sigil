@@ -3,6 +3,12 @@ const { readdirSync } = require('fs');
 const { join } = require('path');
 require('dotenv').config();
 
+// ── DB MUST be required first ─────────────────────────────────────────────────
+// This runs all CREATE TABLE IF NOT EXISTS statements before any command file
+// calls db.prepare() at module load time, regardless of load order.
+require('./db');
+// ─────────────────────────────────────────────────────────────────────────────
+
 const TOKEN     = process.env.DISCORD_TOKEN || process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
