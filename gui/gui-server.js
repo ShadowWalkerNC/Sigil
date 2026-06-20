@@ -1,9 +1,10 @@
-// gui-server.js — Sigil GUI bridge server v2.5
+// gui-server.js — Sigil GUI bridge server v2.6
 // Run with: node gui/gui-server.js
 
 const express    = require('express');
 const path       = require('path');
 const http       = require('http');
+const { spawn }  = require('child_process');
 const rateLimit  = require('express-rate-limit');
 const { WebSocketServer } = require('ws');
 const { createCanvas, loadImage } = require('canvas');
@@ -26,11 +27,9 @@ const app       = express();
 const server    = http.createServer(app);
 const PORT      = Number(process.env.PORT) || 8080;
 const START_TS  = Date.now();
-const VERSION   = '2.5.0';
+const VERSION   = '2.6.0';
 
 // ── SQLite IPC bridge (read-only) ─────────────────────────────────────────────
-// The bot writes bot_heartbeat, service_registry, and log_buffer rows.
-// gui-server reads them here instead of relying on global.sigilClient.
 const DB_PATH = path.join(__dirname, '..', 'data', 'sigil.db');
 
 function getIpcDb() {
@@ -41,9 +40,8 @@ function getIpcDb() {
 function readBotHeartbeat() {
     const ipc = getIpcDb();
     if (!ipc) return null;
-    try {
-        return ipc.prepare('SELECT * FROM bot_heartbeat WHERE id = 1').get() ?? null;
-    } catch { return null; } finally { ipc.close(); }
+    try { return ipc.prepare('SELECT * FROM bot_heartbeat WHERE id = 1').get() ?? null; }
+    catch { return null; } finally { ipc.close(); }
 }
 
 function readServiceRegistry() {
@@ -78,10 +76,9 @@ function readLogBuffer(n = 50, level = null) {
     } catch { return []; } finally { ipc.close(); }
 }
 
-// Stale threshold: if heartbeat is older than 90 s, bot is considered offline.
 const BOT_STALE_MS = 90_000;
 
-// ── ASCILINE stream_server.py base URL (co-hosted, local only) ───────────────
+// ── ASCILINE stream_server.py base URL ───────────────────────────────────────
 const STREAM_URL = (process.env.STREAM_SERVER_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
 const AI_ENABLED = false;
 
@@ -104,76 +101,136 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '4mb' }));
 
 // ── Rate limiting ────────────────────────────────────────────────────────────
-const renderLimiter = rateLimit({
-    windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
-    message: { ok: false, error: '⏳ Too many requests — slow down and try again in a minute.' },
-});
-const webhookLimiter = rateLimit({
-    windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false,
-    message: { ok: false, error: 'Rate limit exceeded.' },
-});
-const apiLimiter = rateLimit({
-    windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false,
-    message: { ok: false, error: 'Rate limit exceeded.' },
-});
-const mediaLimiter = rateLimit({
-    windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false,
-    message: { ok: false, error: 'Media rate limit exceeded.' },
-});
-const controlLimiter = rateLimit({
-    windowMs: 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
-    message: { ok: false, error: 'Rate limit exceeded.' },
-});
+const renderLimiter  = rateLimit({ windowMs: 60_000, max: 20, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Too many requests.' } });
+const webhookLimiter = rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Rate limit exceeded.' } });
+const apiLimiter     = rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Rate limit exceeded.' } });
+const mediaLimiter   = rateLimit({ windowMs: 60_000, max: 30, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Media rate limit exceeded.' } });
+const controlLimiter = rateLimit({ windowMs: 60_000, max: 5,  standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Rate limit exceeded.' } });
+const setupLimiter   = rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Too many setup requests.' } });
 
 // ── Static pages ─────────────────────────────────────────────────────────────
-app.get('/',            (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/brand',       (req, res) => res.sendFile(path.join(__dirname, 'sigil-gui-builder.html')));
-app.get('/community',   (req, res) => res.sendFile(path.join(__dirname, 'sigil-community.html')));
-app.get('/developers',  (req, res) => res.sendFile(path.join(__dirname, 'developers.html')));
-app.get('/packages',    (req, res) => res.sendFile(path.join(__dirname, 'packages.html')));
-app.get('/status',      (req, res) => res.sendFile(path.join(__dirname, 'status.html')));
-app.get('/setup',       (req, res) => res.sendFile(path.join(__dirname, '..', 'setup.html')));
-app.get('/health',      (req, res) => res.json({ ok: true, version: VERSION, ai_enabled: AI_ENABLED }));
+app.get('/',           (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/brand',      (req, res) => res.sendFile(path.join(__dirname, 'sigil-gui-builder.html')));
+app.get('/community',  (req, res) => res.sendFile(path.join(__dirname, 'sigil-community.html')));
+app.get('/developers', (req, res) => res.sendFile(path.join(__dirname, 'developers.html')));
+app.get('/packages',   (req, res) => res.sendFile(path.join(__dirname, 'packages.html')));
+app.get('/status',     (req, res) => res.sendFile(path.join(__dirname, 'status.html')));
+app.get('/setup',      (req, res) => res.sendFile(path.join(__dirname, 'setup.html')));
+app.get('/health',     (req, res) => res.json({ ok: true, version: VERSION, ai_enabled: AI_ENABLED }));
 
-// ── GET /api/packages ─────────────────────────────────────────────────────────────
+// ── GET /api/packages ────────────────────────────────────────────────────────
 app.get('/api/packages', apiLimiter, (req, res) => {
     try {
         const guildId = String(req.query.guild_id || '').trim();
-        if (!guildId || !/^\d{17,20}$/.test(guildId)) {
+        if (!guildId || !/^\d{17,20}$/.test(guildId))
             return res.status(400).json({ ok: false, error: 'Invalid or missing guild_id.' });
-        }
         const packages = getAllPackageStates(guildId);
         const disabled = packages.filter(p => !p.enabled).map(p => p.key);
         res.json({ ok: true, guild_id: guildId, disabled, packages });
-    } catch (err) {
-        console.error('[GET /api/packages]', err);
-        res.status(500).json({ ok: false, error: 'Internal error.' });
-    }
+    } catch (err) { console.error('[GET /api/packages]', err); res.status(500).json({ ok: false, error: 'Internal error.' }); }
 });
 
-// ── POST /api/packages ─────────────────────────────────────────────────────────
+// ── POST /api/packages ────────────────────────────────────────────────────────
 app.post('/api/packages', apiLimiter, (req, res) => {
     try {
         const { guild_id, package: pkgKey, enabled } = req.body || {};
-        if (!guild_id || !/^\d{17,20}$/.test(String(guild_id))) {
+        if (!guild_id || !/^\d{17,20}$/.test(String(guild_id)))
             return res.status(400).json({ ok: false, error: 'Invalid or missing guild_id.' });
-        }
-        if (!pkgKey || typeof pkgKey !== 'string') {
+        if (!pkgKey || typeof pkgKey !== 'string')
             return res.status(400).json({ ok: false, error: 'Missing package key.' });
-        }
-        if (typeof enabled !== 'boolean') {
+        if (typeof enabled !== 'boolean')
             return res.status(400).json({ ok: false, error: '"enabled" must be a boolean.' });
-        }
-        const result = enabled
-            ? enablePackage(String(guild_id), pkgKey)
-            : disablePackage(String(guild_id), pkgKey);
-        if (result === 'unknown') {
-            return res.status(400).json({ ok: false, error: `Unknown package: "${pkgKey}".` });
-        }
+        const result = enabled ? enablePackage(String(guild_id), pkgKey) : disablePackage(String(guild_id), pkgKey);
+        if (result === 'unknown') return res.status(400).json({ ok: false, error: `Unknown package: "${pkgKey}".` });
         res.json({ ok: true, package: pkgKey, enabled, result });
+    } catch (err) { console.error('[POST /api/packages]', err); res.status(500).json({ ok: false, error: 'Internal error.' }); }
+});
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║            SETUP WIZARD — /api/setup/*                          ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+/**
+ * POST /api/setup/validate-token
+ * Validates a Discord bot token by calling the Discord REST API.
+ * Returns { ok: true, tag: 'BotName#0000' } or { ok: false, error: '...' }
+ */
+app.post('/api/setup/validate-token', setupLimiter, async (req, res) => {
+    const { token, clientId } = req.body || {};
+
+    if (!token || typeof token !== 'string' || token.trim().length < 20)
+        return res.status(400).json({ ok: false, error: 'Missing or invalid token.' });
+    if (!clientId || !/^\d{17,20}$/.test(String(clientId).trim()))
+        return res.status(400).json({ ok: false, error: 'Missing or invalid clientId.' });
+
+    try {
+        const discordRes = await fetch('https://discord.com/api/v10/users/@me', {
+            headers: { Authorization: `Bot ${token.trim()}` },
+        });
+
+        if (discordRes.status === 401)
+            return res.json({ ok: false, error: 'Invalid token — Discord rejected it.' });
+        if (!discordRes.ok)
+            return res.json({ ok: false, error: `Discord returned HTTP ${discordRes.status}.` });
+
+        const user = await discordRes.json();
+        if (user.id && String(user.id) !== String(clientId).trim()) {
+            return res.json({
+                ok: false,
+                error: `Token is valid but belongs to application ${user.id}, not ${clientId}. Check your Client ID.`,
+            });
+        }
+
+        const tag = user.username + (user.discriminator && user.discriminator !== '0' ? `#${user.discriminator}` : '');
+        console.log(`[setup] Token validated for ${tag} (${user.id})`);
+        res.json({ ok: true, tag, id: user.id });
     } catch (err) {
-        console.error('[POST /api/packages]', err);
-        res.status(500).json({ ok: false, error: 'Internal error.' });
+        console.error('[POST /api/setup/validate-token]', err);
+        res.status(500).json({ ok: false, error: 'Could not reach Discord API.' });
+    }
+});
+
+/**
+ * POST /api/setup/save-config
+ * Saves the wizard's package selection and channel/role map to the database.
+ * Best-effort — the wizard continues even if this fails.
+ */
+app.post('/api/setup/save-config', setupLimiter, (req, res) => {
+    try {
+        const { packages = [], channels = {} } = req.body || {};
+
+        const VALID_PKGS = new Set(['brand','moderation','community','xp','scheduler','integrations','faith','culinaryos']);
+        const safePkgs   = (Array.isArray(packages) ? packages : []).filter(p => VALID_PKGS.has(p));
+
+        const safeChannels = {};
+        for (const [key, val] of Object.entries(channels)) {
+            const v = String(val || '').trim();
+            if (v && /^\d{17,20}$/.test(v)) safeChannels[key] = v;
+        }
+
+        const db = new Database(DB_PATH);
+        db.prepare(`
+            CREATE TABLE IF NOT EXISTS setup_wizard (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL,
+                ts    INTEGER NOT NULL DEFAULT (unixepoch())
+            )
+        `).run();
+
+        const upsert = db.prepare(`
+            INSERT INTO setup_wizard (key, value, ts)
+            VALUES (?, ?, unixepoch())
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, ts = excluded.ts
+        `);
+        upsert.run('packages', JSON.stringify(safePkgs));
+        upsert.run('channels', JSON.stringify(safeChannels));
+        db.close();
+
+        console.log(`[setup] Config saved — packages: [${safePkgs.join(', ')}], channels: ${Object.keys(safeChannels).length} entries`);
+        res.json({ ok: true, packages: safePkgs, channels: safeChannels });
+    } catch (err) {
+        console.error('[POST /api/setup/save-config]', err);
+        res.status(500).json({ ok: false, error: 'Failed to save config.' });
     }
 });
 
@@ -233,12 +290,12 @@ app.post('/api/media/enqueue', mediaLimiter, async (req, res) => {
 });
 
 app.post('/api/media/skip', mediaLimiter, async (req, res) => {
-    try { const result = await proxyToStream('/api/skip', {}); res.status(result.status).json(result.body); }
+    try { const r = await proxyToStream('/api/skip', {}); res.status(r.status).json(r.body); }
     catch (err) { console.error('[POST /api/media/skip]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable.' }); }
 });
 
 app.post('/api/media/stop', mediaLimiter, async (req, res) => {
-    try { const result = await proxyToStream('/api/stop', {}); res.status(result.status).json(result.body); }
+    try { const r = await proxyToStream('/api/stop', {}); res.status(r.status).json(r.body); }
     catch (err) { console.error('[POST /api/media/stop]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable.' }); }
 });
 
@@ -246,7 +303,7 @@ app.post('/api/media/seek', mediaLimiter, async (req, res) => {
     try {
         const time = Number(req.body?.time ?? -1);
         if (time < 0) return res.status(400).json({ ok: false, error: '"time" must be >= 0.' });
-        const result = await proxyToStream('/api/seek', { time }); res.status(result.status).json(result.body);
+        const r = await proxyToStream('/api/seek', { time }); res.status(r.status).json(r.body);
     } catch (err) { console.error('[POST /api/media/seek]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable.' }); }
 });
 
@@ -254,7 +311,7 @@ app.post('/api/media/volume', mediaLimiter, async (req, res) => {
     try {
         const vol = Number(req.body?.vol ?? -1);
         if (vol < 0 || vol > 5) return res.status(400).json({ ok: false, error: '"vol" must be 0-5.' });
-        const result = await proxyToStream('/api/volume', { vol }); res.status(result.status).json(result.body);
+        const r = await proxyToStream('/api/volume', { vol }); res.status(r.status).json(r.body);
     } catch (err) { console.error('[POST /api/media/volume]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable.' }); }
 });
 
@@ -262,7 +319,7 @@ app.post('/api/media/loop', mediaLimiter, async (req, res) => {
     try {
         const enabled = req.body?.enabled;
         if (typeof enabled !== 'boolean') return res.status(400).json({ ok: false, error: '"enabled" must be a boolean.' });
-        const result = await proxyToStream('/api/loop', { enabled }); res.status(result.status).json(result.body);
+        const r = await proxyToStream('/api/loop', { enabled }); res.status(r.status).json(r.body);
     } catch (err) { console.error('[POST /api/media/loop]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable.' }); }
 });
 
@@ -270,7 +327,7 @@ app.post('/api/media/mode', mediaLimiter, async (req, res) => {
     try {
         const mode = Number(req.body?.mode ?? 0);
         if (!mode || mode < 1 || mode > 5) return res.status(400).json({ ok: false, error: '"mode" must be 1-5.' });
-        const result = await proxyToStream('/api/mode', { mode }); res.status(result.status).json(result.body);
+        const r = await proxyToStream('/api/mode', { mode }); res.status(r.status).json(r.body);
     } catch (err) { console.error('[POST /api/media/mode]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable.' }); }
 });
 
@@ -278,17 +335,17 @@ app.post('/api/media/cols', mediaLimiter, async (req, res) => {
     try {
         const cols = Number(req.body?.cols ?? 0);
         if (!cols || cols < 40 || cols > 500) return res.status(400).json({ ok: false, error: '"cols" must be 40-500.' });
-        const result = await proxyToStream('/api/cols', { cols }); res.status(result.status).json(result.body);
+        const r = await proxyToStream('/api/cols', { cols }); res.status(r.status).json(r.body);
     } catch (err) { console.error('[POST /api/media/cols]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable.' }); }
 });
 
 app.get('/api/media/status', mediaLimiter, async (req, res) => {
-    try { const result = await proxyGetToStream('/api/status'); res.status(result.status).json(result.body); }
+    try { const r = await proxyGetToStream('/api/status'); res.status(r.status).json(r.body); }
     catch (err) { console.error('[GET /api/media/status]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable. Is ASCILINE running?' }); }
 });
 
 app.get('/api/media/queue', mediaLimiter, async (req, res) => {
-    try { const result = await proxyGetToStream('/api/queue'); res.status(result.status).json(result.body); }
+    try { const r = await proxyGetToStream('/api/queue'); res.status(r.status).json(r.body); }
     catch (err) { console.error('[GET /api/media/queue]', err); res.status(503).json({ ok: false, error: 'Stream server unreachable.' }); }
 });
 
@@ -296,36 +353,24 @@ app.get('/api/media/queue', mediaLimiter, async (req, res) => {
 // ║                  LOGS — /api/logs + WebSocket /ws/logs          ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
-/**
- * GET /api/logs
- * Returns combined lines: gui-server in-process buffer UNION bot SQLite buffer,
- * merged and sorted by timestamp, then tailed to n lines.
- */
 app.get('/api/logs', apiLimiter, (req, res) => {
     const n     = Math.max(1, Math.min(500, parseInt(req.query.tail || '50', 10)));
     const level = ['info', 'warn', 'error'].includes(req.query.level) ? req.query.level : null;
-
-    // In-process gui-server lines
     const guiLines = logBuffer.tail(n, level);
-
-    // Bot lines from SQLite
     const botLines = readLogBuffer(n, level);
-
-    // Merge, deduplicate by ts+text, sort chronologically, tail
     const seen = new Set();
     const merged = [...guiLines, ...botLines]
         .filter(l => { const k = `${l.ts}|${l.text}`; if (seen.has(k)) return false; seen.add(k); return true; })
         .sort((a, b) => a.ts - b.ts)
         .slice(-n);
-
     res.json({ ok: true, lines: merged });
 });
 
 const wssLogs = new WebSocketServer({ noServer: true });
 
 wssLogs.on('connection', (ws, req) => {
-    const params = new URLSearchParams(req.url.replace('/ws/logs', '').replace('?', ''));
-    const level  = ['info', 'warn', 'error'].includes(params.get('level')) ? params.get('level') : null;
+    const params   = new URLSearchParams(req.url.replace('/ws/logs', '').replace('?', ''));
+    const level    = ['info', 'warn', 'error'].includes(params.get('level')) ? params.get('level') : null;
     const listener = (entry) => {
         if (level && entry.level !== level) return;
         if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(entry));
@@ -347,100 +392,109 @@ server.on('upgrade', (req, socket, head) => {
 // ║              STATUS — GET /api/status/full                      ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
-/**
- * GET /api/status/full
- * Aggregates health from:
- *   - gui-server itself (uptime, version)
- *   - bot (SQLite bot_heartbeat row — written every 30 s by src/index.js)
- *   - ASCILINE stream_server.py (proxies /api/status)
- *   - service registry (SQLite service_registry rows — written every 60 s by bot)
- *   - last error line (SQLite log_buffer)
- */
 app.get('/api/status/full', apiLimiter, async (req, res) => {
     const result = { ok: true };
-
-    // ─ gui-server self ──────────────────────────────────────────
-    result.gui = {
-        ok:        true,
-        reachable: true,
-        version:   VERSION,
-        uptime_ms: Date.now() - START_TS,
-    };
-
-    // ─ bot health via SQLite IPC ────────────────────────────────
+    result.gui = { ok: true, reachable: true, version: VERSION, uptime_ms: Date.now() - START_TS };
     const hb = readBotHeartbeat();
     if (hb && (Date.now() - hb.ts) < BOT_STALE_MS) {
-        result.bot = {
-            ok:        true,
-            reachable: true,
-            guilds:    hb.guilds,
-            latency:   hb.latency,
-            tag:       hb.tag,
-        };
+        result.bot = { ok: true, reachable: true, guilds: hb.guilds, latency: hb.latency, tag: hb.tag };
     } else {
-        result.bot = {
-            ok:          false,
-            reachable:   false,
-            last_seen_ms: hb ? Date.now() - hb.ts : null,
-        };
+        result.bot = { ok: false, reachable: false, last_seen_ms: hb ? Date.now() - hb.ts : null };
     }
-
-    // ─ ASCILINE ────────────────────────────────────────────────
     try {
         const { body } = await proxyGetToStream('/api/status');
-        result.asciline = {
-            ok:        true,
-            reachable: true,
-            playing:   !!(body.current || body.playing),
-            mode:      body.mode ?? null,
-            cols:      body.cols ?? null,
-            queue_len: body.queue_length ?? body.queue?.length ?? 0,
-        };
-    } catch {
-        result.asciline = { ok: false, reachable: false };
-    }
-
-    // ─ Service registry snapshot from SQLite ────────────────────
-    result.services = readServiceRegistry();
-
-    const degraded = result.services.filter(s => s.status !== 'ok' && s.status !== 'starting');
-    result.services_ok = degraded.length === 0;
-
-    // ─ Last error from SQLite log_buffer ─────────────────────────
-    const lastErrors = readLogBuffer(1, 'error');
-    result.last_error = lastErrors.length ? lastErrors[0] : null;
-
-    // ─ Overall ok flag ─────────────────────────────────────────
-    result.ok = result.bot.ok && result.services_ok;
-
+        result.asciline = { ok: true, reachable: true, playing: !!(body.current || body.playing), mode: body.mode ?? null, cols: body.cols ?? null, queue_len: body.queue_length ?? body.queue?.length ?? 0 };
+    } catch { result.asciline = { ok: false, reachable: false }; }
+    result.services    = readServiceRegistry();
+    result.services_ok = result.services.filter(s => s.status !== 'ok' && s.status !== 'starting').length === 0;
+    const lastErrors   = readLogBuffer(1, 'error');
+    result.last_error  = lastErrors.length ? lastErrors[0] : null;
+    result.ok          = result.bot.ok && result.services_ok;
     res.json(result);
 });
 
 // ╔══════════════════════════════════════════════════════════════════╗
-// ║          CONTROL — POST /api/control/restart                    ║
+// ║          CONTROL — POST /api/control/*                          ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
-app.post('/api/control/restart', controlLimiter, (req, res) => {
-    const secret = process.env.CONTROL_SECRET || '';
-
-    if (!secret) {
-        return res.status(503).json({
-            ok:    false,
-            error: 'CONTROL_SECRET is not configured — restart endpoint disabled.',
-        });
-    }
-
+function requireControlSecret(req, res) {
+    const secret   = process.env.CONTROL_SECRET || '';
     const provided = String(req.headers['x-control-secret'] || '').trim();
-    if (!provided || provided !== secret) {
+    if (!secret)
+        return res.status(503).json({ ok: false, error: 'CONTROL_SECRET is not configured — endpoint disabled.' });
+    if (!provided || provided !== secret)
         return res.status(401).json({ ok: false, error: 'Invalid or missing x-control-secret.' });
-    }
+    return null; // auth passed
+}
 
+app.post('/api/control/restart', controlLimiter, (req, res) => {
+    const fail = requireControlSecret(req, res);
+    if (fail) return;
     res.json({ ok: true, message: 'Restart signal accepted. Process exiting now.' });
-
     res.on('finish', () => {
         console.log('[GUI] Restart requested via /api/control/restart — exiting.');
         gracefulShutdown('restart');
     });
+});
+
+/**
+ * POST /api/control/deploy-commands
+ * Spawns `node src/deploy-commands.js` and streams NDJSON progress lines back.
+ * Each line: { level: 'info'|'ok'|'warn'|'err', text: '...' }
+ * Used by the setup wizard Step 4 and `npx sigil deploy`.
+ */
+app.post('/api/control/deploy-commands', controlLimiter, (req, res) => {
+    const fail = requireControlSecret(req, res);
+    if (fail) return;
+
+    const deployScript = path.join(__dirname, '..', 'src', 'deploy-commands.js');
+
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.flushHeaders();
+
+    const sendLine = (level, text) => {
+        try { res.write(JSON.stringify({ level, text }) + '\n'); } catch (_) {}
+    };
+
+    sendLine('info', '▸ Spawning deploy-commands.js…');
+
+    let child;
+    try {
+        child = spawn(process.execPath, [deployScript], {
+            env:   { ...process.env },
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+    } catch (err) {
+        sendLine('err', `✗ Failed to spawn: ${err.message}`);
+        res.end();
+        return;
+    }
+
+    child.stdout.on('data', chunk => {
+        chunk.toString().split('\n').filter(Boolean).forEach(line => sendLine('info', line));
+    });
+    child.stderr.on('data', chunk => {
+        chunk.toString().split('\n').filter(Boolean).forEach(line => sendLine('warn', line));
+    });
+
+    child.on('close', (code) => {
+        if (code === 0) {
+            sendLine('ok', '✓ deploy-commands.js exited successfully.');
+        } else {
+            sendLine('err', `✗ deploy-commands.js exited with code ${code}.`);
+        }
+        res.end();
+    });
+
+    child.on('error', (err) => {
+        sendLine('err', `✗ Child process error: ${err.message}`);
+        res.end();
+    });
+
+    // Abort the child if the client disconnects mid-stream
+    req.on('close', () => { if (child && !child.killed) child.kill('SIGTERM'); });
 });
 
 // ── POST /webhook/trigger ─────────────────────────────────────────────────────
@@ -451,13 +505,11 @@ app.post('/webhook/trigger', webhookLimiter, async (req, res) => {
         if (!guildId) return res.status(400).json({ ok: false, error: 'Missing x-sigil-guild-id header.' });
         const config = getConfig(guildId);
         if (config.webhook_secret) {
-            if (!verifyHmac(req.rawBody, config.webhook_secret, signature || '')) {
+            if (!verifyHmac(req.rawBody, config.webhook_secret, signature || ''))
                 return res.status(401).json({ ok: false, error: 'Invalid signature.' });
-            }
         }
-        if (!config.webhook_channel) {
+        if (!config.webhook_channel)
             return res.status(400).json({ ok: false, error: 'No webhook channel configured. Use /sigilconfig webhook.' });
-        }
         const { type, ...payload } = req.body;
         payload.guildId = guildId;
         payload.client  = global.sigilClient;
@@ -475,7 +527,7 @@ app.post('/webhook/trigger', webhookLimiter, async (req, res) => {
 // ── POST /preview ─────────────────────────────────────────────────────────────
 app.post('/preview', renderLimiter, async (req, res) => {
     try {
-        const b = req.body || {};
+        const b          = req.body || {};
         const text       = safeText(b.icon_text    || b.text   || 'SIGIL', 8).toUpperCase();
         const bannerText = safeText(b.banner_text  || b.text   || text, 64);
         const primary    = safeHex(b.primary_color   || b.primary,   '#8B0000');
@@ -673,17 +725,13 @@ let shuttingDown = false;
 function gracefulShutdown(reason = 'signal') {
     if (shuttingDown) return;
     shuttingDown = true;
-
     console.log(`[GUI] Graceful shutdown initiated (reason: ${reason}).`);
-
     wssLogs.clients.forEach(ws => ws.terminate());
-
     server.close((err) => {
         if (err) console.error('[GUI] server.close error:', err);
         console.log('[GUI] HTTP server closed. Exiting.');
         process.exit(0);
     });
-
     setTimeout(() => {
         console.warn('[GUI] Shutdown timed out — forcing exit.');
         process.exit(1);
