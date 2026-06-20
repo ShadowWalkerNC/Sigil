@@ -15,6 +15,7 @@ const commands = {
     packages: require('./commands/packages.js'),
     preview:  require('./commands/preview.js'),
     logs:     require('./commands/logs.js'),
+    status:   require('./commands/status.js'),
 };
 
 async function main() {
