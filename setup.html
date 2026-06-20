@@ -1,723 +1,393 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Discord Icon Gen — Setup Wizard</title>
-<style>
-  :root {
-    --bg: #0e0f13;
-    --surface: #16181f;
-    --surface2: #1e2029;
-    --border: #2e3040;
-    --accent: #5865f2;
-    --accent-hover: #4752c4;
-    --success: #3ba55c;
-    --warning: #f0a500;
-    --error: #ed4245;
-    --text: #dcddde;
-    --muted: #8e9297;
-    --white: #ffffff;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 16px;
-  }
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    width: 100%;
-    max-width: 580px;
-    padding: 40px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-  }
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 32px;
-  }
-  .logo-icon {
-    width: 52px; height: 52px;
-    background: var(--accent);
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px;
-  }
-  .logo h1 { font-size: 1.35rem; font-weight: 700; color: var(--white); }
-  .logo p  { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
-
-  /* Steps */
-  .steps {
-    display: flex;
-    gap: 0;
-    margin-bottom: 36px;
-    position: relative;
-  }
-  .steps::before {
-    content: '';
-    position: absolute;
-    top: 15px; left: 16px; right: 16px;
-    height: 2px;
-    background: var(--border);
-    z-index: 0;
-  }
-  .step {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    position: relative;
-    z-index: 1;
-  }
-  .step-num {
-    width: 30px; height: 30px;
-    border-radius: 50%;
-    background: var(--surface2);
-    border: 2px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.78rem; font-weight: 700; color: var(--muted);
-    transition: all 0.3s;
-  }
-  .step.active .step-num  { background: var(--accent); border-color: var(--accent); color: var(--white); }
-  .step.done .step-num    { background: var(--success); border-color: var(--success); color: var(--white); }
-  .step-label { font-size: 0.68rem; color: var(--muted); text-align: center; }
-  .step.active .step-label { color: var(--accent); }
-  .step.done .step-label   { color: var(--success); }
-  .step.skip .step-num     { background: var(--border); border-color: var(--border); color: var(--muted); }
-  .step.skip .step-label   { color: var(--border); }
-
-  /* Panels */
-  .panel { display: none; }
-  .panel.active { display: block; }
-
-  h2 { font-size: 1.1rem; font-weight: 700; color: var(--white); margin-bottom: 6px; }
-  .subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
-  .subtitle a { color: var(--accent); text-decoration: none; }
-  .subtitle a:hover { text-decoration: underline; }
-
-  /* Fields */
-  .field { margin-bottom: 20px; }
-  label {
-    display: block;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-  .input-wrap { position: relative; }
-  input[type=text], input[type=password], input[type=number], select {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    color: var(--white);
-    font-size: 0.92rem;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  input:focus, select:focus { border-color: var(--accent); }
-  input.error { border-color: var(--error); }
-  input.ok    { border-color: var(--success); }
-  .eye-btn {
-    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); font-size: 1rem; padding: 4px;
-  }
-  .eye-btn:hover { color: var(--text); }
-  .field-hint {
-    font-size: 0.77rem; color: var(--muted); margin-top: 5px; line-height: 1.4;
-  }
-  .field-err {
-    font-size: 0.77rem; color: var(--error); margin-top: 5px; display: none;
-  }
-
-  /* Info box */
-  .info-box {
-    background: rgba(88,101,242,0.1);
-    border: 1px solid rgba(88,101,242,0.3);
-    border-radius: 8px;
-    padding: 12px 14px;
-    font-size: 0.83rem;
-    color: var(--text);
-    margin-bottom: 20px;
-    line-height: 1.6;
-  }
-  .info-box strong { color: var(--white); }
-  .info-box ol { padding-left: 18px; margin-top: 6px; }
-  .info-box ol li { margin-bottom: 3px; }
-  .info-box a { color: var(--accent); text-decoration: none; }
-  .info-box a:hover { text-decoration: underline; }
-
-  /* Warning box */
-  .warn-box {
-    background: rgba(240,165,0,0.1);
-    border: 1px solid rgba(240,165,0,0.35);
-    border-radius: 8px;
-    padding: 12px 14px;
-    font-size: 0.83rem;
-    color: var(--text);
-    margin-bottom: 20px;
-    line-height: 1.6;
-  }
-  .warn-box strong { color: var(--warning); }
-
-  /* Success box */
-  .success-box {
-    background: rgba(59,165,92,0.1);
-    border: 1px solid rgba(59,165,92,0.3);
-    border-radius: 8px;
-    padding: 12px 14px;
-    font-size: 0.83rem;
-    color: var(--text);
-    margin-bottom: 20px;
-    line-height: 1.6;
-  }
-  .success-box strong { color: var(--success); }
-
-  /* Mode cards */
-  .mode-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-  .mode-card {
-    background: var(--surface2);
-    border: 2px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    cursor: pointer;
-    transition: border-color 0.2s;
-  }
-  .mode-card:hover { border-color: var(--accent); }
-  .mode-card.selected { border-color: var(--accent); background: rgba(88,101,242,0.08); }
-  .mode-card input[type=radio] { display: none; }
-  .mode-card-title { font-weight: 700; color: var(--white); font-size: 0.92rem; margin-bottom: 3px; }
-  .mode-card-desc  { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
-  .mode-tag {
-    display: inline-block;
-    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-    padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
-  }
-  .tag-rec  { background: rgba(59,165,92,0.2);  color: var(--success); }
-  .tag-prod { background: rgba(88,101,242,0.2); color: #8891f5; }
-
-  /* OS tabs */
-  .os-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
-  .os-tab {
-    padding: 6px 14px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    color: var(--muted);
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.18s;
-  }
-  .os-tab.active { background: var(--accent); border-color: var(--accent); color: var(--white); }
-  .os-panel { display: none; }
-  .os-panel.active { display: block; }
-
-  /* Code block */
-  .code-block {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 0.82rem;
-    color: #a9dc76;
-    margin-bottom: 12px;
-    white-space: pre;
-    overflow-x: auto;
-    line-height: 1.7;
-  }
-
-  /* Buttons */
-  .btn-row { display: flex; gap: 10px; margin-top: 28px; }
-  button {
-    border: none; border-radius: 8px;
-    font-size: 0.9rem; font-weight: 600;
-    padding: 11px 22px; cursor: pointer;
-    transition: background 0.18s, transform 0.1s;
-  }
-  button:active { transform: scale(0.97); }
-  .btn-primary { background: var(--accent); color: var(--white); flex: 1; }
-  .btn-primary:hover { background: var(--accent-hover); }
-  .btn-back { background: var(--surface2); color: var(--muted); }
-  .btn-back:hover { background: var(--border); color: var(--text); }
-  .btn-success { background: var(--success); color: var(--white); flex: 1; }
-
-  /* Inline row for two fields */
-  .field-row { display: flex; gap: 14px; }
-  .field-row .field { flex: 1; }
-
-  /* Done screen */
-  .done-icon {
-    text-align: center; font-size: 3.5rem; margin-bottom: 16px;
-    animation: pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
-  }
-  @keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .done-title {
-    text-align: center; font-size: 1.3rem; font-weight: 700;
-    color: var(--white); margin-bottom: 8px;
-  }
-  .done-sub {
-    text-align: center; font-size: 0.86rem; color: var(--muted);
-    margin-bottom: 24px; line-height: 1.6;
-  }
-  .checklist {
-    list-style: none;
-    margin: 16px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .checklist li {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    font-size: 0.85rem;
-    color: var(--text);
-    line-height: 1.5;
-  }
-  .checklist li .check { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
-  .checklist li strong { color: var(--white); }
-  .checklist li a { color: var(--accent); text-decoration: none; }
-  .checklist li a:hover { text-decoration: underline; }
-  .invite-row {
-    background: rgba(59,165,92,0.08);
-    border: 1px solid rgba(59,165,92,0.3);
-    border-radius: 8px;
-    padding: 12px 14px;
-    font-size: 0.83rem;
-    margin: 14px 0;
-    display: none;
-  }
-  .invite-row strong { color: var(--success); display: block; margin-bottom: 6px; }
-  .invite-row a {
-    color: var(--accent); font-weight: 600; word-break: break-all;
-    text-decoration: none;
-  }
-  .invite-row a:hover { text-decoration: underline; }
-
-  footer {
-    margin-top: 32px;
-    font-size: 0.78rem;
-    color: var(--muted);
-    text-align: center;
-  }
-  footer a { color: var(--accent); text-decoration: none; }
-
-  select option { background: var(--surface2); color: var(--white); }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sigil — Setup Wizard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d0d14; --surface: #13131f; --surface2: #1a1a2e;
+      --border: #2a2a45; --accent: #7c3aed; --accent-light: #a78bfa;
+      --accent-glow: rgba(124,58,237,0.25); --green: #22c55e;
+      --yellow: #f59e0b; --red: #ef4444;
+      --text: #e2e8f0; --muted: #64748b; --radius: 12px;
+    }
+    html, body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+    nav { display:flex; align-items:center; justify-content:space-between; padding:0 2rem; height:60px; border-bottom:1px solid var(--border); background:var(--surface); }
+    .nav-brand { font-size:1.25rem; font-weight:700; color:var(--accent-light); text-decoration:none; letter-spacing:.05em; }
+    .nav-links { display:flex; gap:1.5rem; }
+    .nav-links a { color:var(--muted); text-decoration:none; font-size:.875rem; transition:color .2s; }
+    .nav-links a:hover { color:var(--text); }
+    main { max-width:760px; margin:0 auto; padding:3rem 1.5rem 6rem; }
+    .wizard-header { text-align:center; margin-bottom:3rem; }
+    .wizard-header h1 { font-size:2rem; font-weight:700; color:var(--accent-light); margin-bottom:.5rem; }
+    .wizard-header p { color:var(--muted); font-size:.95rem; }
+    /* Progress bar */
+    .progress-bar { display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:3rem; }
+    .step-dot { display:flex; flex-direction:column; align-items:center; gap:.4rem; }
+    .step-dot .dot { width:36px; height:36px; border-radius:50%; border:2px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; color:var(--muted); transition:all .3s; position:relative; z-index:1; }
+    .step-dot.active .dot { border-color:var(--accent); background:var(--accent); color:#fff; box-shadow:0 0 16px var(--accent-glow); }
+    .step-dot.done .dot { border-color:var(--green); background:var(--green); color:#fff; }
+    .step-dot.done .dot::after { content:'\2713'; font-size:.85rem; }
+    .step-dot.done .dot span { display:none; }
+    .step-dot .label { font-size:.7rem; color:var(--muted); white-space:nowrap; }
+    .step-dot.active .label { color:var(--accent-light); }
+    .step-connector { width:60px; height:2px; background:var(--border); margin-bottom:1.4rem; transition:background .3s; }
+    .step-connector.done { background:var(--green); }
+    /* Panels */
+    .step-panel { display:none; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:2rem; }
+    .step-panel.active { display:block; }
+    .step-panel h2 { font-size:1.2rem; font-weight:600; margin-bottom:.4rem; }
+    .step-panel .step-desc { color:var(--muted); font-size:.875rem; margin-bottom:1.75rem; line-height:1.6; }
+    .step-panel .step-desc a { color:var(--accent-light); }
+    /* Fields */
+    .field { margin-bottom:1.25rem; }
+    .field label { display:block; font-size:.8rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:.4rem; }
+    .field input { width:100%; padding:.65rem .9rem; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:.95rem; font-family:inherit; transition:border-color .2s,box-shadow .2s; outline:none; }
+    .field input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-glow); }
+    .field input.valid { border-color:var(--green); }
+    .field input.invalid { border-color:var(--red); }
+    .field-hint { font-size:.78rem; color:var(--muted); margin-top:.35rem; }
+    .field-hint a { color:var(--accent-light); }
+    .validate-row { display:flex; align-items:center; gap:.75rem; margin-top:1rem; }
+    .validate-badge { display:inline-flex; align-items:center; gap:.4rem; font-size:.8rem; padding:.3rem .75rem; border-radius:999px; border:1px solid var(--border); color:var(--muted); }
+    .validate-badge.ok { border-color:var(--green); color:var(--green); }
+    .validate-badge.fail { border-color:var(--red); color:var(--red); }
+    /* Package grid */
+    .packages-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:.75rem; margin-bottom:.5rem; }
+    .pkg-card { border:1px solid var(--border); border-radius:10px; padding:.9rem 1rem; cursor:pointer; transition:border-color .2s,background .2s; user-select:none; }
+    .pkg-card:hover { border-color:var(--accent); }
+    .pkg-card.selected { border-color:var(--accent); background:rgba(124,58,237,.1); }
+    .pkg-card .pkg-icon { font-size:1.3rem; margin-bottom:.3rem; }
+    .pkg-card .pkg-name { font-size:.9rem; font-weight:600; margin-bottom:.2rem; }
+    .pkg-card .pkg-desc { font-size:.75rem; color:var(--muted); line-height:1.4; }
+    .pkg-card input[type=checkbox] { display:none; }
+    /* Channel mapper */
+    .mapper-table { width:100%; border-collapse:collapse; }
+    .mapper-table tr td { padding:.5rem 0; font-size:.875rem; vertical-align:middle; }
+    .mapper-table tr td:first-child { color:var(--muted); width:40%; padding-right:1rem; }
+    .mapper-table input { width:100%; padding:.5rem .75rem; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:.875rem; font-family:inherit; outline:none; }
+    .mapper-table input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-glow); }
+    .row-hint { font-size:.7rem; color:var(--muted); padding-top:.15rem; }
+    /* Deploy log */
+    #deploy-log { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:1rem; font-family:'Consolas','Courier New',monospace; font-size:.8rem; line-height:1.7; color:var(--text); min-height:140px; max-height:300px; overflow-y:auto; white-space:pre-wrap; word-break:break-word; margin-top:1rem; }
+    .log-ok { color:var(--green); } .log-warn { color:var(--yellow); } .log-err { color:var(--red); } .log-info { color:var(--accent-light); }
+    /* Done screen */
+    .done-screen { text-align:center; padding:1rem 0; }
+    .done-icon { font-size:3.5rem; margin-bottom:1rem; display:block; }
+    .done-screen h2 { font-size:1.5rem; font-weight:700; color:var(--green); margin-bottom:.5rem; }
+    .done-screen p { color:var(--muted); font-size:.9rem; margin-bottom:1.5rem; line-height:1.6; }
+    .done-links { display:flex; justify-content:center; gap:.75rem; flex-wrap:wrap; }
+    /* Buttons */
+    .btn { display:inline-flex; align-items:center; gap:.4rem; padding:.65rem 1.4rem; border-radius:8px; font-size:.9rem; font-weight:600; cursor:pointer; border:none; transition:opacity .2s,box-shadow .2s; text-decoration:none; font-family:inherit; }
+    .btn:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover:not(:disabled) { box-shadow:0 0 16px var(--accent-glow); }
+    .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+    .btn-secondary:hover:not(:disabled) { border-color:var(--accent); }
+    .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--border); }
+    .btn-ghost:hover { color:var(--text); }
+    .step-nav { display:flex; justify-content:space-between; align-items:center; margin-top:2rem; }
+    .step-nav.end { justify-content:flex-end; }
+    /* Alerts */
+    .alert { padding:.75rem 1rem; border-radius:8px; font-size:.85rem; margin-bottom:1rem; display:none; }
+    .alert.show { display:block; }
+    .alert-warn { background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3); color:var(--yellow); }
+    .alert-error { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:var(--red); }
+    .alert-ok { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3); color:var(--green); }
+    .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @media(max-width:600px) { .step-connector{width:28px;} .step-dot .label{display:none;} main{padding:2rem 1rem 4rem;} }
+  </style>
 </head>
 <body>
-
-<div class="card">
-  <div class="logo">
-    <div class="logo-icon">🎨</div>
-    <div>
-      <h1>Discord Icon Gen</h1>
-      <p>Setup Wizard — takes about 2 minutes</p>
-    </div>
+<nav>
+  <a href="/" class="nav-brand">✦ Sigil</a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/status">Status</a>
+    <a href="/developers">Docs</a>
+  </div>
+</nav>
+<main>
+  <div class="wizard-header">
+    <h1>Setup Wizard</h1>
+    <p>Get your Sigil instance running in five steps. No terminal required for basic setup.</p>
   </div>
 
-  <!-- Step indicators (6 steps now) -->
-  <div class="steps">
-    <div class="step active" id="si-1"><div class="step-num">1</div><div class="step-label">Token</div></div>
-    <div class="step" id="si-2"><div class="step-num">2</div><div class="step-label">App ID</div></div>
-    <div class="step" id="si-3"><div class="step-num">3</div><div class="step-label">Server</div></div>
-    <div class="step" id="si-4"><div class="step-num">4</div><div class="step-label">Mode</div></div>
-    <div class="step" id="si-5"><div class="step-num">5</div><div class="step-label">Fonts</div></div>
-    <div class="step" id="si-6"><div class="step-num">✓</div><div class="step-label">Done</div></div>
+  <!-- Progress bar -->
+  <div class="progress-bar">
+    <div class="step-dot active" data-step="1"><div class="dot"><span>1</span></div><div class="label">Credentials</div></div>
+    <div class="step-connector" data-connector="1"></div>
+    <div class="step-dot" data-step="2"><div class="dot"><span>2</span></div><div class="label">Features</div></div>
+    <div class="step-connector" data-connector="2"></div>
+    <div class="step-dot" data-step="3"><div class="dot"><span>3</span></div><div class="label">Channels</div></div>
+    <div class="step-connector" data-connector="3"></div>
+    <div class="step-dot" data-step="4"><div class="dot"><span>4</span></div><div class="label">Deploy</div></div>
+    <div class="step-connector" data-connector="4"></div>
+    <div class="step-dot" data-step="5"><div class="dot"><span>5</span></div><div class="label">Done</div></div>
   </div>
 
-  <!-- Panel 1: Token -->
-  <div class="panel active" id="p1">
-    <h2>Step 1 — Bot Token</h2>
-    <p class="subtitle">Your bot token is a secret password that lets the code control your bot.</p>
-    <div class="info-box">
-      <strong>How to get your token:</strong>
-      <ol>
-        <li>Go to <a href="https://discord.com/developers/applications" target="_blank">discord.com/developers/applications</a></li>
-        <li>Click your app (or <strong>New Application</strong> if you haven't made one)</li>
-        <li>Click <strong>Bot</strong> in the left sidebar</li>
-        <li>Click <strong>Reset Token</strong> → copy the long string that appears</li>
-      </ol>
+  <!-- Step 1: Credentials -->
+  <div class="step-panel active" id="step-1">
+    <h2>Bot Credentials</h2>
+    <p class="step-desc">Enter your bot token and application ID from the <a href="https://discord.com/developers/applications" target="_blank">Discord Developer Portal</a>. These are validated before you continue.</p>
+    <div class="alert alert-error" id="cred-alert"></div>
+    <div class="field">
+      <label>Discord Bot Token</label>
+      <input type="password" id="token-input" placeholder="Paste your bot token here" autocomplete="off" />
+      <div class="field-hint">Bot &rarr; Token in the Developer Portal. Never share this.</div>
     </div>
     <div class="field">
-      <label>Bot Token</label>
-      <div class="input-wrap">
-        <input type="password" id="token" placeholder="Paste your token here…" autocomplete="off">
-        <button class="eye-btn" onclick="toggleEye('token', this)" type="button">👁</button>
-      </div>
-      <div class="field-hint">Keep this secret — never share it publicly.</div>
-      <div class="field-err" id="err-token">Token looks too short. Double-check you copied the full string.</div>
+      <label>Application / Client ID</label>
+      <input type="text" id="client-id-input" placeholder="e.g. 1234567890123456789" autocomplete="off" />
+      <div class="field-hint">General Information &rarr; Application ID.</div>
     </div>
-    <div class="btn-row">
-      <button class="btn-primary" onclick="goTo(2)">Next →</button>
+    <div class="validate-row">
+      <button class="btn btn-secondary" id="validate-btn" onclick="validateCredentials()">Validate Token</button>
+      <div class="validate-badge" id="validate-badge">Not validated</div>
     </div>
-  </div>
-
-  <!-- Panel 2: Client ID -->
-  <div class="panel" id="p2">
-    <h2>Step 2 — Application (Client) ID</h2>
-    <p class="subtitle">This is your bot's unique ID number — different from the token.</p>
-    <div class="info-box">
-      <strong>How to find it:</strong>
-      <ol>
-        <li>On the <a href="https://discord.com/developers/applications" target="_blank">Developer Portal</a>, click your app</li>
-        <li>Click <strong>General Information</strong> in the left sidebar</li>
-        <li>Copy the <strong>Application ID</strong> — it's a long number</li>
-      </ol>
-    </div>
-    <div class="field">
-      <label>Client ID</label>
-      <input type="text" id="clientid" placeholder="e.g. 1234567890123456789" autocomplete="off">
-      <div class="field-hint">Numbers only — usually 17–19 digits long.</div>
-      <div class="field-err" id="err-clientid">Client ID should be a long number. Check you copied it correctly.</div>
-    </div>
-    <div class="btn-row">
-      <button class="btn-back" onclick="goTo(1)">← Back</button>
-      <button class="btn-primary" onclick="goTo(3)">Next →</button>
+    <div class="step-nav end">
+      <button class="btn btn-primary" id="step1-next" onclick="goStep(2)" disabled>Next &rarr;</button>
     </div>
   </div>
 
-  <!-- Panel 3: Guild ID -->
-  <div class="panel" id="p3">
-    <h2>Step 3 — Server (Guild) ID</h2>
-    <p class="subtitle" id="guild-subtitle">This tells the bot which Discord server to register its slash commands on.</p>
-    <div class="info-box" id="guild-howto">
-      <strong>How to find it:</strong>
-      <ol>
-        <li>In Discord, open <strong>User Settings → Advanced</strong> and turn on <strong>Developer Mode</strong></li>
-        <li>Right-click your server name in the left sidebar</li>
-        <li>Click <strong>Copy Server ID</strong></li>
-      </ol>
+  <!-- Step 2: Packages -->
+  <div class="step-panel" id="step-2">
+    <h2>Feature Packages</h2>
+    <p class="step-desc">Select the feature groups you want active. You can change this any time from the <a href="/packages">Packages</a> page.</p>
+    <div class="packages-grid">
+      <label class="pkg-card selected" data-pkg="brand"><input type="checkbox" checked /><div class="pkg-icon">🎨</div><div class="pkg-name">Brand &amp; Identity</div><div class="pkg-desc">Icons, banners, palette cards, AI brand generation</div></label>
+      <label class="pkg-card selected" data-pkg="moderation"><input type="checkbox" checked /><div class="pkg-icon">🛡️</div><div class="pkg-name">Moderation</div><div class="pkg-desc">Automod, ban, kick, warn, case logging, tickets</div></label>
+      <label class="pkg-card selected" data-pkg="community"><input type="checkbox" checked /><div class="pkg-icon">🎉</div><div class="pkg-name">Community</div><div class="pkg-desc">Welcome, reaction roles, giveaways, polls, starboard</div></label>
+      <label class="pkg-card selected" data-pkg="xp"><input type="checkbox" checked /><div class="pkg-icon">⭐</div><div class="pkg-name">XP &amp; Levels</div><div class="pkg-desc">XP economy, rank cards, leaderboards, level roles</div></label>
+      <label class="pkg-card selected" data-pkg="scheduler"><input type="checkbox" checked /><div class="pkg-icon">📅</div><div class="pkg-name">Scheduler &amp; Staff</div><div class="pkg-desc">Shifts, callouts, scheduled posts, reminders</div></label>
+      <label class="pkg-card" data-pkg="integrations"><input type="checkbox" /><div class="pkg-icon">🔗</div><div class="pkg-name">Integrations</div><div class="pkg-desc">YouTube alerts, Twitch notifications, custom commands</div></label>
+      <label class="pkg-card" data-pkg="faith"><input type="checkbox" /><div class="pkg-icon">⛪</div><div class="pkg-name">Faith &amp; Devotional</div><div class="pkg-desc">Bible verses, devotionals, sermons, prayer, certificates</div></label>
+      <label class="pkg-card" data-pkg="culinaryos"><input type="checkbox" /><div class="pkg-icon">🍳</div><div class="pkg-name">CulinaryOS Bridge</div><div class="pkg-desc">Menu, recipe, inventory (requires CulinaryOS API)</div></label>
     </div>
-    <div class="warn-box" id="guild-skip-note" style="display:none">
-      <strong>⚠️ You chose Global mode</strong> — a Guild ID is optional. You can leave this blank and commands will register globally (takes up to 1 hour). If you also want instant guild-mode testing later, enter your server ID here.
-    </div>
-    <div class="field">
-      <label>Guild / Server ID <span id="guild-optional" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);display:none">(optional for Global mode)</span></label>
-      <input type="text" id="guildid" placeholder="e.g. 9876543210987654321" autocomplete="off">
-      <div class="field-hint">Numbers only — same length as the Client ID.</div>
-      <div class="field-err" id="err-guildid">Guild ID should be a long number. Check you copied it correctly.</div>
-    </div>
-    <div class="btn-row">
-      <button class="btn-back" onclick="goTo(2)">← Back</button>
-      <button class="btn-primary" onclick="goTo(4)">Next →</button>
+    <div class="step-nav">
+      <button class="btn btn-ghost" onclick="goStep(1)">&larr; Back</button>
+      <button class="btn btn-primary" onclick="goStep(3)">Next &rarr;</button>
     </div>
   </div>
 
-  <!-- Panel 4: Deploy Mode -->
-  <div class="panel" id="p4">
-    <h2>Step 4 — Deploy Mode</h2>
-    <p class="subtitle">Choose how commands get registered in Discord. You can change this later by editing the <code>.env</code> file.</p>
-
-    <div class="mode-cards">
-      <label class="mode-card selected" id="card-guild" onclick="selectMode('guild')">
-        <input type="radio" name="deploymode" value="guild" checked>
-        <div class="mode-card-title">Guild (Server) <span class="mode-tag tag-rec">Recommended</span></div>
-        <div class="mode-card-desc">Commands appear instantly on <strong>your server only</strong>. Perfect for personal use or testing. Requires a Server ID in Step 3.</div>
-      </label>
-      <label class="mode-card" id="card-global" onclick="selectMode('global')">
-        <input type="radio" name="deploymode" value="global">
-        <div class="mode-card-title">Global <span class="mode-tag tag-prod">Production</span></div>
-        <div class="mode-card-desc">Commands appear on <strong>every server</strong> the bot is in. Takes up to 1 hour to propagate. Use this when you're ready to go live.</div>
-      </label>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn-back" onclick="goTo(3)">← Back</button>
-      <button class="btn-primary" onclick="goTo(5)">Next →</button>
+  <!-- Step 3: Channels & Roles -->
+  <div class="step-panel" id="step-3">
+    <h2>Channels &amp; Roles</h2>
+    <p class="step-desc">Paste the channel or role ID for each feature. In Discord: Settings &rarr; Advanced &rarr; enable Developer Mode, then right-click any channel or role to Copy ID. All fields are optional.</p>
+    <table class="mapper-table">
+      <tbody>
+        <tr><td>Welcome Channel<div class="row-hint">Where join messages post</div></td><td><input type="text" id="ch-welcome" placeholder="Channel ID" /></td></tr>
+        <tr><td>Mod Log Channel<div class="row-hint">Where mod actions log</div></td><td><input type="text" id="ch-modlog" placeholder="Channel ID" /></td></tr>
+        <tr><td>Announcements<div class="row-hint">For scheduled posts and alerts</div></td><td><input type="text" id="ch-announce" placeholder="Channel ID" /></td></tr>
+        <tr><td>Starboard Channel<div class="row-hint">Where starred messages post</div></td><td><input type="text" id="ch-starboard" placeholder="Channel ID" /></td></tr>
+        <tr><td>Auto Role<div class="row-hint">Assigned to new members</div></td><td><input type="text" id="role-auto" placeholder="Role ID" /></td></tr>
+        <tr><td>Mod Role<div class="row-hint">Bypasses automod rules</div></td><td><input type="text" id="role-mod" placeholder="Role ID" /></td></tr>
+      </tbody>
+    </table>
+    <div class="step-nav">
+      <button class="btn btn-ghost" onclick="goStep(2)">&larr; Back</button>
+      <button class="btn btn-primary" onclick="saveChannelsAndContinue()">Save &amp; Continue &rarr;</button>
     </div>
   </div>
 
-  <!-- Panel 5: Font Installation -->
-  <div class="panel" id="p5">
-    <h2>Step 5 — Install Fonts</h2>
-    <p class="subtitle">The bot ships with 1 built-in font. The other 5 are free &amp; open-source — they just need a one-time download. Pick your operating system below.</p>
-
-    <div class="warn-box">
-      <strong>⚠️ Do this BEFORE starting the bot</strong> — fonts are only loaded at startup. If you install them later, restart the bot.
+  <!-- Step 4: Deploy Commands -->
+  <div class="step-panel" id="step-4">
+    <h2>Register Slash Commands</h2>
+    <p class="step-desc">This registers all slash commands with Discord. Takes about 10&ndash;30 seconds. Commands appear in your server within a minute after completion.</p>
+    <div class="alert alert-warn show" id="deploy-alert">⚠️ Requires <code>CONTROL_SECRET</code> to be set in your environment. If you're on Railway, add it as an env var and redeploy first.</div>
+    <div class="field" style="margin-top:1rem">
+      <label>Control Secret</label>
+      <input type="password" id="control-secret-input" placeholder="Your CONTROL_SECRET value" autocomplete="off" />
+      <div class="field-hint">Set in <code>.env</code> or your Railway environment variables.</div>
     </div>
-
-    <div class="os-tabs">
-      <button class="os-tab active" onclick="switchOS('win', this)">🪟 Windows</button>
-      <button class="os-tab" onclick="switchOS('mac', this)">🍎 Mac</button>
-      <button class="os-tab" onclick="switchOS('linux', this)">🐧 Linux</button>
-    </div>
-
-    <!-- Windows -->
-    <div class="os-panel active" id="os-win">
-      <div class="info-box" style="margin-bottom:12px">
-        <strong>How to open a terminal on Windows:</strong><br>
-        Press <strong>Windows key + R</strong>, type <code>cmd</code>, press <strong>Enter</strong>.
-      </div>
-      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:8px">Copy &amp; paste the whole block below into the terminal window, then press Enter:</p>
-      <div class="code-block">cd %USERPROFILE%\Discord-Icon-Gen\src\fonts
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf" -o BebasNeue-Regular.ttf
-curl -fsSL "https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Bold.ttf" -o Oswald-Bold.ttf
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/playfairdisplay/PlayfairDisplay%%5Bwght%%5D.ttf" -o PlayfairDisplay-Bold.ttf
-curl -fsSL "https://github.com/adobe-fonts/source-code-pro/raw/release/TTF/SourceCodePro-Bold.ttf" -o SourceCodePro-Bold.ttf
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/dancingscript/DancingScript%%5Bwght%%5D.ttf" -o DancingScript-Bold.ttf</div>
-      <div class="field-hint" style="margin-bottom:0">If the first line errors, the repo may be in a different location. Replace <code>%USERPROFILE%\Discord-Icon-Gen</code> with the full path to your folder, e.g. <code>%USERPROFILE%\Desktop\Discord-Icon-Gen</code>.</div>
-    </div>
-
-    <!-- Mac -->
-    <div class="os-panel" id="os-mac">
-      <div class="info-box" style="margin-bottom:12px">
-        <strong>How to open a terminal on Mac:</strong><br>
-        Open <strong>Finder</strong> → go to your <strong>Discord-Icon-Gen</strong> folder → right-click it → <strong>New Terminal at Folder</strong>.
-      </div>
-      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:8px">Copy &amp; paste the whole block below, then press Enter:</p>
-      <div class="code-block">cd src/fonts
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf" -o BebasNeue-Regular.ttf
-curl -fsSL "https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Bold.ttf" -o Oswald-Bold.ttf
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf" -o PlayfairDisplay-Bold.ttf
-curl -fsSL "https://github.com/adobe-fonts/source-code-pro/raw/release/TTF/SourceCodePro-Bold.ttf" -o SourceCodePro-Bold.ttf
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/dancingscript/DancingScript%5Bwght%5D.ttf" -o DancingScript-Bold.ttf</div>
-    </div>
-
-    <!-- Linux -->
-    <div class="os-panel" id="os-linux">
-      <p style="font-size:0.83rem;color:var(--muted);margin-bottom:8px">Run from inside your <code>Discord-Icon-Gen</code> folder:</p>
-      <div class="code-block">cd src/fonts
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/bebasneue/BebasNeue-Regular.ttf" -o BebasNeue-Regular.ttf
-curl -fsSL "https://github.com/googlefonts/OswaldFont/raw/main/fonts/ttf/Oswald-Bold.ttf" -o Oswald-Bold.ttf
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf" -o PlayfairDisplay-Bold.ttf
-curl -fsSL "https://github.com/adobe-fonts/source-code-pro/raw/release/TTF/SourceCodePro-Bold.ttf" -o SourceCodePro-Bold.ttf
-curl -fsSL "https://github.com/google/fonts/raw/main/ofl/dancingscript/DancingScript%5Bwght%5D.ttf" -o DancingScript-Bold.ttf</div>
-    </div>
-
-    <div class="success-box" style="margin-top:14px">
-      <strong>✅ How to check it worked:</strong><br>
-      Open the <code>Discord-Icon-Gen/src/fonts/</code> folder. You should see 5 <code>.ttf</code> files, each larger than 50 KB. If any file is tiny (&lt;5 KB), delete it and run that one <code>curl</code> line again.
-    </div>
-
-    <div class="btn-row">
-      <button class="btn-back" onclick="goTo(4)">← Back</button>
-      <button class="btn-primary" onclick="generate()">Generate .env &amp; finish ✓</button>
-    </div>
-  </div>
-
-  <!-- Panel 6: Done -->
-  <div class="panel" id="p6">
-    <div class="done-icon">🎉</div>
-    <div class="done-title">Your .env file has been downloaded!</div>
-    <div class="done-sub">Move it into your <strong>Discord-Icon-Gen</strong> folder, then follow the checklist below.</div>
-
-    <!-- Auto-generated invite link -->
-    <div class="invite-row" id="invite-row">
-      <strong>🔗 Bot invite link (auto-generated)</strong>
-      <a href="#" id="invite-link" target="_blank">Loading…</a>
-      <div style="font-size:0.77rem;color:var(--muted);margin-top:6px">Open this link in your browser to add the bot to your server. You must be a server admin to do this.</div>
-    </div>
-
-    <ul class="checklist">
-      <li><span class="check">✅</span><div>Move the <strong>.env</strong> file into the <strong>Discord-Icon-Gen</strong> folder</div></li>
-      <li><span class="check">🔤</span><div>Confirm you ran the font install commands in Step 5 — if not, go back and do them now before starting the bot</div></li>
-      <li><span class="check">▶️</span><div>Start the bot:</div></li>
-    </ul>
-
-    <div class="code-block">cd Discord-Icon-Gen
-npm install
-node src/index.js</div>
-
-    <ul class="checklist">
-      <li><span class="check">💬</span><div>In Discord, type <strong>/help</strong> to see all commands or <strong>/preview</strong> to browse backgrounds</div></li>
-    </ul>
-
-    <div style="font-size:0.8rem;color:var(--muted);margin-top:8px;line-height:1.6">
-      You should see <code style="color:#a9dc76">✅ Logged in as YourBotName#1234</code> in the terminal when it's working.
-    </div>
-
-    <div class="btn-row" style="margin-top:24px">
-      <button class="btn-success" onclick="downloadAgain()">⬇ Download .env again</button>
-    </div>
-    <div class="btn-row" style="margin-top:10px">
-      <button class="btn-back" onclick="goTo(1)" style="width:100%">Start over</button>
-    </div>
-  </div>
-
+    <div id="deploy-log">Waiting to deploy&hellip;
 </div>
+    <div class="step-nav">
+      <button class="btn btn-ghost" onclick="goStep(3)">&larr; Back</button>
+      <button class="btn btn-primary" id="deploy-btn" onclick="runDeploy()">🚀 Deploy Commands</button>
+    </div>
+  </div>
 
-<footer>
-  Discord Icon Gen &mdash; Setup Wizard &bull;
-  <a href="https://github.com/ShadowWalkerNC/Discord-Icon-Gen" target="_blank">View on GitHub</a>
-</footer>
+  <!-- Step 5: Done -->
+  <div class="step-panel" id="step-5">
+    <div class="done-screen">
+      <span class="done-icon">✦</span>
+      <h2>You're all set.</h2>
+      <p>Sigil is configured and your slash commands are registered.<br>Invite the bot to your server and you're ready to go.</p>
+      <div class="done-links">
+        <a href="/" class="btn btn-secondary">Home</a>
+        <a href="/status" class="btn btn-secondary">🟢 Status</a>
+        <a href="/brand" class="btn btn-secondary">🎨 Brand Builder</a>
+        <a href="#" class="btn btn-primary" id="invite-link">Invite Bot to Server</a>
+      </div>
+    </div>
+  </div>
+</main>
 
 <script>
   let currentStep = 1;
-  const TOTAL = 6;
-  let deployMode = 'guild';
+  const state = { token: '', clientId: '', packages: [], channels: {} };
 
-  function toggleEye(id, btn) {
-    const inp = document.getElementById(id);
-    const isPass = inp.type === 'password';
-    inp.type = isPass ? 'text' : 'password';
-    btn.textContent = isPass ? '\ud83d\ude48' : '\ud83d\udc41';
-  }
-
-  function switchOS(os, btn) {
-    ['win','mac','linux'].forEach(k => {
-      document.getElementById('os-' + k).classList.toggle('active', k === os);
+  function goStep(n) {
+    if (n < 1 || n > 5) return;
+    document.querySelectorAll('.step-dot').forEach(d => {
+      const s = parseInt(d.dataset.step);
+      d.classList.remove('active', 'done');
+      if (s < n) {
+        d.classList.add('done');
+        const c = document.querySelector(`[data-connector="${s}"]`);
+        if (c) c.classList.add('done');
+      } else if (s === n) {
+        d.classList.add('active');
+      }
     });
-    document.querySelectorAll('.os-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-  }
-
-  function selectMode(mode) {
-    deployMode = mode;
-    document.getElementById('card-guild').classList.toggle('selected', mode === 'guild');
-    document.getElementById('card-global').classList.toggle('selected', mode === 'global');
-    document.querySelector('[value="guild"]').checked = mode === 'guild';
-    document.querySelector('[value="global"]').checked = mode === 'global';
-    updateGuildPanel();
-  }
-
-  function updateGuildPanel() {
-    const isGlobal = deployMode === 'global';
-    document.getElementById('guild-skip-note').style.display = isGlobal ? 'block' : 'none';
-    document.getElementById('guild-howto').style.display     = isGlobal ? 'none'  : 'block';
-    document.getElementById('guild-optional').style.display  = isGlobal ? 'inline' : 'none';
-    document.getElementById('guild-subtitle').textContent = isGlobal
-      ? 'In Global mode, a Server ID is optional but useful for local testing.'
-      : 'This tells the bot which Discord server to register its slash commands on.';
-  }
-
-  function setStep(n) {
-    for (let i = 1; i <= TOTAL; i++) {
-      const si = document.getElementById('si-' + i);
-      const p  = document.getElementById('p'  + i);
-      si.className = 'step' + (i === n ? ' active' : i < n ? ' done' : '');
-      p.className  = 'panel' + (i === n ? ' active' : '');
-    }
-    if (n > 3 && deployMode === 'global' && !document.getElementById('guildid').value.trim()) {
-      document.getElementById('si-3').className = 'step skip';
-    }
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(`step-${n}`).classList.add('active');
     currentStep = n;
-  }
-
-  function validate(step) {
-    if (step === 1) {
-      const v = document.getElementById('token').value.trim();
-      const err = document.getElementById('err-token');
-      if (v.length < 50) {
-        document.getElementById('token').classList.add('error');
-        err.style.display = 'block'; return false;
-      }
-      document.getElementById('token').classList.remove('error');
-      document.getElementById('token').classList.add('ok');
-      err.style.display = 'none';
-    }
-    if (step === 2) {
-      const v = document.getElementById('clientid').value.trim();
-      const err = document.getElementById('err-clientid');
-      if (!/^\d{17,20}$/.test(v)) {
-        document.getElementById('clientid').classList.add('error');
-        err.style.display = 'block'; return false;
-      }
-      document.getElementById('clientid').classList.remove('error');
-      document.getElementById('clientid').classList.add('ok');
-      err.style.display = 'none';
-    }
-    if (step === 3) {
-      const v   = document.getElementById('guildid').value.trim();
-      const err = document.getElementById('err-guildid');
-      if (v === '' && deployMode === 'global') return true;
-      if (!/^\d{17,20}$/.test(v)) {
-        document.getElementById('guildid').classList.add('error');
-        err.style.display = 'block'; return false;
-      }
-      document.getElementById('guildid').classList.remove('error');
-      document.getElementById('guildid').classList.add('ok');
-      err.style.display = 'none';
-    }
-    return true;
-  }
-
-  function goTo(n) {
-    if (n > currentStep && !validate(currentStep)) return;
-    if (n === 3) updateGuildPanel();
-    setStep(n);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function buildEnv() {
-    const token = document.getElementById('token').value.trim();
-    const cid   = document.getElementById('clientid').value.trim();
-    const gid   = document.getElementById('guildid').value.trim();
-    const lines = [
-      '# Discord Bot Token (from https://discord.com/developers/applications)',
-      `TOKEN=${token}`,
-      '',
-      '# Your Discord Application Client ID',
-      `CLIENT_ID=${cid}`,
-      '',
-    ];
-    if (gid) {
-      lines.push('# The Guild (Server) ID');
-      lines.push(`GUILD_ID=${gid}`);
-      lines.push('');
+  async function validateCredentials() {
+    const token    = document.getElementById('token-input').value.trim();
+    const clientId = document.getElementById('client-id-input').value.trim();
+    const badge    = document.getElementById('validate-badge');
+    const btn      = document.getElementById('validate-btn');
+    const alertEl  = document.getElementById('cred-alert');
+    if (!token || !clientId) { showAlert(alertEl, 'Enter both a token and a client ID.', 'error'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Validating&hellip;';
+    badge.className = 'validate-badge';
+    badge.textContent = 'Checking…';
+    try {
+      const res  = await fetch('/api/setup/validate-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, clientId })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        badge.className = 'validate-badge ok';
+        badge.textContent = `✓ Valid — ${data.tag}`;
+        document.getElementById('step1-next').disabled = false;
+        document.getElementById('token-input').classList.add('valid');
+        state.token = token;
+        state.clientId = clientId;
+        hideAlert(alertEl);
+        buildInviteLink(clientId);
+      } else {
+        badge.className = 'validate-badge fail';
+        badge.textContent = '\u2717 Invalid';
+        document.getElementById('token-input').classList.remove('valid');
+        document.getElementById('token-input').classList.add('invalid');
+        showAlert(alertEl, data.error || 'Token validation failed.', 'error');
+      }
+    } catch {
+      badge.className = 'validate-badge fail';
+      badge.textContent = '\u2717 Network error';
+      showAlert(alertEl, 'Could not reach the server.', 'error');
     }
-    lines.push('# Command deployment mode: guild | global');
-    lines.push(`DEPLOY_MODE=${deployMode}`);
-    lines.push('');
-    return lines.join('\n');
+    btn.disabled = false;
+    btn.textContent = 'Validate Token';
   }
 
-  function downloadEnv(content) {
-    const blob = new Blob([content], { type: 'text/plain' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = '.env';
-    a.click();
-    URL.revokeObjectURL(a.href);
+  document.querySelectorAll('.pkg-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const cb = card.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      card.classList.toggle('selected', cb.checked);
+    });
+  });
+
+  async function saveChannelsAndContinue() {
+    state.packages = [...document.querySelectorAll('.pkg-card.selected')].map(c => c.dataset.pkg);
+    state.channels = {
+      welcome:   document.getElementById('ch-welcome').value.trim(),
+      modlog:    document.getElementById('ch-modlog').value.trim(),
+      announce:  document.getElementById('ch-announce').value.trim(),
+      starboard: document.getElementById('ch-starboard').value.trim(),
+      autorole:  document.getElementById('role-auto').value.trim(),
+      modrole:   document.getElementById('role-mod').value.trim(),
+    };
+    try {
+      await fetch('/api/setup/save-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ packages: state.packages, channels: state.channels }),
+      });
+    } catch (_) {}
+    goStep(4);
   }
 
-  function buildInviteUrl() {
-    const cid = document.getElementById('clientid').value.trim();
-    if (!cid) return null;
-    const perms = 2147518464;
-    return `https://discord.com/oauth2/authorize?client_id=${cid}&scope=bot%20applications.commands&permissions=${perms}`;
-  }
-
-  function generate() {
-    downloadEnv(buildEnv());
-
-    const inviteUrl  = buildInviteUrl();
-    const inviteRow  = document.getElementById('invite-row');
-    const inviteLink = document.getElementById('invite-link');
-    if (inviteUrl) {
-      inviteRow.style.display = 'block';
-      inviteLink.href = inviteUrl;
-      inviteLink.textContent = inviteUrl;
+  async function runDeploy() {
+    const secret  = document.getElementById('control-secret-input').value.trim();
+    const log     = document.getElementById('deploy-log');
+    const btn     = document.getElementById('deploy-btn');
+    const alertEl = document.getElementById('deploy-alert');
+    if (!secret) { alertEl.classList.add('show'); return; }
+    alertEl.classList.remove('show');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Deploying&hellip;';
+    log.textContent = '';
+    appendLog(log, 'info', '\u25b8 Connecting to deploy endpoint…');
+    try {
+      const res = await fetch('/api/control/deploy-commands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-control-secret': secret },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        appendLog(log, 'err', `\u2717 ${d.error || `HTTP ${res.status}`}`);
+        btn.disabled = false;
+        btn.textContent = '\ud83d\ude80 Deploy Commands';
+        return;
+      }
+      const reader  = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          decoder.decode(value).split('\n').filter(Boolean).forEach(line => {
+            try { const m = JSON.parse(line); appendLog(log, m.level || 'info', m.text); }
+            catch { appendLog(log, 'info', line); }
+          });
+        }
+      } else {
+        const d = await res.json();
+        if (d.ok) appendLog(log, 'ok', `\u2713 Registered ${d.count} commands.`);
+        else appendLog(log, 'err', `\u2717 ${d.error}`);
+      }
+      appendLog(log, 'ok', '\u2713 Done. Commands are live.');
+      setTimeout(() => goStep(5), 1400);
+    } catch (e) {
+      appendLog(log, 'err', `\u2717 ${e.message}`);
+      btn.disabled = false;
+      btn.textContent = '\ud83d\ude80 Deploy Commands';
     }
-
-    setStep(6);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function downloadAgain() {
-    downloadEnv(buildEnv());
+  function appendLog(el, level, text) {
+    const span = document.createElement('span');
+    span.className = `log-${level}`;
+    span.textContent = text + '\n';
+    el.appendChild(span);
+    el.scrollTop = el.scrollHeight;
   }
 
-  // Enter key advances steps
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && currentStep < 5) goTo(currentStep + 1);
-    if (e.key === 'Enter' && currentStep === 5) generate();
+  function buildInviteLink(id) {
+    const link = document.getElementById('invite-link');
+    if (link && id) link.href = `https://discord.com/oauth2/authorize?client_id=${id}&permissions=8&scope=bot+applications.commands`;
+  }
+
+  function showAlert(el, msg, type) { el.textContent = msg; el.className = `alert alert-${type} show`; }
+  function hideAlert(el) { el.classList.remove('show'); }
+
+  ['token-input', 'client-id-input'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keydown', e => { if (e.key === 'Enter') validateCredentials(); });
   });
 </script>
 </body>
