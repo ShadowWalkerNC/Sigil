@@ -2,9 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discor
 const { createCanvas, loadImage } = require('canvas');
 const JSZip = require('jszip');
 const { registerAllFonts, getAllFontFamilies } = require('../utils/canvas.js');
-const { getBackgroundById } = require('../utils/backgrounds.js');
 const { saveEntry } = require('../utils/history.js');
 const { dispatchAutocomplete, autocompleteColor } = require('../utils/autocomplete.js');
+const guard = require('../utils/packageGuard');
 
 registerAllFonts();
 
@@ -57,31 +57,24 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('reactionpack')
         .setDescription('Generate a themed set of 5 custom reaction emojis as a ZIP download')
-        .addStringOption(opt => opt.setName('emoji1').setDescription('First emoji or text (e.g. 👍 or GG)').setRequired(true))
+        .addStringOption(opt => opt.setName('emoji1').setDescription('First emoji or text').setRequired(true))
         .addStringOption(opt => opt.setName('emoji2').setDescription('Second emoji or text').setRequired(true))
         .addStringOption(opt => opt.setName('emoji3').setDescription('Third emoji or text').setRequired(true))
         .addStringOption(opt => opt.setName('emoji4').setDescription('Fourth emoji or text').setRequired(true))
         .addStringOption(opt => opt.setName('emoji5').setDescription('Fifth emoji or text').setRequired(true))
         .addStringOption(opt => opt.setName('theme').setDescription('Color theme').addChoices(...THEME_CHOICES))
-        .addStringOption(opt => opt.setName('primary_color').setDescription('Custom primary color (hex, only used with Custom theme)').setAutocomplete(true))
+        .addStringOption(opt => opt.setName('primary_color').setDescription('Custom primary color (hex)').setAutocomplete(true))
         .addStringOption(opt => opt.setName('font').setDescription('Font family').addChoices(...getAllFontFamilies().map(f => ({ name: f, value: f })))),
 
     async autocomplete(interaction) {
-        await dispatchAutocomplete(interaction, {
-            primary_color: autocompleteColor,
-        });
+        await dispatchAutocomplete(interaction, { primary_color: autocompleteColor });
     },
 
     async execute(interaction) {
+        if (await guard(interaction, 'nitrofree')) return;
         await interaction.deferReply();
 
-        const emojis = [
-            interaction.options.getString('emoji1'),
-            interaction.options.getString('emoji2'),
-            interaction.options.getString('emoji3'),
-            interaction.options.getString('emoji4'),
-            interaction.options.getString('emoji5'),
-        ];
+        const emojis = [1,2,3,4,5].map(n => interaction.options.getString(`emoji${n}`));
         const themeKey    = interaction.options.getString('theme')         ?? 'neon';
         const customColor = interaction.options.getString('primary_color') ?? null;
         const font        = interaction.options.getString('font')          ?? getAllFontFamilies()[0] ?? 'Arial';
@@ -92,11 +85,10 @@ module.exports = {
         const buffers = emojis.map(emoji => renderReaction({ emoji, ...theme, font }));
 
         const PREVIEW_W = 128 * 5 + 16 * 4;
-        const PREVIEW_H = 128;
-        const preview = createCanvas(PREVIEW_W, PREVIEW_H);
+        const preview = createCanvas(PREVIEW_W, 128);
         const pctx    = preview.getContext('2d');
         pctx.fillStyle = theme.bg;
-        pctx.fillRect(0, 0, PREVIEW_W, PREVIEW_H);
+        pctx.fillRect(0, 0, PREVIEW_W, 128);
         for (let i = 0; i < buffers.length; i++) {
             const img = await loadImage(buffers[i]);
             pctx.drawImage(img, i * (128 + 16), 0, 128, 128);
@@ -116,22 +108,15 @@ module.exports = {
 
         const embed = new EmbedBuilder()
             .setTitle('😄 Reaction Pack Ready')
-            .setDescription(
-                `**${emojis.join('  ')}** — themed pack generated!\n\n` +
-                '**To use:**\n' +
-                '1. Download the ZIP below\n' +
-                '2. Extract the PNG files\n' +
-                '3. Go to **Server Settings \u2192 Emoji** and upload each one\n' +
-                '4. All servers get free emoji slots — no Nitro needed'
-            )
+            .setDescription(`**${emojis.join('  ')}** — themed pack generated!\n\n**To use:** Download the ZIP, extract PNGs, upload in **Server Settings → Emoji**. No Nitro needed.`)
             .setImage('attachment://reactionpack-preview.png')
             .setColor(theme.primary)
             .addFields(
                 { name: 'Theme',  value: themeKey.charAt(0).toUpperCase() + themeKey.slice(1), inline: true },
-                { name: 'Count',  value: '5 emojis + preview',                                 inline: true },
-                { name: 'Format', value: 'PNG × 5 (zipped)',                                   inline: true },
+                { name: 'Count',  value: '5 emojis + preview', inline: true },
+                { name: 'Format', value: 'PNG × 5 (zipped)',   inline: true },
             )
-            .setFooter({ text: 'Sigil • reactionpack — upload to any server for free' });
+            .setFooter({ text: 'Sigil • reactionpack' });
 
         await interaction.editReply({ embeds: [embed], files: [previewAttachment, zipAttachment] });
         saveEntry(interaction.user.id, { command: 'reactionpack', emojis, theme: themeKey, font });

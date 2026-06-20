@@ -10,6 +10,7 @@ const {
     autocompleteStickerStyle,
 } = require('../utils/autocomplete.js');
 const { createCanvas } = require('canvas');
+const guard = require('../utils/packageGuard');
 
 registerAllFonts();
 
@@ -66,14 +67,15 @@ module.exports = {
     },
 
     async execute(interaction) {
+        if (await guard(interaction, 'nitrofree')) return;
         await interaction.deferReply();
 
-        const text      = interaction.options.getString('text');
-        const primary   = interaction.options.getString('primary_color')   ?? '#5865F2';
-        const secondary = interaction.options.getString('secondary_color') ?? '#ffffff';
-        const background= interaction.options.getString('background')      ?? null;
-        const font      = interaction.options.getString('font')            ?? getAllFontFamilies()[0];
-        const style     = interaction.options.getString('style')           ?? 'standard';
+        const text       = interaction.options.getString('text');
+        const primary    = interaction.options.getString('primary_color')   ?? '#5865F2';
+        const secondary  = interaction.options.getString('secondary_color') ?? '#ffffff';
+        const background = interaction.options.getString('background')      ?? null;
+        const font       = interaction.options.getString('font')            ?? getAllFontFamilies()[0];
+        const style      = interaction.options.getString('style')           ?? 'standard';
 
         const styleLabel = STICKER_STYLE_CHOICES.find(s => s.value === style)?.name ?? style;
 

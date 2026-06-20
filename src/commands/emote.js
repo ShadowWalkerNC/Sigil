@@ -3,6 +3,7 @@ const { registerAllFonts, getAllFontFamilies, renderIcon } = require('../utils/c
 const { getBackgroundChoices } = require('../utils/backgrounds.js');
 const { saveEntry } = require('../utils/history.js');
 const { getColorAutocomplete } = require('../utils/colors.js');
+const guard = require('../utils/packageGuard');
 
 registerAllFonts();
 
@@ -30,26 +31,24 @@ module.exports = {
     },
 
     async execute(interaction) {
+        if (await guard(interaction, 'nitrofree')) return;
         await interaction.deferReply();
 
         const text       = interaction.options.getString('text');
-        const shape      = interaction.options.getString('shape')          ?? 'square';
-        const background = interaction.options.getString('background')     ?? 'gradient-purple';
-        const primary    = interaction.options.getString('primary_color')  ?? '#ffffff';
+        const shape      = interaction.options.getString('shape')           ?? 'square';
+        const background = interaction.options.getString('background')      ?? 'gradient-purple';
+        const primary    = interaction.options.getString('primary_color')   ?? '#ffffff';
         const secondary  = interaction.options.getString('secondary_color') ?? '#aaaaaa';
-        const font       = interaction.options.getString('font')           ?? getAllFontFamilies()[0];
+        const font       = interaction.options.getString('font')            ?? getAllFontFamilies()[0];
 
         const buf = await renderIcon({ text, shape, background, border: 'none', primary, secondary, font, glow: 0, width: 128, height: 128 });
         const attachment = new AttachmentBuilder(buf, { name: 'emote.png' });
 
         const embed = new EmbedBuilder()
-            .setTitle('\uD83D\uDE04 Custom Emote Ready')
+            .setTitle('😄 Custom Emote Ready')
             .setDescription(
                 `Your **:${text.toLowerCase().replace(/\s+/g, '_')}:** emote is ready!\n\n` +
-                '**To use it:**\n' +
-                '1. Download the image below\n' +
-                '2. Go to **Server Settings \u2192 Emoji**\n' +
-                '3. Upload it \u2014 free slots available on every Discord server'
+                '**To use it:**\n1. Download the image below\n2. Go to **Server Settings → Emoji**\n3. Upload it — free slots available on every Discord server'
             )
             .setImage('attachment://emote.png')
             .setColor(primary)
@@ -58,13 +57,9 @@ module.exports = {
                 { name: 'Format', value: 'PNG', inline: true },
                 { name: 'Suggested name', value: `:${text.toLowerCase().replace(/\s+/g, '_')}:`, inline: true },
             )
-            .setFooter({ text: 'Sigil \u2022 emote \u2014 all servers get free emoji slots, no Nitro required' });
+            .setFooter({ text: 'Sigil • emote — all servers get free emoji slots, no Nitro required' });
 
         await interaction.editReply({ embeds: [embed], files: [attachment] });
-
-        saveEntry(interaction.user.id, {
-            command: 'emote', text, shape, background,
-            primary_color: primary, secondary_color: secondary, font,
-        });
+        saveEntry(interaction.user.id, { command: 'emote', text, shape, background, primary_color: primary, secondary_color: secondary, font });
     },
 };

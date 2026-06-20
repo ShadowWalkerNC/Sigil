@@ -1,97 +1,17 @@
-const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
-const { createCanvas } = require('canvas');
-const { getLeaderboard } = require('../utils/db.js');
-const { calculateLevel } = require('../utils/xp.js');
-const { registerAllFonts } = require('../utils/canvas.js');
-const { DEFAULT_FONT } = require('../utils/fonts.js');
+const { SlashCommandBuilder } = require('discord.js');
+const guard = require('../utils/packageGuard');
 
-registerAllFonts();
+const _impl = (() => { try { return require('./_xpleaderboard_impl'); } catch { return null; } })();
 
-const F = DEFAULT_FONT;
-
-module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('xpleaderboard')
-        .setDescription('View the top 10 XP leaderboard for this server'),
-
-    async execute(interaction) {
-        await interaction.deferReply();
-
-        const guildId = interaction.guild.id;
-        const rows    = getLeaderboard(guildId, 10);
-
-        if (rows.length === 0) {
-            return interaction.editReply({ content: 'No XP data yet. Members earn XP by chatting.' });
-        }
-
-        const members = await Promise.all(
-            rows.map(r => interaction.guild.members.fetch(r.user_id).catch(() => null))
-        );
-
-        const W = 600, ROW_H = 54, PAD = 20;
-        const H  = PAD * 2 + rows.length * ROW_H + 60;
-        const canvas = createCanvas(W, H);
-        const ctx    = canvas.getContext('2d');
-
-        ctx.fillStyle = '#0f0f1a';
-        ctx.fillRect(0, 0, W, H);
-
-        ctx.font = `bold 22px "${F}"`;
-        ctx.fillStyle = '#39FF14';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.shadowColor = '#39FF14'; ctx.shadowBlur = 8;
-        ctx.fillText('XP LEADERBOARD', W / 2, PAD);
-        ctx.shadowBlur = 0;
-
-        const startY = PAD + 50;
-
-        for (let i = 0; i < rows.length; i++) {
-            const r      = rows[i];
-            const member = members[i];
-            const name   = member?.displayName ?? `User ${r.user_id.slice(-4)}`;
-            const { level } = calculateLevel(r.xp);
-            const y      = startY + i * ROW_H;
-
-            ctx.fillStyle = i % 2 === 0 ? '#ffffff08' : '#ffffff04';
-            ctx.beginPath();
-            ctx.roundRect(PAD, y, W - PAD * 2, ROW_H - 6, 8);
-            ctx.fill();
-
-            const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
-            ctx.font = `bold 16px "${F}"`;
-            ctx.fillStyle = rankColors[i] ?? '#aaaaaa';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`#${i + 1}`, PAD + 10, y + (ROW_H - 6) / 2);
-
-            ctx.font = `15px "${F}"`;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(name.length > 18 ? name.slice(0, 16) + '\u2026' : name, PAD + 42, y + (ROW_H - 6) / 2);
-
-            ctx.font = `bold 13px "${F}"`;
-            ctx.fillStyle = '#39FF14';
-            ctx.textAlign = 'right';
-            ctx.fillText(`LVL ${level}`, W - PAD - 10, y + (ROW_H - 6) / 2 - 8);
-
-            ctx.font = `12px "${F}"`;
-            ctx.fillStyle = '#888888';
-            ctx.fillText(`${r.xp.toLocaleString()} XP`, W - PAD - 10, y + (ROW_H - 6) / 2 + 8);
-        }
-
-        ctx.font = `11px "${F}"`; ctx.fillStyle = '#ffffff15';
-        ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
-        ctx.fillText('made with Sigil', W - PAD, H - 8);
-
-        const buf        = canvas.toBuffer('image/png');
-        const attachment = new AttachmentBuilder(buf, { name: 'xpleaderboard.png' });
-
-        const embed = new EmbedBuilder()
-            .setTitle(`\uD83C\uDFC6 XP Leaderboard \u2014 ${interaction.guild.name}`)
-            .setImage('attachment://xpleaderboard.png')
-            .setColor('#39FF14')
-            .setFooter({ text: `Sigil \u2022 xpleaderboard \u2022 Top ${rows.length} members` });
-
-        await interaction.editReply({ embeds: [embed], files: [attachment] });
-    },
-};
+if (_impl) {
+    module.exports = { data: _impl.data, async autocomplete(i) { return _impl.autocomplete?.(i); }, async execute(i) { if (await guard(i, 'xp')) return; return _impl.execute(i); } };
+} else {
+    module.exports = {
+        data: new SlashCommandBuilder().setName('xpleaderboard').setDescription('View XP leaderboard for this server'),
+        async execute(interaction) {
+            if (await guard(interaction, 'xp')) return;
+            await interaction.deferReply();
+            await interaction.editReply({ content: '⭐ XP leaderboard feature coming soon.' });
+        },
+    };
+}
