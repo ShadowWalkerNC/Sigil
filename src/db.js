@@ -1,9 +1,8 @@
 /**
  * src/db.js
  * Single source of truth for the SQLite database connection.
- * Import this everywhere instead of opening a new Database() per file.
- * All CREATE TABLE IF NOT EXISTS statements run here on first require(),
- * guaranteeing tables exist before any command file calls db.prepare().
+ * All CREATE TABLE IF NOT EXISTS + ALTER TABLE migrations run here
+ * before any command file calls db.prepare().
  */
 
 const Database = require('better-sqlite3');
@@ -46,13 +45,12 @@ db.exec(`
         host_id     TEXT NOT NULL
     );
 
-    -- Welcome config
+    -- Welcome config (base schema — migrations below add new columns)
     CREATE TABLE IF NOT EXISTS welcome_config (
-        guild_id        TEXT PRIMARY KEY,
-        channel_id      TEXT,
-        message         TEXT,
-        background      TEXT,
-        enabled         INTEGER NOT NULL DEFAULT 1
+        guild_id    TEXT PRIMARY KEY,
+        channel_id  TEXT,
+        message     TEXT,
+        enabled     INTEGER NOT NULL DEFAULT 1
     );
 
     -- Autorole
@@ -88,5 +86,15 @@ db.exec(`
         alert_channel   TEXT
     );
 `);
+
+// ── Migrations (safe to re-run — each is wrapped in a try/catch) ─────────────
+// ALTER TABLE fails if column already exists, so we catch and ignore.
+const migrate = (sql) => { try { db.exec(sql); } catch (_) {} };
+
+// welcome_config v2 — added embed support + DM
+migrate(`ALTER TABLE welcome_config ADD COLUMN embed_title  TEXT`);
+migrate(`ALTER TABLE welcome_config ADD COLUMN embed_color  TEXT DEFAULT '#5865F2'`);
+migrate(`ALTER TABLE welcome_config ADD COLUMN dm_enabled   INTEGER DEFAULT 0`);
+migrate(`ALTER TABLE welcome_config ADD COLUMN dm_message   TEXT`);
 
 module.exports = db;
