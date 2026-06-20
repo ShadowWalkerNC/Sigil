@@ -141,6 +141,7 @@
     <a class="nav-a" href="/brand">&#127912; Brand Builder</a>
     <a class="nav-a" href="/community">&#127942; Community</a>
     <a class="nav-a" href="/developers">&#128196; Docs</a>
+    <a class="nav-a" href="/status">&#128994; Status</a>
     <a class="nav-cta" href="/brand">Open Dashboard &#8594;</a>
   </div>
 </nav>
@@ -424,22 +425,22 @@
     <div class="step-card">
       <div class="step-num">04</div>
       <h3>Bot Runs It Live</h3>
-      <p>Your Sigil bot on Discord picks up the new settings immediately. Automations, alerts, and responses all reflect your dashboard configuration.</p>
+      <p>Your Sigil bot on Discord picks up the new settings immediately. Automations, alerts, and responses all reflect your dashboard configuration instantly.</p>
     </div>
   </div>
 </section>
 
 <div class="divider"></div>
 
-<!-- CTA -->
-<section class="section" style="padding-top:4rem;padding-bottom:5rem;">
+<!-- DEMO CTA -->
+<section class="section">
   <div class="demo-banner">
-    <h2>&#128279; See it running right now</h2>
-    <p>Join the Sigil demo Discord server to test every command live. Or open the dashboard and explore the visual GUI immediately — no account needed.</p>
+    <h2>Ready to try Sigil?</h2>
+    <p>Jump into the demo server to see the bot in action, or open the dashboard to start building your server&#8217;s identity right now.</p>
     <div class="demo-btns">
       <a class="btn btn-gui" href="/brand">&#128187; Open Dashboard</a>
-      <a class="btn btn-discord" href="https://discord.gg/7c89HKrVe" target="_blank" rel="noopener">&#128279; Demo Server</a>
-      <a class="btn btn-ghost" href="https://github.com/ShadowWalkerNC/Sigil" target="_blank" rel="noopener">&#11088; GitHub</a>
+      <a class="btn btn-discord" href="https://discord.gg/7c89HKrVe" target="_blank" rel="noopener">&#128279; Join Demo Server</a>
+      <a class="btn btn-ghost" href="/status">&#128994; System Status</a>
     </div>
   </div>
 </section>
@@ -449,23 +450,21 @@
 <footer>
   <div class="footer-links">
     <a href="/brand">Brand Builder</a>
-    <a href="/community">Community Tools</a>
-    <a href="/developers">Developers</a>
+    <a href="/community">Community</a>
+    <a href="/developers">Docs</a>
+    <a href="/status">Status</a>
     <a href="https://github.com/ShadowWalkerNC/Sigil" target="_blank" rel="noopener">GitHub</a>
-    <a href="https://discord.gg/7c89HKrVe" target="_blank" rel="noopener">Demo Server</a>
   </div>
-  <p>Sigil &mdash; Open-source Discord bot &amp; visual dashboard. Built by ShadowWalker.</p>
+  <p>Sigil &mdash; Open source Discord bot &amp; dashboard. Built with &#10084;&#65039;</p>
 </footer>
 
-<script src="/js/shared.js"></script>
 <script>
 function toggleCard(btn) {
-  const card = btn.closest('.group-card');
-  const detail = card.querySelector('.group-detail');
-  const isOpen = detail.classList.contains('open');
-  detail.classList.toggle('open', !isOpen);
-  btn.classList.toggle('open', !isOpen);
-  btn.querySelector('.toggle-arrow').style.transform = isOpen ? '' : 'rotate(180deg)';
+  const detail = btn.nextElementSibling;
+  const arrow  = btn.querySelector('.toggle-arrow');
+  const isOpen = detail.classList.toggle('open');
+  btn.textContent = '';
+  btn.innerHTML   = (isOpen ? 'Hide details ' : 'Show details ') + '<span class="toggle-arrow" style="transform:rotate(' + (isOpen ? '180' : '0') + 'deg);display:inline-block;transition:transform .3s">&#8964;</span>';
 }
 </script>
 

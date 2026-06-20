@@ -78,6 +78,7 @@ app.get('/brand',       (req, res) => res.sendFile(path.join(__dirname, 'sigil-g
 app.get('/community',   (req, res) => res.sendFile(path.join(__dirname, 'sigil-community.html')));
 app.get('/developers',  (req, res) => res.sendFile(path.join(__dirname, 'developers.html')));
 app.get('/packages',    (req, res) => res.sendFile(path.join(__dirname, 'packages.html')));
+app.get('/status',      (req, res) => res.sendFile(path.join(__dirname, 'status.html')));
 app.get('/setup',       (req, res) => res.sendFile(path.join(__dirname, '..', 'setup.html')));
 app.get('/health',      (req, res) => res.json({ ok: true, version: VERSION, ai_enabled: AI_ENABLED }));
 
