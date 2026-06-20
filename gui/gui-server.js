@@ -1,10 +1,11 @@
-// gui-server.js — Sigil GUI bridge server v2.2
+// gui-server.js — Sigil GUI bridge server v2.3
 // Run with: node gui/gui-server.js
 
 const express    = require('express');
 const path       = require('path');
 const http       = require('http');
 const rateLimit  = require('express-rate-limit');
+const { WebSocketServer } = require('ws');
 const { createCanvas, loadImage } = require('canvas');
 const { renderKit, registerAllFonts } = require('../src/utils/canvas.js');
 const { getBackgroundById } = require('../src/utils/backgrounds.js');
@@ -12,15 +13,19 @@ const { getConfig }  = require('../src/utils/db.js');
 const { verifyHmac } = require('../src/utils/hmac.js');
 const { handleTwitchLive, handleYouTubeUpload, handleGitHubPush } = require('../src/automation/webhookHandler.js');
 const { enablePackage, disablePackage, getAllPackageStates } = require('../src/utils/packages.js');
+const logBuffer = require('../src/util/logBuffer.js');
 require('dotenv').config();
+
+// Patch console so all output flows through the ring buffer
+logBuffer.patch();
 
 registerAllFonts();
 
-const app  = express();
-const PORT = Number(process.env.PORT) || 8080;
+const app    = express();
+const server = http.createServer(app);   // needed for WS upgrade
+const PORT   = Number(process.env.PORT) || 8080;
 
 // ── ASCILINE stream_server.py base URL (co-hosted, local only) ───────────────
-// Set STREAM_SERVER_URL in .env to override (e.g. for a different port).
 const STREAM_URL = (process.env.STREAM_SERVER_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
 // AI generation is disabled until further notice
@@ -81,7 +86,7 @@ app.get('/community',   (req, res) => res.sendFile(path.join(__dirname, 'sigil-c
 app.get('/developers',  (req, res) => res.sendFile(path.join(__dirname, 'developers.html')));
 app.get('/packages',    (req, res) => res.sendFile(path.join(__dirname, 'packages.html')));
 app.get('/setup',       (req, res) => res.sendFile(path.join(__dirname, '..', 'setup.html')));
-app.get('/health',      (req, res) => res.json({ ok: true, version: '2.2.0', ai_enabled: AI_ENABLED }));
+app.get('/health',      (req, res) => res.json({ ok: true, version: '2.3.0', ai_enabled: AI_ENABLED }));
 
 // ── GET /api/packages?guild_id=... ───────────────────────────────────────────
 app.get('/api/packages', apiLimiter, (req, res) => {
@@ -127,14 +132,8 @@ app.post('/api/packages', apiLimiter, (req, res) => {
 
 // ╔══════════════════════════════════════════════════════════════════╗
 // ║                  MEDIA PACKAGE — /api/media/*                   ║
-// ║  Proxy namespace that forwards commands to stream_server.py.    ║
-// ║  stream_server.py runs locally on STREAM_URL (default :8000).  ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
-/**
- * Thin proxy helper — forwards a JSON body to stream_server.py
- * and pipes the response back. Times out after 8 s.
- */
 function proxyToStream(streamPath, body) {
     return new Promise((resolve, reject) => {
         const payload = JSON.stringify(body);
@@ -184,11 +183,6 @@ function proxyGetToStream(streamPath) {
     });
 }
 
-/**
- * POST /api/media/enqueue
- * Body: { url: string, mode?: 1-5, cols?: number, vol?: 0-5, pixel?: boolean, loop?: boolean }
- * Enqueues a video URL (or local path) into stream_server.py.
- */
 app.post('/api/media/enqueue', mediaLimiter, async (req, res) => {
     try {
         const { url, mode = 1, cols, vol = 1, pixel = false, loop = false } = req.body || {};
@@ -203,10 +197,6 @@ app.post('/api/media/enqueue', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * POST /api/media/skip
- * Skips to the next video in the queue.
- */
 app.post('/api/media/skip', mediaLimiter, async (req, res) => {
     try {
         const result = await proxyToStream('/api/skip', {});
@@ -217,10 +207,6 @@ app.post('/api/media/skip', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * POST /api/media/stop
- * Stops playback and clears the queue.
- */
 app.post('/api/media/stop', mediaLimiter, async (req, res) => {
     try {
         const result = await proxyToStream('/api/stop', {});
@@ -231,10 +217,6 @@ app.post('/api/media/stop', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * POST /api/media/seek
- * Body: { time: number }  — seconds to seek to
- */
 app.post('/api/media/seek', mediaLimiter, async (req, res) => {
     try {
         const time = Number(req.body?.time ?? -1);
@@ -247,10 +229,6 @@ app.post('/api/media/seek', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * POST /api/media/volume
- * Body: { vol: 0-5 }
- */
 app.post('/api/media/volume', mediaLimiter, async (req, res) => {
     try {
         const vol = Number(req.body?.vol ?? -1);
@@ -263,10 +241,6 @@ app.post('/api/media/volume', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * POST /api/media/loop
- * Body: { enabled: boolean }
- */
 app.post('/api/media/loop', mediaLimiter, async (req, res) => {
     try {
         const enabled = req.body?.enabled;
@@ -279,10 +253,6 @@ app.post('/api/media/loop', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * POST /api/media/mode
- * Body: { mode: 1-5 } — change ASCII render mode on the fly
- */
 app.post('/api/media/mode', mediaLimiter, async (req, res) => {
     try {
         const mode = Number(req.body?.mode ?? 0);
@@ -295,10 +265,6 @@ app.post('/api/media/mode', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * POST /api/media/cols
- * Body: { cols: 40-500 } — change terminal column width on the fly
- */
 app.post('/api/media/cols', mediaLimiter, async (req, res) => {
     try {
         const cols = Number(req.body?.cols ?? 0);
@@ -311,10 +277,6 @@ app.post('/api/media/cols', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * GET /api/media/status
- * Returns now-playing info: current video, queue length, fps, mode, etc.
- */
 app.get('/api/media/status', mediaLimiter, async (req, res) => {
     try {
         const result = await proxyGetToStream('/api/status');
@@ -325,10 +287,6 @@ app.get('/api/media/status', mediaLimiter, async (req, res) => {
     }
 });
 
-/**
- * GET /api/media/queue
- * Returns the full current queue.
- */
 app.get('/api/media/queue', mediaLimiter, async (req, res) => {
     try {
         const result = await proxyGetToStream('/api/queue');
@@ -336,6 +294,54 @@ app.get('/api/media/queue', mediaLimiter, async (req, res) => {
     } catch (err) {
         console.error('[GET /api/media/queue]', err);
         res.status(503).json({ ok: false, error: 'Stream server unreachable.' });
+    }
+});
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║                  LOGS — /api/logs + WebSocket /ws/logs          ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+/**
+ * GET /api/logs?tail=N&level=info|warn|error
+ * Returns last N lines from the in-memory ring buffer.
+ */
+app.get('/api/logs', apiLimiter, (req, res) => {
+    const n     = Math.max(1, Math.min(500, parseInt(req.query.tail || '50', 10)));
+    const level = ['info', 'warn', 'error'].includes(req.query.level) ? req.query.level : null;
+    res.json({ ok: true, lines: logBuffer.tail(n, level) });
+});
+
+/**
+ * WebSocket /ws/logs?level=info|warn|error
+ * Streams new log lines in real time to the connected client.
+ * Used by `sigil logs` CLI.
+ */
+const wssLogs = new WebSocketServer({ noServer: true });
+
+wssLogs.on('connection', (ws, req) => {
+    const params = new URLSearchParams(req.url.replace('/ws/logs', '').replace('?', ''));
+    const level  = ['info', 'warn', 'error'].includes(params.get('level')) ? params.get('level') : null;
+
+    const listener = (entry) => {
+        if (level && entry.level !== level) return;
+        if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify(entry));
+        }
+    };
+
+    logBuffer.subscribe(listener);
+    ws.on('close', () => logBuffer.unsubscribe(listener));
+    ws.on('error', () => logBuffer.unsubscribe(listener));
+});
+
+// Upgrade handler — routes /ws/logs upgrades to wssLogs
+server.on('upgrade', (req, socket, head) => {
+    if (req.url.startsWith('/ws/logs')) {
+        wssLogs.handleUpgrade(req, socket, head, (ws) => {
+            wssLogs.emit('connection', ws, req);
+        });
+    } else {
+        socket.destroy();
     }
 });
 
@@ -569,4 +575,5 @@ app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`[GUI] Sigil GUI server v2.2.0 on http://localhost:${PORT}`));
+// Use server.listen (not app.listen) so WebSocket upgrades work
+server.listen(PORT, '0.0.0.0', () => console.log(`[GUI] Sigil GUI server v2.3.0 on http://localhost:${PORT}`));
