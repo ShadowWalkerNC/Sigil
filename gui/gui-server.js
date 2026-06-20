@@ -67,6 +67,10 @@ const mediaLimiter = rateLimit({
     windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false,
     message: { ok: false, error: 'Media rate limit exceeded.' },
 });
+const controlLimiter = rateLimit({
+    windowMs: 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+    message: { ok: false, error: 'Rate limit exceeded.' },
+});
 
 // ── Static pages ─────────────────────────────────────────────────────────────
 app.get('/',            (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -337,6 +341,47 @@ app.get('/api/status/full', apiLimiter, async (req, res) => {
     res.json(result);
 });
 
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║          CONTROL — POST /api/control/restart                    ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+/**
+ * POST /api/control/restart
+ * Triggers a clean process exit so PM2 / Railway auto-restarts.
+ *
+ * Authentication: requires header  x-control-secret  to match
+ * the CONTROL_SECRET environment variable.  If CONTROL_SECRET is
+ * not set the endpoint is disabled (returns 503) so it can never
+ * be abused on an open deployment.
+ *
+ * Rate limited to 5 calls/min to prevent restart loops.
+ */
+app.post('/api/control/restart', controlLimiter, (req, res) => {
+    const secret = process.env.CONTROL_SECRET || '';
+
+    if (!secret) {
+        return res.status(503).json({
+            ok:    false,
+            error: 'CONTROL_SECRET is not configured — restart endpoint disabled.',
+        });
+    }
+
+    const provided = String(req.headers['x-control-secret'] || '').trim();
+    if (!provided || provided !== secret) {
+        return res.status(401).json({ ok: false, error: 'Invalid or missing x-control-secret.' });
+    }
+
+    // Respond before exiting so the caller receives the 200.
+    res.json({ ok: true, message: 'Restart signal accepted. Process exiting now.' });
+
+    // Flush the response socket then exit cleanly.
+    // PM2 / Railway will restart the process automatically.
+    res.on('finish', () => {
+        console.log('[GUI] Restart requested via /api/control/restart — exiting.');
+        gracefulShutdown('restart');
+    });
+});
+
 // ── POST /webhook/trigger ─────────────────────────────────────────────────────
 app.post('/webhook/trigger', webhookLimiter, async (req, res) => {
     try {
@@ -499,7 +544,7 @@ app.post('/preview/serverstats', renderLimiter, async (req, res) => {
         ctx.font = `bold 28px Arial`; ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
         ctx.fillText(server_name, 24, 58);
         ctx.font = `bold 13px Arial`; ctx.fillStyle = '#ff73fa';
-        ctx.fillText(`\uD83D\uDE80 Level ${boost_level} • ${boost_count} Boosts`, 24, 82);
+        ctx.fillText(`\uD83D\uDE80 Level ${boost_level} \u2022 ${boost_count} Boosts`, 24, 82);
         ctx.fillStyle = '#ffffff22'; ctx.fillRect(24, 100, W - 48, 1);
         const stats = [
             { label: 'MEMBERS',  value: member_count.toLocaleString(), icon: '\uD83D\uDC65' },
@@ -557,5 +602,45 @@ function classifyError(err) {
 app.use((req, res) => {
     res.status(404).sendFile(path.join(__dirname, '404.html'));
 });
+
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║            GRACEFUL SHUTDOWN — SIGTERM / SIGINT                 ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+/**
+ * gracefulShutdown(reason)
+ * Closes the HTTP server and all WebSocket connections cleanly
+ * before exiting.  Called by SIGTERM, SIGINT, and the restart endpoint.
+ *
+ * Timeout: if the server hasn't closed within 8 s (e.g. stalled WS
+ * connections) we force-exit anyway so PM2/Railway never gets stuck.
+ */
+let shuttingDown = false;
+
+function gracefulShutdown(reason = 'signal') {
+    if (shuttingDown) return;
+    shuttingDown = true;
+
+    console.log(`[GUI] Graceful shutdown initiated (reason: ${reason}).`);
+
+    // Close all open WebSocket connections
+    wssLogs.clients.forEach(ws => ws.terminate());
+
+    // Stop accepting new HTTP connections; finish in-flight ones
+    server.close((err) => {
+        if (err) console.error('[GUI] server.close error:', err);
+        console.log('[GUI] HTTP server closed. Exiting.');
+        process.exit(0);
+    });
+
+    // Hard timeout — force exit after 8 s
+    setTimeout(() => {
+        console.warn('[GUI] Shutdown timed out — forcing exit.');
+        process.exit(1);
+    }, 8000).unref();
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
 server.listen(PORT, '0.0.0.0', () => console.log(`[GUI] Sigil GUI server v${VERSION} on http://localhost:${PORT}`));
