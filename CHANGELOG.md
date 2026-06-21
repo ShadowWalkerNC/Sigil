@@ -6,7 +6,27 @@ Format: [Semantic Versioning](https://semver.org/) — `[version] — YYYY-MM-DD
 
 ---
 
-## [Unreleased — v2.0.0 in progress]
+## [2.6.0] — 2026-06-21
+
+### Added
+- **`gui/setup.html`** — 5-step setup wizard (Credentials → Features → Channels → Deploy → Done). Discord-style sidebar layout with `--theme-*` CSS variables for full theme customisation. Served at `GET /setup`.
+- **`POST /api/setup/validate-token`** — Validates a Discord bot token + client ID via Discord REST before the wizard advances.
+- **`POST /api/setup/save-config`** — Persists package selection and channel/role IDs to `data/sigil-config.json`.
+- **`POST /api/control/deploy-commands`** — Streams `deploy-commands.js` output as NDJSON. Requires `x-control-secret` header matching `CONTROL_SECRET` env var.
+- **`src/services/postpilot.js`** — Post-Pilot REST API bridge. Methods: `health`, `generatePost`, `publishPost`, `generateAndPublish`, `getHistory`, `getSiteConfig`, `isConfigured`, `formatResults`, `parsePlatforms`.
+- **`src/commands/post.js`** — `/post` slash command — AI social media post generation and publishing via Post-Pilot.
+- **`src/commands/poststatus.js`** — `/poststatus` slash command — Post-Pilot connection health and recent post history.
+- **`SHADOWREALM_NETWORK.md`** — ShadowRealm Network (SRN) app contract v1.0. Defines inter-app identity, `X-SRN-App` header protocol, and integration expectations for all SRN-connected services.
+- **`.env.example`** — Added `POSTPILOT_URL`, `POSTPILOT_API_KEY`, `POSTPILOT_USER_ID`, `POSTPILOT_SRN_APP`, `POSTPILOT_TIMEOUT_MS` entries.
+
+### Changed
+- **`gui/gui-server.js`** bumped to **v2.6.0**. New routes: `/setup` (GET), `/api/setup/validate-token` (POST), `/api/setup/save-config` (POST), `/api/control/deploy-commands` (POST streaming). `requireControlSecret()` middleware added for protected control routes.
+- **`CONTRIBUTING.md`** — Full rewrite for v2.6 architecture: project layout, setup wizard guide, GUI route authoring, PR checklist.
+- **`gui/setup.html`** — Redesigned from generic dark theme to Discord server-settings layout. Full Discord color palette via CSS custom properties; all colors overridable without touching markup.
+
+---
+
+## [2.5.0] — 2026-06-20
 
 ### Added
 - **`gui/developers.html`** — Developers page with API reference, navbar link on all GUI pages
@@ -28,49 +48,49 @@ Format: [Semantic Versioning](https://semver.org/) — `[version] — YYYY-MM-DD
 ### Fixed
 - **Brand Builder → Community** nav link corrected from `/` to `/brand`
 - **404 catch-all** added to `gui-server.js` — unknown routes now return HTTP 404 with branded page instead of raw Express error
-- **Color autocomplete — all commands** — replaced broken `colorAutocomplete(interaction)` call (which referenced a non-existent export) with correct `getColorAutocomplete(focused)` pattern across all 25 commands that use color options: `announcebanner`, `avatar`, `banner`, `brand`, `certificate`, `compare`, `emote`, `eventbanner`, `icon`, `invitecard`, `logo`, `namecard`, `palette`, `profilecard`, `rankcard`, `reactionpack`, `rolebadge`, `servercard`, `sigilconfig`, `splash`, `sticker`, `texteffect`, `themepreview`, `welcomecard`
-- **`/mood`** — added `saveEntry()` call so AI-generated palettes are saved to history and accessible via `/history` and `/brand share`
+- **Color autocomplete — all commands** — replaced broken `colorAutocomplete(interaction)` call with correct `getColorAutocomplete(focused)` pattern across all 25 commands that use color options
+- **`/mood`** — added `saveEntry()` call so AI-generated palettes are saved to history
 
 ### Removed
-- **`src/utils/database.js`** — dead file; was never imported by any command; wrote to incorrect path (`sigil.db` in root instead of `data/sigil.db`); all active DB logic lives in `src/utils/db.js`
+- **`src/utils/database.js`** — dead file; all active DB logic lives in `src/utils/db.js`
 
 ---
 
 ## [2.4.0] — 2026-06-20
 
 ### Added
-- **`src/util/logBuffer.js`** — In-memory ring buffer (1 000 entries) for all `console` output. `patch()` intercepts `console.log/warn/error`, stamps entries with `{ ts, level, text }`, and notifies subscribers. Supports `tail(n, level?)` and pub/sub via `subscribe(fn)` / `unsubscribe(fn)`.
+- **`src/util/logBuffer.js`** — In-memory ring buffer (1 000 entries) for all `console` output. `patch()` intercepts `console.log/warn/error`, stamps entries with `{ ts, level, text }`, and notifies subscribers. Supports `tail(n, level?)` and pub/sub via `subscribe(fn)` / `unsubscribe(fn)`.
 - **`GET /api/logs`** — Returns last N lines from the ring buffer. Query params: `tail` (1–500, default 50), `level` (`info` | `warn` | `error`). Rate-limited (60 req/min).
-- **`WS /ws/logs`** — WebSocket stream of real-time log entries. Optional `?level=` filter. Used by `sigil logs --live`. Upgrade handled by `ws` `WebSocketServer`.
-- **`GET /api/packages`** — Returns all package states for a guild. Requires `?guild_id=` (17–20 digit snowflake).
-- **`POST /api/packages`** — Enable or disable a named package for a guild. Body: `{ guild_id, package, enabled: bool }`.
-- **`POST /api/media/enqueue`** — Proxies to ASCILINE `stream_server.py /api/enqueue`. Supports `url`, `mode`, `cols`, `vol`, `pixel`, `loop`.
-- **`POST /api/media/skip|stop|seek|volume|loop|mode|cols`** — Full ASCILINE playback control surface, all proxied to `stream_server.py`.
-- **`GET /api/media/status`** — Proxies ASCILINE `/api/status` (now-playing info).
+- **`WS /ws/logs`** — WebSocket stream of real-time log entries. Optional `?level=` filter. Used by `sigil logs --live`.
+- **`GET /api/packages`** — Returns all package states for a guild. Requires `?guild_id=`.
+- **`POST /api/packages`** — Enable or disable a named package for a guild.
+- **`POST /api/media/enqueue`** — Proxies to ASCILINE `stream_server.py /api/enqueue`.
+- **`POST /api/media/skip|stop|seek|volume|loop|mode|cols`** — Full ASCILINE playback control surface.
+- **`GET /api/media/status`** — Proxies ASCILINE `/api/status`.
 - **`GET /api/media/queue`** — Proxies ASCILINE `/api/queue`.
-- **`GET /api/status/full`** — Aggregated health snapshot: `{ gui, bot, asciline, last_error }`. `gui` reports version + uptime; `bot` reads `global.sigilClient` for guild count and WebSocket latency; `asciline` proxies `stream_server.py /api/status`; `last_error` is the last `error`-level ring-buffer entry.
-- **`src/commands/status.js`** — `/status` Discord slash command. Ephemeral reply with a color-coded embed (green / yellow / red) showing the full stack health. Includes guild count, bot latency, gui-server version and uptime, ASCILINE playback state, and last error if present.
-- **`src/cli/status.js`** — `sigil status` CLI module. ANSI-colored terminal output with colored `●` indicators per layer. `--json` flag for raw JSON output (scripting / dashboards). Reads `GUI_SERVER_URL` env var.
-- **`src/cli/commands/status.js`** — CLI dispatcher adapter wiring `sigil status` into the existing command map.
+- **`GET /api/status/full`** — Aggregated health snapshot: `{ gui, bot, asciline, last_error }`.
+- **`src/commands/status.js`** — `/status` Discord slash command with color-coded health embed.
+- **`src/cli/status.js`** — `sigil status` CLI module with ANSI output and `--json` flag.
+- **`src/cli/commands/status.js`** — CLI dispatcher adapter.
 
 ### Changed
-- **`gui-server.js`** bumped to **v2.4.0**. `START_TS = Date.now()` recorded at boot for uptime calculation. `logBuffer.patch()` called at startup so all server output flows through the ring buffer.
-- **`src/cli/index.js`** — `status` added to the `commands` map.
-- **`src/cli/lib/help.js`** — `sigil status` entry added under the **Server** section with `--json` flag description.
+- **`gui-server.js`** bumped to **v2.4.0**.
+- **`src/cli/index.js`** — `status` added to the commands map.
+- **`src/cli/lib/help.js`** — `sigil status` entry added.
 
 ---
 
 ## [1.11.1] — 2026-06-18
 
 ### Removed
-- **`/minecraft`** command and `docs/MINECRAFT.md` — removed from bot; guide available separately if needed
+- **`/minecraft`** command and `docs/MINECRAFT.md`
 
 ---
 
 ## [1.11.0] — 2026-06-18
 
 ### Added
-- **`/palette export`** slash command — CSS Variables, Tailwind Config, Hex List formats; auto-loads last kit from history if no colors provided
+- **`/palette export`** slash command — CSS Variables, Tailwind Config, Hex List formats
 
 ---
 
