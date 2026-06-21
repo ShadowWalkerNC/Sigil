@@ -182,14 +182,14 @@
 
 <div class="page-header">
   <h1>&#128230; Feature Packages</h1>
-  <p>Enable or disable bundles of related features for your server. All packages are <strong>on by default</strong> — turn off anything you don’t use to keep the bot focused.</p>
+  <p>Enable or disable bundles of related features for your server. All packages are <strong>on by default</strong> — turn off anything you don't use to keep the bot focused.</p>
   <p class="setup-hint">&#128161; First time here? Run the <a href="/setup">Setup Wizard</a> to configure your server before toggling packages.</p>
 </div>
 
 <div class="guild-bar">
   <label for="guildInput">Guild ID</label>
   <input id="guildInput" class="guild-input" type="text" placeholder="Enter your Discord Guild ID…" maxlength="20" />
-  <button class="btn btn-primary" id="loadBtn" onclick="loadPackages()">&#128260; Load</button>
+  <button class="btn btn-primary" id="loadBtn">&#128260; Load</button>
   <div id="statusBar" class="status-bar" style="margin:0;padding:0;">
     <span id="statusPill" class="status-pill idle"></span>
   </div>
@@ -231,15 +231,21 @@ const PACKAGES = [
   { key:'postpilot',   emoji:'📰', label:'Post-Pilot',     description:'AI social media post generation and publishing across Facebook, Instagram, TikTok, YouTube, and more.',       commands:['/post','/poststatus'], isNew: true },
 ];
 
+const LS_GUILD_KEY = 'sigil_last_guild_id';
 let currentGuildId   = '';
 let disabledPackages = [];
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 function setStatus(type, msg) {
   const el = document.getElementById('statusPill');
   el.className = `status-pill ${type}`;
   el.innerHTML = type === 'loading' ? `<span class="spin">&#9696;</span> ${msg}` : msg;
 }
-function clearStatus() { document.getElementById('statusPill').className = 'status-pill idle'; }
 
 function toast(msg, type = 'ok', duration = 3500) {
   const el = document.createElement('div');
@@ -253,6 +259,7 @@ async function loadPackages() {
   const guildId = document.getElementById('guildInput').value.trim();
   if (!guildId || !/^\d{17,20}$/.test(guildId)) { toast('Enter a valid Guild ID (17–20 digits).', 'err'); return; }
   currentGuildId = guildId;
+  localStorage.setItem(LS_GUILD_KEY, guildId);
   setStatus('loading', 'Loading package states…');
   document.getElementById('loadBtn').disabled = true;
   try {
@@ -261,7 +268,7 @@ async function loadPackages() {
     if (!res.ok || !data.ok) throw new Error(data.error || 'Server error');
     disabledPackages = data.disabled || [];
     renderGrid();
-    setStatus('success', `&#9989; Loaded for guild <code>${guildId}</code>`);
+    setStatus('success', `&#9989; Loaded for guild <code>${esc(guildId)}</code>`);
     document.getElementById('emptyState').style.display = 'none';
     document.getElementById('packagesGrid').style.display = '';
   } catch (err) {
@@ -280,32 +287,86 @@ function renderGrid() {
     const card = document.createElement('div');
     card.className = `pkg-card ${enabled ? 'is-on' : 'is-off'}`;
     card.id = `card-${pkg.key}`;
-    const newBadge = pkg.isNew ? '<span class="new-badge">&#10024; New</span>' : '';
-    card.innerHTML = `
-      <div class="pkg-card-header">
-        <div class="pkg-emoji">${pkg.emoji}</div>
-        <div class="pkg-info">
-          <div class="pkg-label">${pkg.label} ${newBadge}</div>
-          <div class="pkg-desc">${pkg.description}</div>
-        </div>
-      </div>
-      <div class="pkg-commands">
-        ${pkg.commands.map(c => `<span class="cmd-chip">${c}</span>`).join('')}
-      </div>
-      <div class="pkg-toggle-row">
-        <span class="toggle-label">Package State</span>
-        <div class="toggle-wrap">
-          <span class="toggle-state ${enabled ? 'on' : 'off'}" id="state-${pkg.key}">${enabled ? 'Enabled' : 'Disabled'}</span>
-          <label class="toggle" title="Toggle ${pkg.label}">
-            <input type="checkbox" ${enabled ? 'checked' : ''} onchange="togglePackage('${pkg.key}', this.checked)" id="chk-${pkg.key}" />
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-      </div>
-      <div class="pkg-saving"><span class="spin" style="font-size:1.4rem;">&#9696;</span></div>
-    `;
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'pkg-card-header';
+    const emojiEl = document.createElement('div');
+    emojiEl.className = 'pkg-emoji';
+    emojiEl.textContent = pkg.emoji;
+    const info = document.createElement('div');
+    info.className = 'pkg-info';
+    const labelEl = document.createElement('div');
+    labelEl.className = 'pkg-label';
+    labelEl.textContent = pkg.label;
+    if (pkg.isNew) {
+      const badge = document.createElement('span');
+      badge.className = 'new-badge';
+      badge.textContent = '✨ New';
+      labelEl.appendChild(badge);
+    }
+    const descEl = document.createElement('div');
+    descEl.className = 'pkg-desc';
+    descEl.textContent = pkg.description;
+    info.appendChild(labelEl);
+    info.appendChild(descEl);
+    header.appendChild(emojiEl);
+    header.appendChild(info);
+
+    // Commands
+    const cmds = document.createElement('div');
+    cmds.className = 'pkg-commands';
+    pkg.commands.forEach(c => {
+      const chip = document.createElement('span');
+      chip.className = 'cmd-chip';
+      chip.textContent = c;
+      cmds.appendChild(chip);
+    });
+
+    // Toggle row
+    const toggleRow = document.createElement('div');
+    toggleRow.className = 'pkg-toggle-row';
+    const toggleLbl = document.createElement('span');
+    toggleLbl.className = 'toggle-label';
+    toggleLbl.textContent = 'Package State';
+    const toggleWrap = document.createElement('div');
+    toggleWrap.className = 'toggle-wrap';
+    const stateEl = document.createElement('span');
+    stateEl.className = `toggle-state ${enabled ? 'on' : 'off'}`;
+    stateEl.id = `state-${pkg.key}`;
+    stateEl.textContent = enabled ? 'Enabled' : 'Disabled';
+    const label = document.createElement('label');
+    label.className = 'toggle';
+    label.title = `Toggle ${pkg.label}`;
+    const chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.id = `chk-${pkg.key}`;
+    chk.checked = enabled;
+    const track = document.createElement('div');
+    track.className = 'toggle-track';
+    const thumb = document.createElement('div');
+    thumb.className = 'toggle-thumb';
+    label.appendChild(chk);
+    label.appendChild(track);
+    label.appendChild(thumb);
+    toggleWrap.appendChild(stateEl);
+    toggleWrap.appendChild(label);
+    toggleRow.appendChild(toggleLbl);
+    toggleRow.appendChild(toggleWrap);
+
+    // Saving overlay
+    const saving = document.createElement('div');
+    saving.className = 'pkg-saving';
+    saving.innerHTML = '<span class="spin" style="font-size:1.4rem;">&#9696;</span>';
+
+    card.appendChild(header);
+    card.appendChild(cmds);
+    card.appendChild(toggleRow);
+    card.appendChild(saving);
     grid.appendChild(card);
+
+    // Wire toggle via addEventListener — no inline onchange
+    chk.addEventListener('change', () => togglePackage(pkg.key, chk.checked));
   });
 }
 
@@ -331,7 +392,7 @@ async function togglePackage(key, nowEnabled) {
     stateEl.textContent = nowEnabled ? 'Enabled' : 'Disabled';
     stateEl.className   = `toggle-state ${nowEnabled ? 'on' : 'off'}`;
     const pkg = PACKAGES.find(p => p.key === key);
-    toast(`${pkg.emoji} <strong>${pkg.label}</strong> ${nowEnabled ? 'enabled' : 'disabled'}.`, 'ok');
+    toast(`${pkg.emoji} ${pkg.label} ${nowEnabled ? 'enabled' : 'disabled'}.`, 'ok');
   } catch (err) {
     chk.checked = !nowEnabled;
     toast(err.message, 'err');
@@ -341,9 +402,20 @@ async function togglePackage(key, nowEnabled) {
   }
 }
 
+// Enter key on guild input
 document.getElementById('guildInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') loadPackages();
 });
+
+// Load button via addEventListener — no inline onclick
+document.getElementById('loadBtn').addEventListener('click', loadPackages);
+
+// Restore last guild ID from localStorage
+const savedGuild = localStorage.getItem(LS_GUILD_KEY);
+if (savedGuild) {
+  document.getElementById('guildInput').value = savedGuild;
+}
+
 document.getElementById('packagesGrid').style.display = 'none';
 document.getElementById('emptyState').style.display = 'block';
 
@@ -352,6 +424,7 @@ document.getElementById('hamburgerBtn').addEventListener('click', () => {
   document.getElementById('hamburgerBtn').classList.toggle('open');
   document.getElementById('navDrawer').classList.toggle('open');
 });
+
 // Theme
 function toggleTheme() {
   const r = document.documentElement;
