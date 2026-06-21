@@ -130,6 +130,28 @@ app.get('/developers', (req, res) => res.sendFile(path.join(__dirname, 'develope
 app.get('/packages',   (req, res) => res.sendFile(path.join(__dirname, 'packages.html')));
 app.get('/status',     (req, res) => res.sendFile(path.join(__dirname, 'status.html')));
 app.get('/setup',      (req, res) => res.sendFile(path.join(__dirname, 'setup.html')));
+
+// Serve auth helper — no auth required (bootstraps the session itself)
+app.get('/auth.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(__dirname, 'auth.js'));
+});
+
+// Discord OAuth redirect — browsers land here when authFetch() finds no token
+app.get('/auth/discord', (req, res) => {
+    const oauthUrl = process.env.DISCORD_OAUTH_URL || '';
+    const returnTo = String(req.query.return || '/').replace(/[^a-zA-Z0-9/_-]/g, '');
+    if (oauthUrl) {
+        // Append return path as state so the OAuth callback can redirect back
+        const url = new URL(oauthUrl);
+        url.searchParams.set('state', returnTo);
+        return res.redirect(302, url.toString());
+    }
+    // Fallback: no OAuth configured — redirect to /login (or show inline prompt)
+    res.redirect(302, `/login?return=${encodeURIComponent(returnTo)}`);
+});
+
 app.get('/health',     (req, res) => {
     // Unauthenticated — used by Railway health checks
     const botReady = typeof global.sigilClient !== 'undefined' && global.sigilClient?.isReady?.();

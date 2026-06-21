@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sigil — Developers</title>
+  <script src="/auth.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -259,6 +260,8 @@ docker run -d --env-file .env -p 8080:8080 sigil</code></pre>
         <tr><td>CLIENT_ID</td><td>Your Discord application's client ID</td><td><span class="req-dot req"></span></td></tr>
         <tr><td>GUILD_ID</td><td>Guild ID for guild-scoped command registration (dev only)</td><td><span class="req-dot opt"></span></td></tr>
         <tr><td>PORT</td><td>Port for the GUI server (default: 8080). Set automatically by Railway.</td><td><span class="req-dot opt"></span></td></tr>
+        <tr><td>GUI_AUTH_TOKEN</td><td>Static bearer token that protects /api/* and /preview/* routes</td><td><span class="req-dot req"></span></td></tr>
+        <tr><td>DISCORD_OAUTH_URL</td><td>Full Discord OAuth2 URL for the /auth/discord redirect (optional — falls back to /login)</td><td><span class="req-dot opt"></span></td></tr>
         <tr><td>GEMINI_API_KEY</td><td>Google Gemini API key — required for AI Generate (currently disabled)</td><td><span class="req-dot opt"></span></td></tr>
       </tbody>
     </table>
@@ -274,11 +277,13 @@ docker run -d --env-file .env -p 8080:8080 sigil</code></pre>
         <tr><td>/brand</td><td>GET</td><td>Brand Builder GUI</td></tr>
         <tr><td>/community</td><td>GET</td><td>Community Tools GUI</td></tr>
         <tr><td>/developers</td><td>GET</td><td>This page</td></tr>
+        <tr><td>/auth.js</td><td>GET</td><td>Auth helper script (no auth required)</td></tr>
+        <tr><td>/auth/discord</td><td>GET</td><td>Redirect to Discord OAuth login</td></tr>
         <tr><td>/health</td><td>GET</td><td>Returns <code>{ok:true, version}</code> — used by the online pill</td></tr>
-        <tr><td>/preview</td><td>POST</td><td>Render brand icon + banner (JSON body)</td></tr>
-        <tr><td>/preview/welcome</td><td>POST</td><td>Render welcome card image</td></tr>
-        <tr><td>/preview/rankcard</td><td>POST</td><td>Render rank card image</td></tr>
-        <tr><td>/preview/serverstats</td><td>POST</td><td>Render server stats card</td></tr>
+        <tr><td>/preview</td><td>POST</td><td>Render brand icon + banner (auth required)</td></tr>
+        <tr><td>/preview/welcome</td><td>POST</td><td>Render welcome card image (auth required)</td></tr>
+        <tr><td>/preview/rankcard</td><td>POST</td><td>Render rank card image (auth required)</td></tr>
+        <tr><td>/preview/serverstats</td><td>POST</td><td>Render server stats card (auth required)</td></tr>
         <tr><td>/generate</td><td>POST</td><td>AI brand generation — <strong>disabled (coming soon)</strong></td></tr>
       </tbody>
     </table>
@@ -312,16 +317,14 @@ docker run -d --env-file .env -p 8080:8080 sigil</code></pre>
     <a href="/community">Community</a>
     <a href="/developers" class="active">Developers</a>
   </nav>
-  <span class="footer-ver">Sigil GUI v2.6.0</span>
+  <span class="footer-ver">Sigil GUI v2.7.0</span>
 </footer>
 
 <script>
-  // Hamburger
   document.getElementById('hamburgerBtn').addEventListener('click', () => {
     document.getElementById('hamburgerBtn').classList.toggle('open');
     document.getElementById('navDrawer').classList.toggle('open');
   });
-  // Theme
   function toggleTheme() {
     const r = document.documentElement;
     r.setAttribute('data-theme', r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
