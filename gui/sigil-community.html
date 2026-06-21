@@ -16,18 +16,35 @@
     button{cursor:pointer;border:none;background:none;}
 
     /* NAV */
-    .navbar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;padding:.6rem 1rem;}
+    .navbar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;padding:.6rem 1rem;}
     .nav-logo{font-family:var(--fontd);font-weight:900;font-size:1.1rem;background:linear-gradient(135deg,#ff4444,#8b0000,#4b0082);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;}
     .nav-sep{width:1px;height:20px;background:var(--border);}
     .nav-subtitle{font-size:.8rem;color:var(--muted);font-weight:600;}
     .nav-pill{padding:.25rem .7rem;border-radius:999px;font-size:.75rem;font-weight:700;border:1px solid var(--border);background:var(--surface2);color:var(--muted);display:flex;align-items:center;gap:5px;}
     .nav-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--faint);}
     .nav-pill.online .dot{background:var(--success);box-shadow:0 0 7px var(--success);}
-    .nav-actions{margin-left:auto;display:flex;gap:.4rem;flex-wrap:wrap;}
+    .nav-actions{margin-left:auto;display:flex;gap:.4rem;align-items:center;}
     .nav-btn{padding:.35rem .8rem;border-radius:.5rem;font-size:.8rem;font-weight:600;border:1px solid var(--border);background:var(--surface2);transition:background 150ms;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;color:var(--text);}
     .nav-btn:hover{background:var(--surface3);}
     .nav-btn.active{background:linear-gradient(135deg,rgba(139,0,0,.3),rgba(75,0,130,.3));border-color:rgba(255,255,255,.2);}
-    .nav-btn.primary-btn{background:linear-gradient(135deg,var(--primary),var(--secondary));border:none;color:#fff;}
+
+    /* Hamburger */
+    .nav-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;width:34px;height:34px;padding:6px;border-radius:.5rem;border:1px solid var(--border);background:var(--surface2);cursor:pointer;flex-shrink:0;}
+    .nav-hamburger span{display:block;height:2px;background:var(--text);border-radius:2px;transition:all 200ms var(--ease);}
+    .nav-hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+    .nav-hamburger.open span:nth-child(2){opacity:0;}
+    .nav-hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+    /* Mobile drawer */
+    .nav-drawer{display:none;flex-direction:column;gap:.35rem;padding:.75rem 1rem;background:var(--surface);border-bottom:1px solid var(--border);}
+    .nav-drawer.open{display:flex;}
+    .nav-drawer .nav-btn{justify-content:flex-start;}
+
+    @media(max-width:700px){
+      .nav-subtitle,.nav-sep{display:none;}
+      .nav-actions{display:none;}
+      .nav-hamburger{display:flex;}
+    }
 
     /* LAYOUT */
     .page{display:flex;min-height:calc(100dvh - 52px);}
@@ -133,6 +150,14 @@
     @media(max-width:700px){.mobile-tabs{display:flex;}}
     .mtab{padding:.4rem .75rem;border-radius:.45rem;font-size:.78rem;font-weight:700;color:var(--muted);white-space:nowrap;border:1px solid transparent;}
     .mtab.active{background:var(--surface2);border-color:var(--border);color:var(--text);}
+
+    /* FOOTER */
+    .site-footer{border-top:1px solid var(--border);background:var(--surface);padding:1.25rem 1.5rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;font-size:.78rem;color:var(--faint);}
+    .footer-links{display:flex;flex-wrap:wrap;gap:.5rem .9rem;}
+    .footer-links a{color:var(--muted);text-decoration:none;font-weight:600;transition:color 150ms;}
+    .footer-links a:hover{color:var(--text);}
+    .footer-links a.active{color:var(--primary);}
+    .footer-ver{font-size:.72rem;opacity:.6;}
   </style>
 </head>
 <body>
@@ -143,13 +168,30 @@
   <span class="nav-subtitle">Community Tools</span>
   <div id="serverPill" class="nav-pill"><span class="dot"></span><span id="serverLabel">Checking...</span></div>
   <div class="nav-actions">
+    <a class="nav-btn" href="/">&#127968; Dashboard</a>
+    <a class="nav-btn" href="/setup">&#9881;&#65039; Setup</a>
+    <a class="nav-btn" href="/packages">&#128230; Packages</a>
+    <a class="nav-btn" href="/status">&#128268; Status</a>
     <a class="nav-btn" href="/brand">&#127912; Brand</a>
     <a class="nav-btn active" href="/community">&#127942; Community</a>
-    <a class="nav-btn" href="/developers">&#128196; Developers</a>
-    <button class="nav-btn" id="themeBtn">&#9680;</button>
-    <a class="nav-btn primary-btn" href="/">&#8592; Home</a>
+    <a class="nav-btn" href="/developers">&#128279; Developers</a>
+    <button class="nav-btn" id="themeBtn">&#9680; Theme</button>
   </div>
+  <button class="nav-hamburger" id="hamburgerBtn" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<div class="nav-drawer" id="navDrawer">
+  <a class="nav-btn" href="/">&#127968; Dashboard</a>
+  <a class="nav-btn" href="/setup">&#9881;&#65039; Setup</a>
+  <a class="nav-btn" href="/packages">&#128230; Packages</a>
+  <a class="nav-btn" href="/status">&#128268; Status</a>
+  <a class="nav-btn" href="/brand">&#127912; Brand Builder</a>
+  <a class="nav-btn active" href="/community">&#127942; Community Tools</a>
+  <a class="nav-btn" href="/developers">&#128279; Developers</a>
+  <button class="nav-btn" id="themeBtnMobile">&#9680; Theme</button>
+</div>
 
 <div id="toast"></div>
 <div class="mobile-tabs" id="mobileTabs"></div>
@@ -522,6 +564,19 @@
   </main>
 </div>
 
+<footer class="site-footer">
+  <nav class="footer-links">
+    <a href="/">Dashboard</a>
+    <a href="/setup">Setup</a>
+    <a href="/packages">Packages</a>
+    <a href="/status">Status</a>
+    <a href="/brand">Brand Builder</a>
+    <a href="/community" class="active">Community</a>
+    <a href="/developers">Developers</a>
+  </nav>
+  <span class="footer-ver">Sigil GUI v2.6.0</span>
+</footer>
+
 <script>
 const SERVER=window.location.origin;
 const $=id=>document.getElementById(id);
@@ -536,10 +591,17 @@ async function ping(){
 ping();setInterval(ping,9000);
 
 // THEME
-$('themeBtn').addEventListener('click',()=>{
+function toggleTheme(){
   const t=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
   document.documentElement.setAttribute('data-theme',t);
-  $('themeBtn').textContent=t==='dark'?'☀️':'☽';
+}
+$('themeBtn').addEventListener('click',toggleTheme);
+$('themeBtnMobile').addEventListener('click',toggleTheme);
+
+// HAMBURGER
+$('hamburgerBtn').addEventListener('click',()=>{
+  $('hamburgerBtn').classList.toggle('open');
+  $('navDrawer').classList.toggle('open');
 });
 
 // TOAST
