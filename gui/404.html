@@ -9,125 +9,64 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:        #08080f;
-      --surface:   #111118;
-      --surface2:  #18181f;
-      --surface3:  #202028;
-      --border:    rgba(255,255,255,.1);
-      --text:      #f0f2f8;
-      --muted:     #9299b0;
-      --faint:     #555d78;
-      --primary:   #8b0000;
-      --secondary: #4b0082;
-      --success:   #39ff14;
-      --radius:    .75rem;
-      --radiuslg:  1.25rem;
-      --font:      'Inter', sans-serif;
-      --fontd:     'Orbitron', sans-serif;
+      --bg:#08080f; --surface:#111118; --surface2:#18181f; --surface3:#202028;
+      --border:rgba(255,255,255,.1); --text:#f0f2f8; --muted:#9299b0; --faint:#555d78;
+      --primary:#8b0000; --secondary:#4b0082; --success:#39ff14;
+      --radius:.75rem; --radiuslg:1.25rem;
+      --font:'Inter',sans-serif; --fontd:'Orbitron',sans-serif;
     }
     [data-theme="light"] {
       --bg:#f0f2f8; --surface:#fff; --surface2:#e8eaf2; --surface3:#dde0ee;
       --border:rgba(0,0,0,.1); --text:#0e0e1a; --muted:#555d78; --faint:#9299b0;
-      --primary:#8b0000; --secondary:#4b0082;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: var(--font);
-      font-size: 15px;
-      color: var(--text);
-      background: var(--bg);
-      line-height: 1.55;
-      min-height: 100dvh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:var(--font);font-size:15px;color:var(--text);background:var(--bg);
+      line-height:1.55;min-height:100dvh;display:flex;align-items:center;justify-content:center;
     }
-    .container {
-      max-width: 600px;
-      padding: 2rem;
-      text-align: center;
+    .container{max-width:640px;padding:2rem;text-align:center;}
+    .error-code{
+      font-family:var(--fontd);font-size:8rem;font-weight:900;
+      background:linear-gradient(135deg,#ff4444,#8b0000,#4b0082);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+      line-height:1;margin-bottom:.5rem;
     }
-    .error-code {
-      font-family: var(--fontd);
-      font-size: 8rem;
-      font-weight: 900;
-      background: linear-gradient(135deg, #ff4444, #8b0000, #4b0082);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      line-height: 1;
-      margin-bottom: 0.5rem;
+    .error-title{font-family:var(--fontd);font-size:1.5rem;font-weight:700;margin-bottom:1rem;}
+    .error-message{font-size:1rem;color:var(--muted);margin-bottom:2rem;line-height:1.6;}
+    .nav-links{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-bottom:2rem;}
+    .nav-btn{
+      padding:.6rem 1.1rem;border-radius:.5rem;font-size:.83rem;font-weight:600;
+      border:1px solid var(--border);background:var(--surface2);color:var(--text);
+      transition:background 150ms;white-space:nowrap;text-decoration:none;
+      display:inline-flex;align-items:center;gap:.35rem;
     }
-    .error-title {
-      font-family: var(--fontd);
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      color: var(--text);
-    }
-    .error-message {
-      font-size: 1rem;
-      color: var(--muted);
-      margin-bottom: 2rem;
-      line-height: 1.6;
-    }
-    .nav-links {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin-bottom: 2rem;
-    }
-    .nav-btn {
-      padding: 0.6rem 1.2rem;
-      border-radius: 0.5rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text);
-      transition: background 150ms;
-      white-space: nowrap;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-    .nav-btn:hover { background: var(--surface3); }
-    .nav-btn.primary {
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      border: none;
-      color: #fff;
-    }
-    .icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-    }
-    @media(max-width: 480px) {
-      .error-code { font-size: 5rem; }
-      .error-title { font-size: 1.2rem; }
-      .container { padding: 1.5rem; }
-    }
+    .nav-btn:hover{background:var(--surface3);}
+    .nav-btn.primary{background:linear-gradient(135deg,var(--primary),var(--secondary));border:none;color:#fff;}
+    .icon{font-size:3rem;margin-bottom:1rem;}
+    @media(max-width:480px){.error-code{font-size:5rem;}.error-title{font-size:1.2rem;}.container{padding:1.5rem;}}
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="icon">🔗</div>
+    <div class="icon">&#128279;</div>
     <div class="error-code">404</div>
     <div class="error-title">Page Not Found</div>
     <div class="error-message">
-      Oops! The page you're looking for doesn't exist.<br>
+      Oops! The page you&rsquo;re looking for doesn&rsquo;t exist.<br>
       It might have been moved, renamed, or never existed.
     </div>
     <div class="nav-links">
-      <a class="nav-btn primary" href="/">← Back to Home</a>
-      <a class="nav-btn" href="/brand">🎨 Brand Builder</a>
-      <a class="nav-btn" href="/community">🏆 Community Tools</a>
-      <a class="nav-btn" href="/developers">🔗 Developers</a>
+      <a class="nav-btn primary" href="/">&#8592; Back to Home</a>
+      <a class="nav-btn" href="/setup">&#9881;&#65039; Setup Wizard</a>
+      <a class="nav-btn" href="/packages">&#128230; Packages</a>
+      <a class="nav-btn" href="/brand">&#127912; Brand Builder</a>
+      <a class="nav-btn" href="/community">&#127942; Community</a>
+      <a class="nav-btn" href="/developers">&#128196; Developers</a>
+      <a class="nav-btn" href="/status">&#128994; Status</a>
     </div>
-    <div style="color: var(--faint); font-size: 0.8rem;">
-      ✦ Need help? Join our <a href="https://discord.gg/7c89HKrVe" style="color: var(--primary); text-decoration: none;">demo server</a>
+    <div style="color:var(--faint);font-size:.8rem;">
+      &#10022; Need help? Join our <a href="https://discord.gg/7c89HKrVe" style="color:var(--primary);text-decoration:none;">demo server</a>
     </div>
   </div>
 </body>
