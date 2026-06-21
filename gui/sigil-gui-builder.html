@@ -41,15 +41,17 @@
     button { cursor: pointer; border: none; background: none; }
     fieldset { border: none; }
 
+    /* ── Navbar ── */
     .navbar {
       position: sticky; top: 0; z-index: 100;
       background: var(--surface); border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; flex-wrap: wrap;
+      display: flex; align-items: center;
       gap: .5rem; padding: .6rem 1rem;
     }
     .nav-logo { font-family: var(--fontd); font-weight: 900; font-size: 1.1rem;
       background: linear-gradient(135deg,#ff4444,#8b0000,#4b0082);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      text-decoration: none;
     }
     .nav-sep { width:1px; height:20px; background:var(--border); flex-shrink:0; }
     .nav-subtitle { font-size:.8rem; color:var(--muted); font-weight:600; }
@@ -60,7 +62,7 @@
     }
     .nav-pill .dot { width:7px; height:7px; border-radius:50%; background:var(--faint); flex-shrink:0; }
     .nav-pill.online .dot { background:var(--success); box-shadow:0 0 7px var(--success); }
-    .nav-actions { margin-left:auto; display:flex; gap:.4rem; flex-wrap:wrap; }
+    .nav-actions { margin-left:auto; display:flex; gap:.4rem; align-items:center; }
     .nav-btn {
       padding:.35rem .8rem; border-radius:.5rem; font-size:.8rem; font-weight:600;
       border:1px solid var(--border); background:var(--surface2);
@@ -70,11 +72,35 @@
     .nav-btn:hover { background:var(--surface3); }
     .nav-btn.active { background:linear-gradient(135deg,rgba(139,0,0,.3),rgba(75,0,130,.3)); border-color:rgba(255,255,255,.2); color:var(--text); }
     .nav-btn.primary { background:linear-gradient(135deg,var(--primary),var(--secondary)); border:none; color:#fff; }
-    @media(max-width:480px) {
+
+    /* Hamburger */
+    .nav-hamburger {
+      display:none; flex-direction:column; justify-content:center; gap:5px;
+      width:34px; height:34px; padding:6px; border-radius:.5rem;
+      border:1px solid var(--border); background:var(--surface2);
+      cursor:pointer; flex-shrink:0;
+    }
+    .nav-hamburger span { display:block; height:2px; background:var(--text); border-radius:2px; transition:all 200ms var(--ease); }
+    .nav-hamburger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity:0; }
+    .nav-hamburger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+
+    /* Mobile drawer */
+    .nav-drawer {
+      display:none; flex-direction:column; gap:.35rem;
+      padding:.75rem 1rem; background:var(--surface);
+      border-bottom:1px solid var(--border);
+    }
+    .nav-drawer.open { display:flex; }
+    .nav-drawer .nav-btn { justify-content:flex-start; }
+
+    @media(max-width:700px) {
       .nav-subtitle, .nav-sep { display:none; }
-      .nav-btn.hide-xs { display:none; }
+      .nav-actions { display:none; }
+      .nav-hamburger { display:flex; }
     }
 
+    /* ── Layout ── */
     .page { display:flex; flex-direction:column; }
     @media(min-width:900px) { .page { flex-direction:row; min-height:calc(100dvh - 52px); } }
 
@@ -154,6 +180,8 @@
     .preview-tabs::-webkit-scrollbar { display:none; }
     .ptab { padding:.7rem 1rem; font-size:.82rem; font-weight:700; color:var(--faint); border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap; flex-shrink:0; transition:all 150ms; }
     .ptab.on { color:var(--text); border-bottom-color:var(--primary); }
+    .ptab.soon { opacity:.5; cursor:default; font-size:.75rem; }
+    .ptab.soon::after { content:' (soon)'; font-size:.65rem; }
     .preview-body { flex:1; padding:1.25rem; overflow-y:auto; }
     .preview-panel { display:none; }
     .preview-panel.on { display:block; }
@@ -189,24 +217,53 @@
     .step-dots { display:flex; gap:5px; }
     .step-dot-sm { width:7px; height:7px; border-radius:50%; background:var(--faint); transition:background 200ms; }
     .step-dot-sm.on { background:var(--primary); }
+
+    /* ── Footer ── */
+    .site-footer {
+      border-top:1px solid var(--border); background:var(--surface);
+      padding:1.25rem 1.5rem;
+      display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+      gap:.75rem; font-size:.78rem; color:var(--faint);
+    }
+    .footer-links { display:flex; flex-wrap:wrap; gap:.5rem .9rem; }
+    .footer-links a { color:var(--muted); text-decoration:none; font-weight:600; transition:color 150ms; }
+    .footer-links a:hover { color:var(--text); }
+    .footer-links a.active { color:var(--primary); }
+    .footer-ver { font-size:.72rem; opacity:.6; }
   </style>
 </head>
 <body>
 
 <nav class="navbar">
-  <span class="nav-logo">SIGIL</span>
+  <a class="nav-logo" href="/">SIGIL</a>
   <div class="nav-sep"></div>
   <span class="nav-subtitle">Brand Builder</span>
   <div id="serverPill" class="nav-pill"><span class="dot"></span><span id="serverLabel">Offline</span></div>
   <div class="nav-actions">
-    <a class="nav-btn active" href="/brand">&#127912; Brand Builder</a>
-    <a class="nav-btn" href="/community">&#127942; Community Tools</a>
-    <a class="nav-btn hide-xs" href="/developers">&#128279; Developers</a>
-    <button class="nav-btn hide-xs" id="previewBtn">&#9889; Preview</button>
-    <button class="nav-btn primary" id="generateBtn">&#10022; Generate</button>
+    <a class="nav-btn" href="/">&#127968; Dashboard</a>
+    <a class="nav-btn" href="/setup">&#9881;&#65039; Setup</a>
+    <a class="nav-btn" href="/packages">&#128230; Packages</a>
+    <a class="nav-btn" href="/status">&#128268; Status</a>
+    <a class="nav-btn active" href="/brand">&#127912; Brand</a>
+    <a class="nav-btn" href="/community">&#127942; Community</a>
+    <a class="nav-btn" href="/developers">&#128279; Developers</a>
     <button class="nav-btn" id="themeBtn">&#9680; Theme</button>
   </div>
+  <button class="nav-hamburger" id="hamburgerBtn" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
+
+<div class="nav-drawer" id="navDrawer">
+  <a class="nav-btn" href="/">&#127968; Dashboard</a>
+  <a class="nav-btn" href="/setup">&#9881;&#65039; Setup</a>
+  <a class="nav-btn" href="/packages">&#128230; Packages</a>
+  <a class="nav-btn" href="/status">&#128268; Status</a>
+  <a class="nav-btn active" href="/brand">&#127912; Brand Builder</a>
+  <a class="nav-btn" href="/community">&#127942; Community Tools</a>
+  <a class="nav-btn" href="/developers">&#128279; Developers</a>
+  <button class="nav-btn" id="themeBtnMobile">&#9680; Theme</button>
+</div>
 
 <div id="toast">&#10003; Copied!</div>
 
@@ -305,7 +362,7 @@
     <div class="preview-tabs">
       <button class="ptab on" data-panel="preview">Preview</button>
       <button class="ptab" data-panel="palette">Output &amp; Palette</button>
-      <button class="ptab" data-panel="ai">AI Image</button>
+      <button class="ptab soon" title="AI image generation coming soon" disabled>AI Image</button>
     </div>
     <div class="preview-body">
 
@@ -328,25 +385,35 @@
         </div>
       </div>
 
-      <!-- AI Image tab -->
-      <div class="preview-panel" id="pp-ai">
-        <div class="canvas-wrap" id="aiImgWrap" style="aspect-ratio:1;">
-          <div id="aiImgPlaceholder" style="color:var(--faint);font-size:.82rem;text-align:center;padding:2rem;">&#128274; AI image generation is coming soon. Use the manual renderer above to preview your brand kit.</div>
-          <img id="aiImg" style="display:none;width:100%;border-radius:.6rem;" alt="AI generated brand image" />
-        </div>
-        <div class="action-row">
-          <button class="abtn" id="dlAiBtn" disabled>&#8595; Download AI Image</button>
-        </div>
-      </div>
-
     </div>
   </main>
 </div>
+
+<footer class="site-footer">
+  <nav class="footer-links">
+    <a href="/">Dashboard</a>
+    <a href="/setup">Setup</a>
+    <a href="/packages">Packages</a>
+    <a href="/status">Status</a>
+    <a href="/brand" class="active">Brand Builder</a>
+    <a href="/community">Community</a>
+    <a href="/developers">Developers</a>
+  </nav>
+  <span class="footer-ver">Sigil GUI v2.6.0</span>
+</footer>
 
 <script>
 const SERVER = window.location.origin;
 const $ = id => document.getElementById(id);
 let serverAlive = false;
+let kitDirty = false;
+
+// ── Hamburger ─────────────────────────────────────────────────────────────
+$('hamburgerBtn').addEventListener('click', () => {
+  const btn = $('hamburgerBtn'), drawer = $('navDrawer');
+  btn.classList.toggle('open');
+  drawer.classList.toggle('open');
+});
 
 // ── Server health ─────────────────────────────────────────────────────────
 async function pingServer() {
@@ -358,9 +425,16 @@ async function pingServer() {
 pingServer(); setInterval(pingServer, 9000);
 
 // ── Theme ─────────────────────────────────────────────────────────────────
-$('themeBtn').addEventListener('click', () => {
+function toggleTheme() {
   const r = document.documentElement;
   r.setAttribute('data-theme', r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+$('themeBtn').addEventListener('click', toggleTheme);
+$('themeBtnMobile').addEventListener('click', toggleTheme);
+
+// ── Unsaved-changes guard ─────────────────────────────────────────────────
+window.addEventListener('beforeunload', e => {
+  if (kitDirty) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // ── Toast ─────────────────────────────────────────────────────────────────
@@ -370,7 +444,7 @@ function showToast(msg = '✓ Copied!') {
 }
 
 // ── Preview tabs ──────────────────────────────────────────────────────────
-document.querySelectorAll('.ptab').forEach(tab => {
+document.querySelectorAll('.ptab:not(.soon)').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.ptab').forEach(t => t.classList.remove('on'));
     document.querySelectorAll('.preview-panel').forEach(p => p.classList.remove('on'));
@@ -390,7 +464,7 @@ const TEMPLATES = [
   { id:'cozy-den',     name:'Cozy Den',      sub:'Community',      primary:'#E67E22', secondary:'#F1C40F', bg:'solid-dark',      border:'none',   shape:'rounded',  font:'Arial' },
   { id:'neon-drift',   name:'Neon Drift',    sub:'Racing / Sports',primary:'#FF6B35', secondary:'#F7C59F', bg:'neon-city',       border:'neon',   shape:'diamond',  font:'Impact' },
   { id:'polar-ops',    name:'Polar Ops',     sub:'Tactical FPS',   primary:'#ADB5BD', secondary:'#495057', bg:'polar',           border:'subtle', shape:'square',   font:'Arial Black' },
-  { id:'emerald-fang', name:'Emerald Fang',  sub:'Survival / RPG', primary:'#39FF14', secondary:'#1A5C2A', bg:'forest-night',    border:'glow',   shape:'shield',   shape2:'shield', font:'Oswald' },
+  { id:'emerald-fang', name:'Emerald Fang',  sub:'Survival / RPG', primary:'#39FF14', secondary:'#1A5C2A', bg:'forest-night',    border:'glow',   shape:'shield',   font:'Oswald' },
   { id:'void-protocol',name:'Void Protocol', sub:'Sci-Fi',         primary:'#7B8CDE', secondary:'#DE7B9B', bg:'deep-space',      border:'subtle', shape:'circle',   font:'Source Code Pro' },
 ];
 
@@ -429,7 +503,7 @@ function buildChips(containerId, items, stateKey, labelFn) {
     const btn = document.createElement('button');
     btn.className = 'chip' + (state[stateKey] === k ? ' on' : '');
     btn.textContent = labelFn ? labelFn(l) : l;
-    btn.addEventListener('click', () => { state[stateKey] = k; buildChips(containerId, items, stateKey, labelFn); renderAll(); });
+    btn.addEventListener('click', () => { state[stateKey] = k; kitDirty = true; buildChips(containerId, items, stateKey, labelFn); renderAll(); });
     wrap.appendChild(btn);
   });
 }
@@ -462,18 +536,18 @@ function syncUIFromState() {
 
 function syncColor(pickerId, hexId, stateKey) {
   const picker = $(pickerId), hex = $(hexId);
-  picker.addEventListener('input', e => { state[stateKey] = e.target.value.toUpperCase(); hex.value = state[stateKey]; renderAll(); });
-  hex.addEventListener('input',   e => { try { picker.value = e.target.value; } catch {} state[stateKey] = e.target.value; renderAll(); });
+  picker.addEventListener('input', e => { state[stateKey] = e.target.value.toUpperCase(); hex.value = state[stateKey]; kitDirty = true; renderAll(); });
+  hex.addEventListener('input',   e => { try { picker.value = e.target.value; } catch {} state[stateKey] = e.target.value; kitDirty = true; renderAll(); });
 }
 syncColor('colorPrimaryPicker',   'colorPrimary',   'primary');
 syncColor('colorSecondaryPicker', 'colorSecondary', 'secondary');
 
 ['brandName','tagline','desc','iconText','bannerText'].forEach(id => {
-  $(id).addEventListener('input', e => { state[id === 'brandName' ? 'name' : id] = e.target.value; renderAll(); });
+  $(id).addEventListener('input', e => { state[id === 'brandName' ? 'name' : id] = e.target.value; kitDirty = true; renderAll(); });
 });
 
-$('radiusRange').addEventListener('input', e => { state.radius = parseFloat(e.target.value); $('radiusDisplay').textContent = state.radius; renderAll(); });
-$('shadowRange').addEventListener('input', e => { state.shadow = parseFloat(e.target.value); $('shadowDisplay').textContent = state.shadow; renderAll(); });
+$('radiusRange').addEventListener('input', e => { state.radius = parseFloat(e.target.value); $('radiusDisplay').textContent = state.radius; kitDirty = true; renderAll(); });
+$('shadowRange').addEventListener('input', e => { state.shadow = parseFloat(e.target.value); $('shadowDisplay').textContent = state.shadow; kitDirty = true; renderAll(); });
 
 // ── Wizard navigation ─────────────────────────────────────────────────────
 function goToStep(n) {
@@ -501,8 +575,7 @@ function buildStepDots() {
 $('nextBtn').addEventListener('click', () => goToStep(currentStep + 1));
 $('backBtn').addEventListener('click', () => goToStep(currentStep - 1));
 document.querySelectorAll('.step[data-step]').forEach(s => s.addEventListener('click', () => goToStep(+s.dataset.step)));
-$('previewBtn').addEventListener('click', () => { renderAll(); showToast('Preview refreshed'); });
-$('generateBtn').addEventListener('click', () => goToStep(TOTAL_STEPS - 1));
+$('manualGenBtn').addEventListener('click', () => { renderAll(); showToast('✓ Rendered!'); });
 
 // ── Canvas rendering ──────────────────────────────────────────────────────
 function getBgColor() {
@@ -604,7 +677,7 @@ function renderBanner() {
 
 function renderPalette() {
   const strip = $('paletteStrip'); strip.innerHTML = '';
-  [state.primary, state.secondary, getBgColor(), '#ffffff'].forEach((c,i) => {
+  [state.primary, state.secondary, getBgColor(), '#ffffff'].forEach((c) => {
     const s = document.createElement('div');
     s.className = 'pal-swatch';
     s.style.background = c;
@@ -655,6 +728,7 @@ $('dlIconBtn').addEventListener('click', () => {
   const a = document.createElement('a');
   a.download = `${(state.name || 'sigil').toLowerCase().replace(/\s+/g,'-')}-icon.png`;
   a.href = $('iconCanvas').toDataURL(); a.click();
+  kitDirty = false;
 });
 $('dlBannerBtn').addEventListener('click', () => {
   const a = document.createElement('a');
@@ -665,15 +739,7 @@ $('copyKitBtn').addEventListener('click', () => {
   const kit = { name: state.name, tagline: state.tagline, primary: state.primary, secondary: state.secondary, background: state.bg, border: state.border, shape: state.shape, font: state.font, size: state.size };
   navigator.clipboard.writeText(JSON.stringify(kit, null, 2));
   showToast('✓ Kit JSON copied!');
-});
-
-$('manualGenBtn').addEventListener('click', () => { renderAll(); showToast('✓ Rendered!'); });
-
-$('dlAiBtn').addEventListener('click', () => {
-  const img = $('aiImg');
-  if (!img.src) return;
-  const a = document.createElement('a'); a.href = img.src;
-  a.download = `${(state.name||'sigil').toLowerCase().replace(/\s+/g,'-')}-ai.png`; a.click();
+  kitDirty = false;
 });
 
 function setAiStatus(msg, type) {
