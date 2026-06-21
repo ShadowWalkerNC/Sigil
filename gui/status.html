@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="/auth.js"></script>
   <style>
     :root{
       --bg:#08080f;--surface:#111118;--surface2:#18181f;--surface3:#202028;
@@ -25,8 +26,6 @@
     html{scroll-behavior:smooth;}
     body{font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.6;min-height:100vh;}
     button{cursor:pointer;border:none;background:none;font:inherit;color:inherit;}
-
-    /* NAV */
     .navbar{position:sticky;top:0;z-index:100;background:rgba(8,8,15,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;padding:.6rem 1.5rem;}
     .nav-logo{font-family:var(--fontd);font-weight:900;font-size:1.1rem;background:linear-gradient(135deg,#ff4444,#8b0000,#4b0082);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none;white-space:nowrap;}
     .nav-sep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
@@ -43,46 +42,35 @@
     .nav-drawer{display:none;flex-direction:column;gap:.35rem;padding:.75rem 1rem;background:rgba(8,8,15,.95);border-bottom:1px solid var(--border);}
     .nav-drawer.open{display:flex;}
     .nav-drawer .nav-btn{justify-content:flex-start;}
-    @media(max-width:700px){
-      .nav-subtitle,.nav-sep{display:none;}
-      .nav-actions{display:none;}
-      .nav-hamburger{display:flex;}
-    }
-
+    @media(max-width:700px){.nav-subtitle,.nav-sep{display:none;}.nav-actions{display:none;}.nav-hamburger{display:flex;}}
     .page-header{padding:3rem 1.5rem 2rem;max-width:1200px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}
     .page-header h1{font-family:var(--fontd);font-size:clamp(1.4rem,3.5vw,2rem);font-weight:900;background:linear-gradient(135deg,#ff6666,#8b0000,#4b0082);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
     .page-header p{color:var(--muted);font-size:.9rem;margin-top:.3rem;}
     .refresh-info{font-size:.78rem;color:var(--faint);display:flex;align-items:center;gap:.5rem;white-space:nowrap;}
     .refresh-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite;flex-shrink:0;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-
     .page-body{max-width:1200px;margin:0 auto;padding:0 1.5rem 4rem;display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
     @media(max-width:860px){.page-body{grid-template-columns:1fr;}}
     .full-col{grid-column:1/-1;}
-
     .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radiuslg);overflow:hidden;transition:border-color 200ms;}
     .card:hover{border-color:rgba(255,255,255,.16);}
     .card-head{padding:1.1rem 1.4rem .8rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;border-bottom:1px solid var(--border);}
     .card-title{font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:.5rem;}
     .card-body{padding:1.2rem 1.4rem;}
-
     .pill{display:inline-flex;align-items:center;gap:.35rem;font-size:.72rem;font-weight:700;padding:.22rem .65rem;border-radius:999px;text-transform:uppercase;letter-spacing:.06em;}
     .pill-ok{background:rgba(57,255,20,.12);border:1px solid rgba(57,255,20,.3);color:var(--success);}
     .pill-warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:var(--warn);}
     .pill-err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--err);}
     .pill-loading{background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.2);color:var(--faint);}
     .pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
-
     .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.85rem;}
     .kpi{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:.85rem 1rem;}
     .kpi-val{font-family:var(--fontd);font-size:1.35rem;font-weight:900;color:var(--text);line-height:1;margin-bottom:.25rem;font-variant-numeric:tabular-nums;}
     .kpi-lbl{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);}
-
     .svc-list{display:flex;flex-direction:column;gap:.5rem;}
     .svc-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.65rem .85rem;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border);}
     .svc-name{font-size:.85rem;font-weight:600;color:var(--text);font-family:var(--fontm);}
     .svc-meta{font-size:.72rem;color:var(--faint);margin-top:.08rem;}
-
     .asciline-meta{display:flex;flex-wrap:wrap;gap:.65rem;margin-bottom:1.1rem;}
     .meta-chip{font-size:.75rem;font-weight:600;padding:.2rem .65rem;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:var(--fontm);display:flex;align-items:center;gap:.35rem;}
     .ctrl-row{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;}
@@ -95,7 +83,6 @@
     .vol-row label{font-size:.75rem;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;}
     input[type=range]{flex:1;accent-color:var(--info);cursor:pointer;}
     .vol-val{font-size:.78rem;font-family:var(--fontm);color:var(--muted);width:2.5rem;text-align:right;}
-
     .log-toolbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
     .log-filter-btn{padding:.28rem .7rem;border-radius:.4rem;font-size:.73rem;font-weight:700;border:1px solid var(--border);background:transparent;color:var(--faint);cursor:pointer;transition:all 130ms;}
     .log-filter-btn.active,.log-filter-btn:hover{background:var(--surface3);color:var(--text);border-color:rgba(255,255,255,.2);}
@@ -114,15 +101,11 @@
     .log-ts{color:var(--faint);margin-right:.5rem;}
     .log-lvl{font-weight:700;margin-right:.5rem;}
     .log-empty{color:var(--faint);font-style:italic;padding:.5rem 0;}
-
     .last-err-box{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius);padding:.85rem 1rem;font-size:.8rem;color:var(--err);font-family:var(--fontm);word-break:break-all;line-height:1.6;}
     .last-err-ts{font-size:.68rem;color:rgba(239,68,68,.5);margin-top:.35rem;}
     .no-err{color:var(--faint);font-size:.82rem;font-style:italic;}
-
     .uptime-bar-wrap{background:var(--surface2);border-radius:999px;height:6px;overflow:hidden;margin-top:.45rem;}
     .uptime-bar{height:100%;background:linear-gradient(90deg,var(--success),#00cc88);border-radius:999px;transition:width .5s var(--ease);}
-
-    /* FOOTER */
     .site-footer{border-top:1px solid var(--border);background:var(--surface);padding:1.25rem 1.5rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;font-size:.78rem;color:var(--faint);}
     .footer-links{display:flex;flex-wrap:wrap;gap:.5rem .9rem;}
     .footer-links a{color:var(--muted);text-decoration:none;font-weight:600;transition:color 150ms;}
@@ -138,14 +121,14 @@
   <div class="nav-sep"></div>
   <span class="nav-subtitle">Status</span>
   <div class="nav-actions">
-    <a class="nav-btn" href="/">&#127968; Dashboard</a>
-    <a class="nav-btn" href="/setup">&#9881;&#65039; Setup</a>
-    <a class="nav-btn" href="/packages">&#128230; Packages</a>
-    <a class="nav-btn active" href="/status">&#128268; Status</a>
-    <a class="nav-btn" href="/brand">&#127912; Brand</a>
-    <a class="nav-btn" href="/community">&#127942; Community</a>
-    <a class="nav-btn" href="/developers">&#128279; Developers</a>
-    <button class="nav-btn" id="themeBtn">&#9680; Theme</button>
+    <a class="nav-btn" href="/">🏠 Dashboard</a>
+    <a class="nav-btn" href="/setup">⚙️ Setup</a>
+    <a class="nav-btn" href="/packages">📦 Packages</a>
+    <a class="nav-btn active" href="/status">🔌 Status</a>
+    <a class="nav-btn" href="/brand">🎨 Brand</a>
+    <a class="nav-btn" href="/community">🏆 Community</a>
+    <a class="nav-btn" href="/developers">🔗 Developers</a>
+    <button class="nav-btn" id="themeBtn">⮀ Theme</button>
   </div>
   <button class="nav-hamburger" id="hamburgerBtn" aria-label="Toggle menu">
     <span></span><span></span><span></span>
@@ -153,19 +136,19 @@
 </nav>
 
 <div class="nav-drawer" id="navDrawer">
-  <a class="nav-btn" href="/">&#127968; Dashboard</a>
-  <a class="nav-btn" href="/setup">&#9881;&#65039; Setup</a>
-  <a class="nav-btn" href="/packages">&#128230; Packages</a>
-  <a class="nav-btn active" href="/status">&#128268; Status</a>
-  <a class="nav-btn" href="/brand">&#127912; Brand Builder</a>
-  <a class="nav-btn" href="/community">&#127942; Community Tools</a>
-  <a class="nav-btn" href="/developers">&#128279; Developers</a>
-  <button class="nav-btn" id="themeBtnMobile">&#9680; Theme</button>
+  <a class="nav-btn" href="/">🏠 Dashboard</a>
+  <a class="nav-btn" href="/setup">⚙️ Setup</a>
+  <a class="nav-btn" href="/packages">📦 Packages</a>
+  <a class="nav-btn active" href="/status">🔌 Status</a>
+  <a class="nav-btn" href="/brand">🎨 Brand Builder</a>
+  <a class="nav-btn" href="/community">🏆 Community Tools</a>
+  <a class="nav-btn" href="/developers">🔗 Developers</a>
+  <button class="nav-btn" id="themeBtnMobile">⮀ Theme</button>
 </div>
 
 <div class="page-header">
   <div>
-    <h1>&#128994; System Status</h1>
+    <h1>🟢 System Status</h1>
     <p>Live health snapshot &mdash; bot, GUI server, ASCILINE, and background services.</p>
   </div>
   <div class="refresh-info">
@@ -176,7 +159,7 @@
 
 <div class="page-body">
   <div class="card full-col" id="overall-card">
-    <div class="card-head"><span class="card-title">&#9889; Overall Health</span><span class="pill pill-loading" id="overall-pill"><span class="pill-dot"></span>Loading</span></div>
+    <div class="card-head"><span class="card-title">⚡ Overall Health</span><span class="pill pill-loading" id="overall-pill"><span class="pill-dot"></span>Loading</span></div>
     <div class="card-body">
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-val" id="kpi-guilds">&mdash;</div><div class="kpi-lbl">Guilds</div></div>
@@ -188,7 +171,7 @@
     </div>
   </div>
   <div class="card">
-    <div class="card-head"><span class="card-title">&#129302; Discord Bot</span><span class="pill pill-loading" id="bot-pill"><span class="pill-dot"></span>Loading</span></div>
+    <div class="card-head"><span class="card-title">🤖 Discord Bot</span><span class="pill pill-loading" id="bot-pill"><span class="pill-dot"></span>Loading</span></div>
     <div class="card-body">
       <div class="svc-list">
         <div class="svc-row"><span class="svc-name">Guilds</span><span class="svc-meta" id="bot-guilds">&mdash;</span></div>
@@ -198,7 +181,7 @@
     </div>
   </div>
   <div class="card">
-    <div class="card-head"><span class="card-title">&#127760; GUI Server</span><span class="pill pill-loading" id="gui-pill"><span class="pill-dot"></span>Loading</span></div>
+    <div class="card-head"><span class="card-title">🌐 GUI Server</span><span class="pill pill-loading" id="gui-pill"><span class="pill-dot"></span>Loading</span></div>
     <div class="card-body">
       <div class="svc-list">
         <div class="svc-row"><span class="svc-name">Version</span><span class="svc-meta" id="gui-version">&mdash;</span></div>
@@ -209,17 +192,17 @@
     </div>
   </div>
   <div class="card full-col">
-    <div class="card-head"><span class="card-title">&#127922; ASCILINE Stream Server</span><span class="pill pill-loading" id="asc-pill"><span class="pill-dot"></span>Loading</span></div>
+    <div class="card-head"><span class="card-title">🎠 ASCILINE Stream Server</span><span class="pill pill-loading" id="asc-pill"><span class="pill-dot"></span>Loading</span></div>
     <div class="card-body">
       <div class="asciline-meta">
-        <span class="meta-chip">&#127910; Mode: <span id="asc-mode">&mdash;</span></span>
-        <span class="meta-chip">&#128250; Cols: <span id="asc-cols">&mdash;</span></span>
-        <span class="meta-chip">&#127911; Playing: <span id="asc-playing">&mdash;</span></span>
-        <span class="meta-chip">&#128223; Queue: <span id="asc-queue">&mdash;</span></span>
+        <span class="meta-chip">🎧 Mode: <span id="asc-mode">&mdash;</span></span>
+        <span class="meta-chip">📺 Cols: <span id="asc-cols">&mdash;</span></span>
+        <span class="meta-chip">🎵 Playing: <span id="asc-playing">&mdash;</span></span>
+        <span class="meta-chip">📏 Queue: <span id="asc-queue">&mdash;</span></span>
       </div>
       <div class="ctrl-row">
-        <button class="ctrl-btn" id="btn-skip" disabled>&#9197; Skip</button>
-        <button class="ctrl-btn danger" id="btn-stop" disabled>&#9209; Stop</button>
+        <button class="ctrl-btn" id="btn-skip" disabled>⏭ Skip</button>
+        <button class="ctrl-btn danger" id="btn-stop" disabled>⏹ Stop</button>
       </div>
       <div class="vol-row">
         <label>Volume</label>
@@ -229,16 +212,16 @@
     </div>
   </div>
   <div class="card">
-    <div class="card-head"><span class="card-title">&#9965; Background Services</span><span class="pill pill-loading" id="svc-pill"><span class="pill-dot"></span>Loading</span></div>
+    <div class="card-head"><span class="card-title">⛽ Background Services</span><span class="pill pill-loading" id="svc-pill"><span class="pill-dot"></span>Loading</span></div>
     <div class="card-body"><div class="svc-list" id="svc-list"><div class="svc-row"><span class="svc-name" style="color:var(--faint)">Loading&hellip;</span></div></div></div>
   </div>
   <div class="card">
-    <div class="card-head"><span class="card-title">&#9888; Last Error</span></div>
+    <div class="card-head"><span class="card-title">⚠ Last Error</span></div>
     <div class="card-body" id="last-err-body"><span class="no-err">No errors logged.</span></div>
   </div>
   <div class="card full-col">
     <div class="card-head">
-      <span class="card-title">&#128196; Live Logs</span>
+      <span class="card-title">📄 Live Logs</span>
       <div class="log-toolbar">
         <button class="log-filter-btn active" data-level="">All</button>
         <button class="log-filter-btn lf-info" data-level="info">Info</button>
@@ -261,11 +244,10 @@
     <a href="/community">Community</a>
     <a href="/developers">Developers</a>
   </nav>
-  <span class="footer-ver">Sigil GUI v2.6.0</span>
+  <span class="footer-ver">Sigil GUI v2.7.0</span>
 </footer>
 
 <script>
-// Nav
 document.getElementById('hamburgerBtn').addEventListener('click', () => {
   document.getElementById('hamburgerBtn').classList.toggle('open');
   document.getElementById('navDrawer').classList.toggle('open');
@@ -277,13 +259,10 @@ function toggleTheme() {
 document.getElementById('themeBtn').addEventListener('click', toggleTheme);
 document.getElementById('themeBtnMobile').addEventListener('click', toggleTheme);
 
-// Media controls
 document.getElementById('btn-skip').addEventListener('click', () => mediaAction('skip'));
 document.getElementById('btn-stop').addEventListener('click', () => mediaAction('stop'));
 document.getElementById('vol-slider').addEventListener('input', e => document.getElementById('vol-label').textContent = parseFloat(e.target.value).toFixed(1));
 document.getElementById('vol-slider').addEventListener('change', e => setVolume(e.target.value));
-
-// Log filters
 document.querySelectorAll('.log-filter-btn').forEach(btn => {
   btn.addEventListener('click', () => setLogLevel(btn.dataset.level));
 });
@@ -292,8 +271,21 @@ function pill(el,state,label){el.className='pill pill-'+state;el.innerHTML='<spa
 function fmtUptime(ms){if(!ms&&ms!==0)return'—';const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;if(h>0)return h+'h '+m+'m';if(m>0)return m+'m '+sec+'s';return sec+'s';}
 function fmtTs(iso){if(!iso)return'';try{return new Date(iso).toLocaleTimeString();}catch{return iso;}}
 function esc(str){return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-const POLL_MS=10000;let countdown=POLL_MS/1000;
-async function fetchStatus(){try{const r=await fetch('/api/status/full');const d=await r.json();renderStatus(d);}catch(e){pill(document.getElementById('overall-pill'),'err','Unreachable');}}
+
+const POLL_MS=10000;
+let countdown=POLL_MS/1000;
+
+async function fetchStatus(){
+  try{
+    // authFetch adds Authorization: Bearer <token>
+    const r=await SigilAuth.authFetch('/api/status/full');
+    const d=await r.json();
+    renderStatus(d);
+  }catch(e){
+    pill(document.getElementById('overall-pill'),'err','Unreachable');
+  }
+}
+
 function renderStatus(d){
   pill(document.getElementById('overall-pill'),d.ok?'ok':'err',d.ok?'All Systems Operational':'Degraded');
   document.getElementById('kpi-guilds').textContent=d.bot?.guilds??'—';
@@ -321,8 +313,9 @@ function renderStatus(d){
   ['btn-skip','btn-stop'].forEach(id=>document.getElementById(id).disabled=!ao);
   document.getElementById('vol-slider').disabled=!ao;
   const el=document.getElementById('svc-list');
-  if(!Array.isArray(d.services)||d.services.length===0){el.innerHTML='<div class="svc-row"><span class="svc-name" style="color:var(--faint)">No services registered.</span></div>';}
-  else{
+  if(!Array.isArray(d.services)||d.services.length===0){
+    el.innerHTML='<div class="svc-row"><span class="svc-name" style="color:var(--faint)">No services registered.</span></div>';
+  } else {
     el.innerHTML='';
     d.services.forEach(s=>{
       const st2=s.status==='ok'?'ok':s.status==='starting'?'warn':'err';
@@ -343,28 +336,48 @@ function renderStatus(d){
   pill(document.getElementById('svc-pill'),d.services_ok!==false?'ok':'warn',d.services_ok!==false?'All Running':'Degraded');
   const ee=document.getElementById('last-err-body');
   ee.innerHTML='';
-  if(!d.last_error){const s=document.createElement('span');s.className='no-err';s.textContent='No errors logged. 🎉';ee.appendChild(s);}
-  else{
+  if(!d.last_error){
+    const s=document.createElement('span');s.className='no-err';s.textContent='No errors logged. 🎉';ee.appendChild(s);
+  } else {
     const box=document.createElement('div');box.className='last-err-box';
     box.textContent=d.last_error.msg||d.last_error.message||JSON.stringify(d.last_error);
     const ts=document.createElement('div');ts.className='last-err-ts';ts.textContent=fmtTs(d.last_error.ts||d.last_error.time);
     box.appendChild(ts);ee.appendChild(box);
   }
 }
+
 function tick(){const el=document.getElementById('next-refresh');countdown--;if(countdown<=0){countdown=POLL_MS/1000;fetchStatus();el.textContent='Refreshing…';}else{el.textContent='Next refresh in '+countdown+'s';}}
-fetchStatus();setInterval(tick,1000);
-async function mediaAction(action){try{await fetch('/api/media/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});setTimeout(fetchStatus,800);}catch(e){}}
-async function setVolume(v){try{await fetch('/api/media/volume',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vol:parseFloat(v)})});}catch(e){}}
+fetchStatus();
+setInterval(tick,1000);
+
+async function mediaAction(action){
+  try{
+    await SigilAuth.authFetch('/api/media/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    setTimeout(fetchStatus,800);
+  }catch(e){}
+}
+async function setVolume(v){
+  try{
+    await SigilAuth.authFetch('/api/media/volume',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vol:parseFloat(v)})});
+  }catch(e){}
+}
+
 let ws=null,currentLevel='';
 const MAX_LOG_LINES=500;
+
 function setLogLevel(level){
   currentLevel=level;
   document.querySelectorAll('.log-filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.level===level));
   connectWS();
 }
+
 function connectWS(){
   if(ws){try{ws.close();}catch(_){}}
-  const url=(location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/ws/logs'+(currentLevel?'?level='+currentLevel:'');
+  // Auth token passed as ?token= query param (Authorization header not available in WS upgrade)
+  const token=SigilAuth.getToken();
+  const levelParam=currentLevel?'&level='+currentLevel:'';
+  const scheme=(location.protocol==='https:'?'wss':'ws');
+  const url=scheme+'://'+location.host+'/ws/logs?token='+encodeURIComponent(token)+levelParam;
   ws=new WebSocket(url);
   const dot=document.getElementById('ws-dot'),lbl=document.getElementById('ws-label');
   dot.className='ws-dot';lbl.textContent='Connecting…';
@@ -373,8 +386,9 @@ function connectWS(){
   ws.onclose=()=>{dot.className='ws-dot';lbl.textContent='Disconnected — retrying…';setTimeout(connectWS,3000);};
   ws.onerror=()=>{dot.className='ws-dot error';lbl.textContent='Connection error';};
 }
+
 function appendLogLine(entry){
-  const box=document.getElementById('log-box'),level=(entry.level||'info').toLowerCase(),ts=entry.ts?new Date(entry.ts).toLocaleTimeString():'',msg=entry.msg||entry.message||JSON.stringify(entry);
+  const box=document.getElementById('log-box'),level=(entry.level||'info').toLowerCase(),ts=entry.ts?new Date(entry.ts).toLocaleTimeString():'',msg=entry.msg||entry.message||entry.text||JSON.stringify(entry);
   const line=document.createElement('div');line.className='log-line '+level;
   if(ts){const tsEl=document.createElement('span');tsEl.className='log-ts';tsEl.textContent=ts;line.appendChild(tsEl);}
   const lvlEl=document.createElement('span');lvlEl.className='log-lvl';lvlEl.textContent='['+level.toUpperCase()+'] ';line.appendChild(lvlEl);
@@ -383,6 +397,7 @@ function appendLogLine(entry){
   while(box.children.length>MAX_LOG_LINES)box.removeChild(box.firstChild);
   if(box.scrollHeight-box.scrollTop-box.clientHeight<60)box.scrollTop=box.scrollHeight;
 }
+
 connectWS();
 </script>
 </body>
