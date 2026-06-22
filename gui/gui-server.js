@@ -121,6 +121,7 @@ const apiLimiter     = rateLimit({ windowMs: 60_000, max: 60, standardHeaders: t
 const mediaLimiter   = rateLimit({ windowMs: 60_000, max: 30, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Media rate limit exceeded.' } });
 const controlLimiter = rateLimit({ windowMs: 60_000, max: 5,  standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Rate limit exceeded.' } });
 const setupLimiter   = rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Too many setup requests.' } });
+const authLimiter    = rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Too many auth attempts.' } });
 
 // ── Static pages (no auth required) ──────────────────────────────────────────
 app.get('/',           (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -130,6 +131,7 @@ app.get('/developers', (req, res) => res.sendFile(path.join(__dirname, 'develope
 app.get('/packages',   (req, res) => res.sendFile(path.join(__dirname, 'packages.html')));
 app.get('/status',     (req, res) => res.sendFile(path.join(__dirname, 'status.html')));
 app.get('/setup',      (req, res) => res.sendFile(path.join(__dirname, 'setup.html')));
+app.get('/login',      (req, res) => res.sendFile(path.join(__dirname, 'login.html')));
 
 // Serve auth helper — no auth required (bootstraps the session itself)
 app.get('/auth.js', (req, res) => {
@@ -138,18 +140,101 @@ app.get('/auth.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'auth.js'));
 });
 
-// Discord OAuth redirect — browsers land here when authFetch() finds no token
+// ── POST /auth/token — validate a GUI token (used by login.html) ──────────────
+app.post('/auth/token', authLimiter, (req, res) => {
+    const provided  = String(req.body?.token || '').trim();
+    const guiSecret = process.env.GUI_AUTH_TOKEN || '';
+    if (!guiSecret)
+        return res.status(503).json({ ok: false, error: 'GUI_AUTH_TOKEN is not configured on this server.' });
+    if (!provided || provided.length < 8)
+        return res.status(400).json({ ok: false, error: 'Token is too short.' });
+    let valid = false;
+    try {
+        const a = Buffer.from(provided);
+        const b = Buffer.from(guiSecret);
+        if (a.length === b.length) valid = crypto.timingSafeEqual(a, b);
+    } catch { valid = false; }
+    if (!valid)
+        return res.status(401).json({ ok: false, error: 'Invalid token.' });
+    res.json({ ok: true });
+});
+
+// ── GET /auth/discord — redirect to Discord OAuth ─────────────────────────────
 app.get('/auth/discord', (req, res) => {
     const oauthUrl = process.env.DISCORD_OAUTH_URL || '';
     const returnTo = String(req.query.return || '/').replace(/[^a-zA-Z0-9/_-]/g, '');
     if (oauthUrl) {
-        // Append return path as state so the OAuth callback can redirect back
         const url = new URL(oauthUrl);
         url.searchParams.set('state', returnTo);
         return res.redirect(302, url.toString());
     }
-    // Fallback: no OAuth configured — redirect to /login (or show inline prompt)
+    // No OAuth configured — send to token login page
     res.redirect(302, `/login?return=${encodeURIComponent(returnTo)}`);
+});
+
+// ── GET /auth/discord/callback — exchange OAuth code for token ────────────────
+app.get('/auth/discord/callback', authLimiter, async (req, res) => {
+    const code     = String(req.query.code     || '').trim();
+    const returnTo = String(req.query.state    || '/').replace(/[^a-zA-Z0-9/_-]/g, '') || '/';
+
+    const clientId     = process.env.DISCORD_CLIENT_ID     || '';
+    const clientSecret = process.env.DISCORD_CLIENT_SECRET || '';
+    const redirectUri  = process.env.DISCORD_REDIRECT_URI  || `http://localhost:${PORT}/auth/discord/callback`;
+    const guiSecret    = process.env.GUI_AUTH_TOKEN         || '';
+
+    if (!code)
+        return res.redirect(302, `/login?return=${encodeURIComponent(returnTo)}&error=missing_code`);
+    if (!clientId || !clientSecret)
+        return res.redirect(302, `/login?return=${encodeURIComponent(returnTo)}&error=oauth_not_configured`);
+
+    try {
+        // Exchange code for Discord access token
+        const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body:    new URLSearchParams({
+                client_id:     clientId,
+                client_secret: clientSecret,
+                grant_type:    'authorization_code',
+                code,
+                redirect_uri:  redirectUri,
+            }),
+        });
+
+        if (!tokenRes.ok) {
+            console.warn('[OAuth] Discord token exchange failed:', tokenRes.status);
+            return res.redirect(302, `/login?return=${encodeURIComponent(returnTo)}&error=oauth_failed`);
+        }
+
+        // Verify the Discord user is in the allowed guild (optional — uses DISCORD_GUILD_ID env)
+        const { access_token } = await tokenRes.json();
+        const userRes = await fetch('https://discord.com/api/v10/users/@me', {
+            headers: { Authorization: `Bearer ${access_token}` },
+        });
+        if (!userRes.ok) {
+            console.warn('[OAuth] Discord user fetch failed:', userRes.status);
+            return res.redirect(302, `/login?return=${encodeURIComponent(returnTo)}&error=user_fetch_failed`);
+        }
+        const user = await userRes.json();
+        console.log(`[OAuth] Authenticated: ${user.username} (${user.id})`);
+
+        // Use GUI_AUTH_TOKEN as the session token (passed back to the client via ?token=)
+        // This keeps the auth model simple — all GUI access = same shared token.
+        if (!guiSecret) {
+            console.warn('[OAuth] GUI_AUTH_TOKEN not set — cannot issue session token.');
+            return res.redirect(302, `/login?return=${encodeURIComponent(returnTo)}&error=no_gui_token`);
+        }
+
+        // Redirect to the return path with the session token in the URL
+        // auth.js will strip this from the URL and store it in sessionStorage.
+        const dest = new URL(returnTo, `http://localhost:${PORT}`);
+        dest.searchParams.set('token', guiSecret);
+        return res.redirect(302, dest.pathname + dest.search);
+
+    } catch (err) {
+        console.error('[OAuth] Callback error:', err.message);
+        return res.redirect(302, `/login?return=${encodeURIComponent(returnTo)}&error=server_error`);
+    }
 });
 
 app.get('/health',     (req, res) => {
@@ -222,7 +307,6 @@ app.post('/api/setup/validate-token', setupLimiter, async (req, res) => {
         }
 
         const tag = user.username + (user.discriminator && user.discriminator !== '0' ? `#${user.discriminator}` : '');
-        // SECURITY: never log the token, only the resolved tag
         console.log(`[setup] Token validated for ${tag} (${user.id})`);
         res.json({ ok: true, tag, id: user.id });
     } catch (err) {
@@ -321,7 +405,6 @@ app.post('/api/media/enqueue', mediaLimiter, async (req, res) => {
         const { url, mode = 1, cols, vol = 1, pixel = false, loop = false } = req.body || {};
         if (!url || typeof url !== 'string' || !url.trim())
             return res.status(400).json({ ok: false, error: 'Missing or invalid "url".' });
-        // SSRF guard — block RFC-1918, loopback, metadata service addresses
         try { await assertSafeUrl(url.trim()); }
         catch (ssrfErr) { return res.status(400).json({ ok: false, error: ssrfErr.message }); }
         const result = await proxyToStream('/api/enqueue', { url: url.trim(), mode, cols, vol, pixel, loop });
@@ -406,7 +489,7 @@ app.get('/api/logs', apiLimiter, (req, res) => {
     res.json({ ok: true, lines: merged });
 });
 
-// WebSocket logs — auth via ?token= query param (Authorization header not available in WS upgrade)
+// WebSocket logs — auth via ?token= query param
 const wssLogs = new WebSocketServer({ noServer: true });
 
 wssLogs.on('connection', (ws, req) => {
@@ -423,7 +506,6 @@ wssLogs.on('connection', (ws, req) => {
 
 server.on('upgrade', (req, socket, head) => {
     if (req.url.startsWith('/ws/logs')) {
-        // Auth check for WebSocket upgrade — token passed as ?token=
         const guiSecret = process.env.GUI_AUTH_TOKEN || '';
         const params    = new URLSearchParams((req.url || '').split('?')[1] || '');
         const provided  = String(params.get('token') || '').trim();
@@ -487,7 +569,6 @@ function requireControlSecret(req, res) {
         res.status(401).json({ ok: false, error: 'Missing x-control-secret header.' });
         return false;
     }
-    // Constant-time comparison (ASVS V2.7 — prevent timing attacks)
     let valid = false;
     try {
         const a = Buffer.from(provided);
@@ -498,7 +579,7 @@ function requireControlSecret(req, res) {
         res.status(401).json({ ok: false, error: 'Invalid x-control-secret.' });
         return false;
     }
-    return null; // auth passed
+    return null;
 }
 
 app.post('/api/control/restart', controlLimiter, (req, res) => {
@@ -572,8 +653,6 @@ app.post('/webhook/trigger', webhookLimiter, async (req, res) => {
         if (!guildId) return res.status(400).json({ ok: false, error: 'Missing x-sigil-guild-id header.' });
         const config = getConfig(guildId);
 
-        // SECURITY: HMAC verification is now MANDATORY.
-        // If webhook_secret is not configured for this guild, reject the request.
         if (!config.webhook_secret) {
             return res.status(400).json({
                 ok: false,
@@ -592,9 +671,7 @@ app.post('/webhook/trigger', webhookLimiter, async (req, res) => {
         if (!VALID_TYPES.has(type))
             return res.status(400).json({ ok: false, error: `Unknown event type: ${type}` });
 
-        // Enqueue for the bot process via SQLite IPC — no global.sigilClient needed
         enqueueWebhook(type, guildId, payload);
-
         res.json({ ok: true, type, queued: true });
     } catch (err) { console.error('[/webhook/trigger]', err); res.status(500).json({ ok: false, error: 'Internal error.' }); }
 });

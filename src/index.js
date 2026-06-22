@@ -139,8 +139,59 @@ function flushServiceRegistry() {
     console.error = (...a) => { _error(...a); writeLog('error', a); };
 }());
 
+// ── Apply setup_wizard config saved by the GUI setup page ────────────────────
+function applySetupWizardConfig() {
+    try {
+        const Database = require('better-sqlite3');
+        const path     = require('path');
+        const { enablePackage } = require('./utils/packages.js');
+
+        const dbPath  = path.join(__dirname, '..', 'data', 'sigil.db');
+        const setupDb = new Database(dbPath, { readonly: true, fileMustExist: true });
+
+        const hasTable = setupDb
+            .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='setup_wizard'")
+            .get();
+        if (!hasTable) { setupDb.close(); return; }
+
+        const rows = setupDb.prepare('SELECT key, value FROM setup_wizard').all();
+        setupDb.close();
+
+        const data = Object.fromEntries(rows.map(r => [r.key, JSON.parse(r.value)]));
+
+        // Apply enabled packages for every guild currently in cache
+        // (also stores them so future guilds pick them up via packages.js)
+        if (Array.isArray(data.packages) && data.packages.length > 0) {
+            const guildIds = [...client.guilds.cache.keys()];
+            for (const guildId of guildIds) {
+                for (const pkg of data.packages) {
+                    try { enablePackage(guildId, pkg); } catch { /* ignore unknown pkg */ }
+                }
+            }
+            console.log(`[setup] Applied packages [${data.packages.join(', ')}] to ${guildIds.length} guild(s).`);
+        }
+
+        // Store channel config in process.env so services can read it without DB access
+        if (data.channels && typeof data.channels === 'object') {
+            for (const [key, channelId] of Object.entries(data.channels)) {
+                const envKey = `SETUP_CHANNEL_${key.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
+                process.env[envKey] = channelId;
+            }
+            console.log(`[setup] Loaded ${Object.keys(data.channels).length} channel config(s) from setup_wizard.`);
+        }
+    } catch (err) {
+        // Non-fatal — if setup_wizard hasn't been used the table may not exist
+        if (!err.message?.includes('no such table') && !err.message?.includes('ENOENT')) {
+            console.warn('[setup] applySetupWizardConfig error:', err.message);
+        }
+    }
+}
+
 client.once('clientReady', () => {
     global.sigilClient = client;
+
+    // Apply any config saved via the GUI setup wizard
+    applySetupWizardConfig();
 
     const { handleTwitchLive, handleYouTubeUpload, handleGitHubPush } = require('./automation/webhookHandler.js');
     const { processWebhookQueue } = require('./utils/webhookQueue.js');

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sigil — Login</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg:      #0d0d0f;
+            --surface: #17181c;
+            --border:  #2a2b30;
+            --accent:  #8b0000;
+            --accent2: #4b0082;
+            --text:    #e8e8ec;
+            --muted:   #7a7b82;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px #00000066;
+        }
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.25rem;
+        }
+        .subtitle {
+            color: var(--muted);
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+        }
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 1.2rem;
+        }
+        input[type="password"]:focus { border-color: var(--accent); }
+        button {
+            width: 100%;
+            padding: 0.7rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.04em;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.88; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .error {
+            display: none;
+            margin-top: 1rem;
+            padding: 0.6rem 0.9rem;
+            background: #8b000022;
+            border: 1px solid #8b000066;
+            border-radius: 6px;
+            color: #ff6b6b;
+            font-size: 0.85rem;
+        }
+        .footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">SIGIL</div>
+        <div class="subtitle">ShadowRealm Network — GUI Access</div>
+        <label for="token">GUI AUTH TOKEN</label>
+        <input type="password" id="token" placeholder="Enter your GUI auth token" autocomplete="current-password">
+        <button id="btn" onclick="doLogin()">Authenticate</button>
+        <div class="error" id="err"></div>
+        <div class="footer">Sigil GUI v2.7.0 — ShadowRealm Network</div>
+    </div>
+    <script>
+        // Pre-fill return path from URL
+        const _return = new URLSearchParams(window.location.search).get('return') || '/';
+
+        async function doLogin() {
+            const btn = document.getElementById('btn');
+            const err = document.getElementById('err');
+            const tok = document.getElementById('token').value.trim();
+            err.style.display = 'none';
+            if (!tok || tok.length < 8) {
+                err.textContent = 'Token is too short.';
+                err.style.display = 'block';
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = 'Verifying…';
+            try {
+                const res  = await fetch('/auth/token', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ token: tok }),
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    sessionStorage.setItem('gui_auth_token', tok);
+                    window.location.href = _return;
+                } else {
+                    err.textContent = data.error || 'Invalid token.';
+                    err.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Authenticate';
+                }
+            } catch (e) {
+                err.textContent = 'Could not reach server. Try again.';
+                err.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Authenticate';
+            }
+        }
+
+        document.getElementById('token').addEventListener('keydown', e => {
+            if (e.key === 'Enter') doLogin();
+        });
+    </script>
+</body>
+</html>
