@@ -3,6 +3,8 @@
     "aptPackages": [
       "build-essential",
       "pkg-config",
+      "python3",
+      "python3-distutils-extra",
       "libcairo2-dev",
       "libjpeg-dev",
       "libpango1.0-dev",
