@@ -4,7 +4,6 @@
 'use strict';
 
 const nodeGlobals = {
-    // Node.js built-ins
     __dirname: 'readonly',
     __filename: 'readonly',
     exports: 'writable',
@@ -78,7 +77,7 @@ module.exports = [
         ],
     },
 
-    // ── src/ — Node.js (bot + utils) ──────────────────────────────────────────
+    // ── src/ — Node.js CJS (bot + utils) ────────────────────────────────────────
     {
         files: ['src/**/*.js'],
         languageOptions: {
@@ -99,7 +98,23 @@ module.exports = [
         },
     },
 
-    // ── gui/*.js — Node.js (gui-server, auth helper served as static) ─────────
+    // ── ESM utils — override sourceType for files that use import/export ─────
+    {
+        files: [
+            'src/utils/emoji-generator.js',
+            'src/utils/git.js',
+            'src/utils/queue.js',
+            'src/utils/sleep.js',
+            'src/utils/sticker-generator.js',
+        ],
+        languageOptions: {
+            ecmaVersion: 2022,
+            sourceType: 'module',
+            globals: nodeGlobals,
+        },
+    },
+
+    // ── gui/*.js — Node.js CJS + browser globals ───────────────────────────
     {
         files: ['gui/**/*.js'],
         languageOptions: {
