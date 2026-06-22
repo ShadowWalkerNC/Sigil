@@ -1,6 +1,10 @@
-import { execSync } from 'child_process';
+'use strict';
 
-export function getGitCommit() {
-  try { return execSync('git rev-parse --short HEAD').toString().trim(); }
-  catch { return 'unknown'; }
+const { execSync } = require('child_process');
+
+function getGitCommit() {
+    try { return execSync('git rev-parse --short HEAD').toString().trim(); }
+    catch { return 'unknown'; }
 }
+
+module.exports = { getGitCommit };

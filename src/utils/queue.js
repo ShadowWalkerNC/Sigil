@@ -1,5 +1,11 @@
-import { db } from './database.js';
+'use strict';
 
-export function enqueue(type, payload = {}) {
-  db.prepare('INSERT INTO jobs (type, payload) VALUES (?, ?)').run(type, JSON.stringify(payload));
+class Queue {
+    constructor() { this.items = []; }
+    enqueue(item) { this.items.push(item); }
+    dequeue() { return this.items.shift(); }
+    get size() { return this.items.length; }
+    isEmpty() { return this.items.length === 0; }
 }
+
+module.exports = { Queue };

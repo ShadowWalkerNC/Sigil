@@ -77,7 +77,7 @@ module.exports = [
         ],
     },
 
-    // ── src/ — Node.js CJS (bot + utils) ────────────────────────────────────────
+    // ── src/ — Node.js CJS ───────────────────────────────────────────────
     {
         files: ['src/**/*.js'],
         languageOptions: {
@@ -98,23 +98,7 @@ module.exports = [
         },
     },
 
-    // ── ESM utils — override sourceType for files that use import/export ─────
-    {
-        files: [
-            'src/utils/emoji-generator.js',
-            'src/utils/git.js',
-            'src/utils/queue.js',
-            'src/utils/sleep.js',
-            'src/utils/sticker-generator.js',
-        ],
-        languageOptions: {
-            ecmaVersion: 2022,
-            sourceType: 'module',
-            globals: nodeGlobals,
-        },
-    },
-
-    // ── gui/*.js — Node.js CJS + browser globals ───────────────────────────
+    // ── gui/ — Node.js CJS + browser globals ─────────────────────────────
     {
         files: ['gui/**/*.js'],
         languageOptions: {
