@@ -1,0 +1,20 @@
+[phases.setup]
+nixPkgs = [
+  "nodejs_20",
+  "python3",
+  "pkg-config",
+  "cairo",
+  "pango",
+  "libjpeg",
+  "giflib",
+  "librsvg",
+  "pixman",
+  "glib",
+  "fontconfig",
+]
+
+[phases.build]
+cmds = ["npm install --omit=dev"]
+
+[start]
+cmd = "node start.js"
