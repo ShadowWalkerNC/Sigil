@@ -2,11 +2,11 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "node src/index.js"
+startCommand = "node start.js"
 healthcheckPath = "/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 120
 
-# ── Persistent Volume ──────────────────────────────────────────────────────────
+# ── Persistent Volume ─────────────────────────────────────────────────────────────
 # Mount a Railway Volume at /app/data so SQLite survives redeploys.
 # In the Railway dashboard: add a Volume, set mount path to /app/data
 # Without this, data/sigil.db is wiped on every deploy.
