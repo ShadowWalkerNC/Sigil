@@ -1,5 +1,6 @@
 // canvas.js — shared render utilities for Sigil
-const { createCanvas } = require('canvas');
+// canvas (native addon) is lazy-loaded so a missing libuuid.so at startup
+// never crashes the bot process. It is only required when a render is actually invoked.
 const { getBackgroundById } = require('./backgrounds.js');
 const { getBorderById } = require('./borders.js');
 const { registerAllFonts: _regFonts, getAllFontFamilies } = require('./fonts.js');
@@ -17,6 +18,10 @@ function registerAllFonts() {
     if (_fontsRegistered) return;
     _regFonts();
     _fontsRegistered = true;
+}
+
+function _getCreateCanvas() {
+    return require('canvas').createCanvas;
 }
 
 function autoFontSize(ctx, text, maxWidth, startSize) {
@@ -74,6 +79,7 @@ function applyShapeClip(ctx, W, H, shape) {
  * Render a square (or custom-size) icon and return a PNG Buffer.
  */
 async function renderIcon(opts = {}) {
+    const createCanvas = _getCreateCanvas();
     const {
         text       = 'SIGIL',
         background = 'gradient-purple',
@@ -126,6 +132,7 @@ async function renderIcon(opts = {}) {
  * Render a banner at the requested dimensions and return a PNG Buffer.
  */
 async function renderBanner(opts = {}) {
+    const createCanvas = _getCreateCanvas();
     const {
         text       = 'SIGIL',
         subtitle   = '',
@@ -183,6 +190,7 @@ async function renderBanner(opts = {}) {
  * Invalid or non-hex color strings are silently skipped.
  */
 async function renderPalette(colors = []) {
+    const createCanvas = _getCreateCanvas();
     const fallback = ['#6a0dad', '#0057e7', '#cc0000', '#ffd700', '#00cccc'];
     const valid = (Array.isArray(colors) ? colors : [])
         .filter(c => typeof c === 'string' && HEX_RE.test(c.trim()));
