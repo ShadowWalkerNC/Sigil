@@ -15,8 +15,14 @@ const commands = [];
 const cmdDir = path.join(__dirname, 'commands');
 
 for (const file of readdirSync(cmdDir).filter(f => f.endsWith('.js'))) {
-    const cmd = require(path.join(cmdDir, file));
-    if (cmd.data) commands.push(cmd.data.toJSON());
+    // Skip private impl files — they are not command entry points
+    if (file.startsWith('_')) continue;
+    try {
+        const cmd = require(path.join(cmdDir, file));
+        if (cmd?.data?.toJSON) commands.push(cmd.data.toJSON());
+    } catch (err) {
+        console.warn(`[deploy] Skipping ${file}: ${err.message}`);
+    }
 }
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
