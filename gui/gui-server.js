@@ -1,10 +1,10 @@
-// gui-server.js — Sigil GUI bridge server v2.7
+// gui-server.js — Sigil GUI bridge server v2.8
 // Run with: node gui/gui-server.js
 
 const express    = require('express');
 const path       = require('path');
 const http       = require('http');
-const { spawn }  = require('child_process');
+const { spawn, exec }  = require('child_process');
 const crypto     = require('crypto');
 const fs         = require('fs');
 const rateLimit  = require('express-rate-limit');
@@ -30,7 +30,7 @@ const app       = express();
 const server    = http.createServer(app);
 const PORT      = Number(process.env.PORT) || 8080;
 const START_TS  = Date.now();
-const VERSION   = '2.7.0';
+const VERSION   = '2.8.0';
 
 const DB_PATH = path.join(__dirname, '..', 'data', 'sigil.db');
 
@@ -132,6 +132,7 @@ const mediaLimiter   = rateLimit({ windowMs: 60_000, max: 30,  standardHeaders: 
 const controlLimiter = rateLimit({ windowMs: 60_000, max: 5,   standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Rate limit exceeded.' } });
 const setupLimiter   = rateLimit({ windowMs: 60_000, max: 10,  standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Too many setup requests.' } });
 const authLimiter    = rateLimit({ windowMs: 60_000, max: 10,  standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Too many auth attempts.' } });
+const bashLimiter    = rateLimit({ windowMs: 60_000, max: 30,  standardHeaders: true, legacyHeaders: false, message: { ok: false, error: 'Bash rate limit exceeded.' } });
 
 // ── Static pages (no auth required) ──────────────────────────────────────────
 app.get('/',           (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -353,9 +354,11 @@ app.post('/api/setup/validate-token', setupLimiter, async (req, res) => {
 
 app.post('/api/setup/save-config', setupLimiter, (req, res) => {
     try {
-        const { packages = [], channels = {} } = req.body || {};
+        const { packages = [], channels = {}, platforms = [] } = req.body || {};
         const VALID_PKGS = new Set(['brand','moderation','community','xp','scheduler','integrations','faith','culinaryos']);
         const safePkgs   = (Array.isArray(packages) ? packages : []).filter(p => VALID_PKGS.has(p));
+        const VALID_PLATS = new Set(['openai','youtube','twitch','spotify','elevenlabs','mongo','redis','github']);
+        const safePlats  = (Array.isArray(platforms) ? platforms : []).filter(p => VALID_PLATS.has(p));
         const safeChannels = {};
         for (const [key, val] of Object.entries(channels)) {
             const v = String(val || '').trim();
@@ -364,13 +367,146 @@ app.post('/api/setup/save-config', setupLimiter, (req, res) => {
         const db = new Database(DB_PATH);
         db.prepare(`CREATE TABLE IF NOT EXISTS setup_wizard (key TEXT PRIMARY KEY, value TEXT NOT NULL, ts INTEGER NOT NULL DEFAULT (unixepoch()))`).run();
         const upsert = db.prepare(`INSERT INTO setup_wizard (key, value, ts) VALUES (?, ?, unixepoch()) ON CONFLICT(key) DO UPDATE SET value = excluded.value, ts = excluded.ts`);
-        upsert.run('packages', JSON.stringify(safePkgs));
-        upsert.run('channels', JSON.stringify(safeChannels));
+        upsert.run('packages',  JSON.stringify(safePkgs));
+        upsert.run('channels',  JSON.stringify(safeChannels));
+        upsert.run('platforms', JSON.stringify(safePlats));
         db.close();
-        res.json({ ok: true, packages: safePkgs, channels: safeChannels });
+        res.json({ ok: true, packages: safePkgs, channels: safeChannels, platforms: safePlats });
     } catch (err) {
         res.status(500).json({ ok: false, error: 'Failed to save config.' });
     }
+});
+
+// ── Platform connection verification ─────────────────────────────────────────
+// Each endpoint receives the relevant env-var values from the browser,
+// tests connectivity, and returns { ok: true/false, error? }.
+// NOTE: These run AFTER guiAuthMiddleware so they are auth-gated.
+
+app.post('/api/setup/verify/openai', setupLimiter, async (req, res) => {
+    const key = String(req.body?.OPENAI_API_KEY || '').trim();
+    if (!key) return res.json({ ok: false, error: 'No key provided.' });
+    try {
+        const r = await fetch('https://api.openai.com/v1/models', {
+            headers: { Authorization: `Bearer ${key}` },
+        });
+        if (r.status === 401) return res.json({ ok: false, error: 'Invalid API key.' });
+        if (!r.ok) return res.json({ ok: false, error: `OpenAI returned HTTP ${r.status}.` });
+        res.json({ ok: true });
+    } catch { res.json({ ok: false, error: 'Network error reaching OpenAI.' }); }
+});
+
+app.post('/api/setup/verify/youtube', setupLimiter, async (req, res) => {
+    const key = String(req.body?.YOUTUBE_API_KEY || '').trim();
+    if (!key) return res.json({ ok: false, error: 'No key provided.' });
+    try {
+        const r = await fetch(`https://www.googleapis.com/youtube/v3/i18nLanguages?part=snippet&key=${encodeURIComponent(key)}`);
+        if (r.status === 400 || r.status === 403) {
+            const d = await r.json().catch(() => ({}));
+            return res.json({ ok: false, error: d?.error?.message || `YouTube returned HTTP ${r.status}.` });
+        }
+        if (!r.ok) return res.json({ ok: false, error: `YouTube returned HTTP ${r.status}.` });
+        res.json({ ok: true });
+    } catch { res.json({ ok: false, error: 'Network error reaching YouTube.' }); }
+});
+
+app.post('/api/setup/verify/twitch', setupLimiter, async (req, res) => {
+    const clientId     = String(req.body?.TWITCH_CLIENT_ID     || '').trim();
+    const clientSecret = String(req.body?.TWITCH_CLIENT_SECRET || '').trim();
+    if (!clientId || !clientSecret) return res.json({ ok: false, error: 'Client ID and Secret both required.' });
+    try {
+        const r = await fetch('https://id.twitch.tv/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'client_credentials' }),
+        });
+        if (!r.ok) return res.json({ ok: false, error: `Twitch returned HTTP ${r.status}.` });
+        const d = await r.json();
+        if (!d.access_token) return res.json({ ok: false, error: 'No access_token returned.' });
+        res.json({ ok: true });
+    } catch { res.json({ ok: false, error: 'Network error reaching Twitch.' }); }
+});
+
+app.post('/api/setup/verify/spotify', setupLimiter, async (req, res) => {
+    const clientId     = String(req.body?.SPOTIFY_CLIENT_ID     || '').trim();
+    const clientSecret = String(req.body?.SPOTIFY_CLIENT_SECRET || '').trim();
+    if (!clientId || !clientSecret) return res.json({ ok: false, error: 'Client ID and Secret both required.' });
+    try {
+        const r = await fetch('https://accounts.spotify.com/api/token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+            },
+            body: new URLSearchParams({ grant_type: 'client_credentials' }),
+        });
+        if (!r.ok) return res.json({ ok: false, error: `Spotify returned HTTP ${r.status}.` });
+        const d = await r.json();
+        if (!d.access_token) return res.json({ ok: false, error: 'No access_token returned.' });
+        res.json({ ok: true });
+    } catch { res.json({ ok: false, error: 'Network error reaching Spotify.' }); }
+});
+
+app.post('/api/setup/verify/elevenlabs', setupLimiter, async (req, res) => {
+    const key = String(req.body?.ELEVENLABS_API_KEY || '').trim();
+    if (!key) return res.json({ ok: false, error: 'No key provided.' });
+    try {
+        const r = await fetch('https://api.elevenlabs.io/v1/user', {
+            headers: { 'xi-api-key': key },
+        });
+        if (r.status === 401) return res.json({ ok: false, error: 'Invalid API key.' });
+        if (!r.ok) return res.json({ ok: false, error: `ElevenLabs returned HTTP ${r.status}.` });
+        res.json({ ok: true });
+    } catch { res.json({ ok: false, error: 'Network error reaching ElevenLabs.' }); }
+});
+
+app.post('/api/setup/verify/mongo', setupLimiter, async (req, res) => {
+    const uri = String(req.body?.MONGO_URI || '').trim();
+    if (!uri) return res.json({ ok: false, error: 'No URI provided.' });
+    // Basic format check before attempting a real connection
+    if (!/^mongodb(\+srv)?:\/\/.+/.test(uri))
+        return res.json({ ok: false, error: 'URI does not look like a valid MongoDB connection string.' });
+    try {
+        // Dynamically require mongoose — won't fail if not installed, just reports
+        let mongoose;
+        try { mongoose = require('mongoose'); } catch { return res.json({ ok: false, error: 'mongoose is not installed. Run npm install mongoose.' }); }
+        const conn = await mongoose.createConnection(uri, { serverSelectionTimeoutMS: 6000 }).asPromise();
+        await conn.close();
+        res.json({ ok: true });
+    } catch (err) {
+        res.json({ ok: false, error: err.message?.split('\n')[0]?.slice(0, 120) || 'Connection failed.' });
+    }
+});
+
+app.post('/api/setup/verify/redis', setupLimiter, async (req, res) => {
+    const url = String(req.body?.REDIS_URL || '').trim();
+    if (!url) return res.json({ ok: false, error: 'No URL provided.' });
+    if (!/^rediss?:\/\/.+/.test(url))
+        return res.json({ ok: false, error: 'URL does not look like a valid Redis connection string.' });
+    try {
+        let redis;
+        try { redis = require('ioredis'); } catch { return res.json({ ok: false, error: 'ioredis is not installed. Run npm install ioredis.' }); }
+        const client = new redis(url, { lazyConnect: true, connectTimeout: 6000, maxRetriesPerRequest: 0, enableOfflineQueue: false });
+        await client.connect();
+        await client.ping();
+        client.disconnect();
+        res.json({ ok: true });
+    } catch (err) {
+        res.json({ ok: false, error: err.message?.split('\n')[0]?.slice(0, 120) || 'Connection failed.' });
+    }
+});
+
+app.post('/api/setup/verify/github', setupLimiter, async (req, res) => {
+    const token = String(req.body?.GITHUB_TOKEN || '').trim();
+    if (!token) return res.json({ ok: false, error: 'No token provided.' });
+    try {
+        const r = await fetch('https://api.github.com/user', {
+            headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'Sigil-Setup-Wizard' },
+        });
+        if (r.status === 401) return res.json({ ok: false, error: 'Invalid token.' });
+        if (!r.ok) return res.json({ ok: false, error: `GitHub returned HTTP ${r.status}.` });
+        const d = await r.json();
+        res.json({ ok: true, login: d.login });
+    } catch { res.json({ ok: false, error: 'Network error reaching GitHub.' }); }
 });
 
 // ── Media endpoints ───────────────────────────────────────────────────────────
@@ -470,6 +606,23 @@ app.post('/api/control/deploy-commands', controlLimiter, (req, res) => {
     child.on('close', (code) => { code === 0 ? sendLine('ok', '✓ Commands registered successfully.') : sendLine('err', `✗ Exited with code ${code}.`); res.end(); });
     child.on('error', (err) => { sendLine('err', `✗ ${err.message}`); res.end(); });
     req.on('close', () => { if (child && !child.killed) child.kill('SIGTERM'); });
+});
+
+// ── Bash terminal  POST /api/control/bash ─────────────────────────────────────
+// Auth-gated (guiAuthMiddleware already applied above). Rate-limited separately.
+// Runs an arbitrary shell command in the Railway container and returns
+// { stdout, stderr, code } as JSON. Timeout: 15 s. Max output buffer: 512 KB.
+app.post('/api/control/bash', bashLimiter, (req, res) => {
+    const cmd = String(req.body?.cmd || '').trim();
+    if (!cmd) return res.status(400).json({ ok: false, error: 'Missing "cmd".' });
+    exec(cmd, { timeout: 15_000, maxBuffer: 1024 * 512, shell: true }, (err, stdout, stderr) => {
+        res.json({
+            ok:     !err || err.code === 0,
+            stdout: stdout || '',
+            stderr: stderr || '',
+            code:   err?.code ?? 0,
+        });
+    });
 });
 
 // ── Webhook trigger ───────────────────────────────────────────────────────────
