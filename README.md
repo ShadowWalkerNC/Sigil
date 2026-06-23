@@ -170,6 +170,8 @@ npm run gui             # web dashboard (separate process or combined via PM2)
 
 All variables are documented in [`.env.example`](.env.example). Required ones are needed to start. Everything else unlocks an optional feature.
 
+> ⚠️ **Never commit `.env`** — it is listed in `.gitignore`. Use `.env.example` as your template.
+
 ### Core (required)
 
 | Variable | Description |
@@ -281,8 +283,9 @@ Sigil/
 │   └── 404.html
 ├── data/
 │   └── sigil.db             # SQLite database (auto-created, WAL mode)
-├── .env.example
+├── .env.example             # Template — copy to .env and fill in values
 ├── ecosystem.config.js      # PM2 process config
+├── CHANGELOG.md
 ├── DEPLOY.md
 ├── CULINARYOS_BRIDGE.md
 └── SCHEDULER_INTEGRATION.md
@@ -301,6 +304,18 @@ Sigil/
 | IPC | SQLite cross-process bridge (bot → GUI server) |
 
 The bot and GUI server run as **separate processes**. They share one SQLite database file. The bot writes heartbeat, service registry, and log rows every 30–60 seconds. The GUI server reads them via a lightweight read-only connection — no in-memory globals, no sockets, no restarts required when either process recycles.
+
+---
+
+## Security
+
+- All `/api/*` and `/preview/*` routes require a valid `GUI_AUTH_TOKEN` (Bearer header or `?token=` query param) enforced by `guiAuthMiddleware`
+- `/api/setup/validate-token` and `/api/status/full` are intentionally exempt (pre-auth setup flow and public health reads)
+- The `/api/control/bash` endpoint requires a separate `CONTROL_SECRET` header in addition to GUI auth
+- Webhook HMAC verification on `/webhook/trigger` via `x-sigil-signature`
+- SSRF guard on all user-supplied URLs via `src/utils/ssrfGuard.js`
+- Rate limiting on every endpoint group (auth: 10/min, render: 20/min, control: 5/min)
+- `.env` is git-ignored — **never commit real secrets**; use `.env.example` as the template
 
 ---
 
@@ -337,16 +352,17 @@ The service will automatically appear on the `/status` dashboard and in the SQLi
 
 ### REST & WebSocket API
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/status/full` | GET | Aggregated health — bot, GUI, services, last error |
-| `/api/logs` | GET | Merged bot + GUI log tail (`?tail=50&level=error`) |
-| `/api/packages` | GET / POST | Read or toggle feature packages per guild |
-| `/api/media/*` | GET / POST | ASCILINE media queue proxy |
-| `/api/control/restart` | POST | Graceful restart (requires `x-control-secret`) |
-| `/webhook/trigger` | POST | External event trigger (Twitch, YouTube, GitHub) |
-| `/health` | GET | Simple uptime + version check |
-| `/ws/logs` | WebSocket | Live log stream (`?level=error`) |
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/status/full` | GET | None | Aggregated health — bot, GUI, services, last error |
+| `/api/logs` | GET | ✅ | Merged bot + GUI log tail (`?tail=50&level=error`) |
+| `/api/packages` | GET / POST | ✅ | Read or toggle feature packages per guild |
+| `/api/media/*` | GET / POST | ✅ | ASCILINE media queue proxy |
+| `/api/control/restart` | POST | ✅ + control secret | Graceful restart |
+| `/api/control/bash` | POST | ✅ + control secret | Run shell command (Railway terminal) |
+| `/webhook/trigger` | POST | HMAC | External event trigger (Twitch, YouTube, GitHub) |
+| `/health` | GET | None | Simple uptime + version check |
+| `/ws/logs` | WebSocket | token param | Live log stream (`?token=&level=error`) |
 
 All endpoints are rate-limited. See [`gui/README.md`](gui/README.md) for the full API reference and rate limit table.
 

@@ -1,187 +1,148 @@
 # Changelog
 
-All notable changes to **Sigil** are documented here.
-
-Format: [Semantic Versioning](https://semver.org/) — `[version] — YYYY-MM-DD`
-
----
-
-## [2.6.0] — 2026-06-21
-
-### Added
-- **`gui/setup.html`** — 5-step setup wizard (Credentials → Features → Channels → Deploy → Done). Discord-style sidebar layout with `--theme-*` CSS variables for full theme customisation. Served at `GET /setup`.
-- **`POST /api/setup/validate-token`** — Validates a Discord bot token + client ID via Discord REST before the wizard advances.
-- **`POST /api/setup/save-config`** — Persists package selection and channel/role IDs to `data/sigil-config.json`.
-- **`POST /api/control/deploy-commands`** — Streams `deploy-commands.js` output as NDJSON. Requires `x-control-secret` header matching `CONTROL_SECRET` env var.
-- **`src/services/postpilot.js`** — Post-Pilot REST API bridge. Methods: `health`, `generatePost`, `publishPost`, `generateAndPublish`, `getHistory`, `getSiteConfig`, `isConfigured`, `formatResults`, `parsePlatforms`.
-- **`src/commands/post.js`** — `/post` slash command — AI social media post generation and publishing via Post-Pilot.
-- **`src/commands/poststatus.js`** — `/poststatus` slash command — Post-Pilot connection health and recent post history.
-- **`SHADOWREALM_NETWORK.md`** — ShadowRealm Network (SRN) app contract v1.0. Defines inter-app identity, `X-SRN-App` header protocol, and integration expectations for all SRN-connected services.
-- **`.env.example`** — Added `POSTPILOT_URL`, `POSTPILOT_API_KEY`, `POSTPILOT_USER_ID`, `POSTPILOT_SRN_APP`, `POSTPILOT_TIMEOUT_MS` entries.
-
-### Changed
-- **`gui/gui-server.js`** bumped to **v2.6.0**. New routes: `/setup` (GET), `/api/setup/validate-token` (POST), `/api/setup/save-config` (POST), `/api/control/deploy-commands` (POST streaming). `requireControlSecret()` middleware added for protected control routes.
-- **`CONTRIBUTING.md`** — Full rewrite for v2.6 architecture: project layout, setup wizard guide, GUI route authoring, PR checklist.
-- **`gui/setup.html`** — Redesigned from generic dark theme to Discord server-settings layout. Full Discord color palette via CSS custom properties; all colors overridable without touching markup.
+All notable changes to Sigil are documented here.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ---
 
-## [2.5.0] — 2026-06-20
+## [2.8.0] — 2026-06-22
 
-### Added
-- **`gui/developers.html`** — Developers page with API reference, navbar link on all GUI pages
-- **`gui/sigil-community.html`** — Community Tools page (welcome cards, rank cards, server stats)
-- **`gui/404.html`** — Branded 404 error page matching Sigil dark theme
-- **`/setup` route** — `setup.html` now served at `/setup` instead of being orphaned in root
-- **`express-rate-limit`** — 20 requests/minute per IP on all `/preview/*` canvas routes
-- **`safeText()`** — Input sanitizer strips control characters from all user text fields
-- **`docs/API.md`** — Full GUI server API reference
-
-### Changed
-- **AI Generate disabled** — `/generate` endpoint returns 503 Coming Soon; GUI button and textarea disabled with Coming Soon banner
-- **Node engine** bumped from `>=18 <19` to `>=20 <23` (Node 18 is EOL)
-- **`.gitignore`** — Added `.env.local`, `.env.*.local`, editor dirs (`.vscode/`, `.idea/`)
-- **`package.json`** — Added `express-rate-limit` dep, `eslint` devDep, `lint` and `test` scripts
-- **README** — Updated version, file tree, GUI feature list (AI status), Node prerequisite, badges
-- **`docs/CONTEXT.md`** — Updated to v2.0.0 state
+### Security
+- Removed committed `.env` file from repository — secrets were present in git history; rotate any credentials that were stored there
+- Added `.env` warning note to README environment variables section
+- Confirmed `.env` is correctly listed in `.gitignore`
+- Removed stale root-level `setup.html` duplicate (canonical copy lives at `gui/setup.html`)
 
 ### Fixed
-- **Brand Builder → Community** nav link corrected from `/` to `/brand`
-- **404 catch-all** added to `gui-server.js` — unknown routes now return HTTP 404 with branded page instead of raw Express error
-- **Color autocomplete — all commands** — replaced broken `colorAutocomplete(interaction)` call with correct `getColorAutocomplete(focused)` pattern across all 25 commands that use color options
-- **`/mood`** — added `saveEntry()` call so AI-generated palettes are saved to history
-
-### Removed
-- **`src/utils/database.js`** — dead file; all active DB logic lives in `src/utils/db.js`
-
----
-
-## [2.4.0] — 2026-06-20
-
-### Added
-- **`src/util/logBuffer.js`** — In-memory ring buffer (1 000 entries) for all `console` output. `patch()` intercepts `console.log/warn/error`, stamps entries with `{ ts, level, text }`, and notifies subscribers. Supports `tail(n, level?)` and pub/sub via `subscribe(fn)` / `unsubscribe(fn)`.
-- **`GET /api/logs`** — Returns last N lines from the ring buffer. Query params: `tail` (1–500, default 50), `level` (`info` | `warn` | `error`). Rate-limited (60 req/min).
-- **`WS /ws/logs`** — WebSocket stream of real-time log entries. Optional `?level=` filter. Used by `sigil logs --live`.
-- **`GET /api/packages`** — Returns all package states for a guild. Requires `?guild_id=`.
-- **`POST /api/packages`** — Enable or disable a named package for a guild.
-- **`POST /api/media/enqueue`** — Proxies to ASCILINE `stream_server.py /api/enqueue`.
-- **`POST /api/media/skip|stop|seek|volume|loop|mode|cols`** — Full ASCILINE playback control surface.
-- **`GET /api/media/status`** — Proxies ASCILINE `/api/status`.
-- **`GET /api/media/queue`** — Proxies ASCILINE `/api/queue`.
-- **`GET /api/status/full`** — Aggregated health snapshot: `{ gui, bot, asciline, last_error }`.
-- **`src/commands/status.js`** — `/status` Discord slash command with color-coded health embed.
-- **`src/cli/status.js`** — `sigil status` CLI module with ANSI output and `--json` flag.
-- **`src/cli/commands/status.js`** — CLI dispatcher adapter.
+- `guiAuthMiddleware` now correctly exempts `/api/setup/validate-token` from auth so the setup wizard can verify a bot token before a `GUI_AUTH_TOKEN` is configured
+- Fixed `verify-btn` ID collision in `gui/setup.html` — each platform verify button now has a unique ID
+- Auth-gated verify endpoints (`/api/setup/verify/*`) now receive the `Authorization` header correctly from the setup wizard frontend
 
 ### Changed
-- **`gui-server.js`** bumped to **v2.4.0**.
-- **`src/cli/index.js`** — `status` added to the commands map.
-- **`src/cli/lib/help.js`** — `sigil status` entry added.
+- README: added Security section documenting all auth layers, rate limits, and SSRF guard
+- README: updated API reference table to include auth requirements per endpoint
+- README: clarified `.env.example` workflow with explicit warning against committing `.env`
+- CHANGELOG: retroactively organized prior releases
 
 ---
 
-## [1.11.1] — 2026-06-18
-
-### Removed
-- **`/minecraft`** command and `docs/MINECRAFT.md`
-
----
-
-## [1.11.0] — 2026-06-18
+## [2.7.0] — 2026-06-20
 
 ### Added
-- **`/palette export`** slash command — CSS Variables, Tailwind Config, Hex List formats
+- Full GUI authentication system (`guiAuthMiddleware`) — all `/api/*` and `/preview/*` routes require `GUI_AUTH_TOKEN`
+- Discord OAuth2 login flow (`/auth/discord` → `/auth/discord/callback`) as primary auth method
+- Token-entry fallback login page (`/login`) with `auth.js` client-side helper
+- `authFetch()` helper — automatically injects auth header and redirects to `/login` on 401
+- WebSocket log stream auth via `?token=` query param
+- SSRF guard (`src/utils/ssrfGuard.js`) on all user-supplied URLs
+- Webhook queue (`src/utils/webhookQueue.js`) — debounced, ordered dispatch for Twitch/YouTube/GitHub events
+- `GUI_AUTH_TOKEN` and `CONTROL_SECRET` documented in `.env.example`
+
+### Changed
+- `/api/status/full` moved above `guiAuthMiddleware` — public read-only health endpoint, no token required
+- Rate limiter split: separate limiters for auth, render, webhook, API, media, control, bash, setup routes
+- Setup wizard verify endpoints moved under `/api/setup/verify/*` namespace
 
 ---
 
-## [1.10.0] — 2026-06-18
+## [2.6.0] — 2026-06-15
 
 ### Added
-- **`/brand share`** subcommand — shareable GUI link pre-loaded from last kit via base64 URL hash
+- Setup wizard (`/setup`) — step-by-step guided onboarding for new deployments
+- Platform connection verification endpoints: OpenAI, YouTube, Twitch, Spotify, ElevenLabs, MongoDB, Redis, GitHub
+- `POST /api/setup/save-config` — persists wizard selections (packages, channels, platforms) to SQLite
+- `POST /api/setup/validate-token` — live Discord bot token validation before wizard completes
+- Packages toggle page (`/packages`) — enable/disable feature bundles per guild from the browser
+- `src/utils/packages.js` — package enable/disable/state helpers
+
+### Changed
+- GUI server bumped to v2.6 (`VERSION = '2.6.0'`)
 
 ---
 
-## [1.9.0] — 2026-06-18
+## [2.5.0] — 2026-06-10
 
 ### Added
-- **`/template`** slash command — 8 built-in brand templates, full kit render, history save
+- ASCILINE media queue integration — `/api/media/*` proxy endpoints (enqueue, skip, stop, seek, volume, loop, mode, cols, status, queue)
+- `assertSafeUrl` SSRF guard on `/api/media/enqueue`
+- Bash terminal endpoint `POST /api/control/bash` — auth-gated, rate-limited, 15s timeout, 512KB buffer
+- `CONTROL_SECRET` header requirement on control endpoints
+- `GET /api/control/deploy-commands` — streaming NDJSON deploy log
+
+### Changed
+- Media endpoints on separate `mediaLimiter` (30/min)
+- Control endpoints on `controlLimiter` (5/min)
 
 ---
 
-## [1.8.0] — 2026-06-18
+## [2.4.0] — 2026-06-05
 
 ### Added
-- Shape-aware borders; `neon` and `rainbow` border styles; total: **8**
+- Status dashboard (`/status`) — real-time bot health, service heartbeats, live log tail via WebSocket
+- `GET /api/status/full` — aggregated health response (bot, GUI, ASCILINE, services, last error)
+- SQLite IPC bridge — bot writes `bot_heartbeat` and `service_registry` rows; GUI server reads via read-only connection
+- `serviceRegistry.js` — in-process service health tracker with status, error count, last heartbeat
+- `logBuffer.js` — in-process log ring buffer with subscribe/unsubscribe for WebSocket streaming
+- WebSocket log endpoint `ws://host/ws/logs` — live log push with level filter
 
 ---
 
-## [1.7.0] — 2026-06-18
+## [2.3.0] — 2026-05-28
 
 ### Added
-- 12 missing named background presets; total: **32**
-
-### Fixed
-- `bg-image-1` / `bg-image-2` now deterministic (fixed coordinates)
+- Developer docs page (`/developers`) — API reference, webhook config, integration guide
+- Community tools GUI (`/community`) — welcome card previews, reaction roles, giveaway controls
+- Brand builder live canvas GUI (`/brand`) — icon, banner, palette preview with real-time render
+- Preview endpoints: `POST /preview`, `POST /preview/welcome`, `POST /preview/rankcard`, `POST /preview/serverstats`
+- `renderKit()` in `src/utils/canvas.js` — unified canvas render pipeline
+- Background registry (`src/utils/backgrounds.js`) — named gradient/pattern presets
 
 ---
 
-## [1.6.1] — 2026-06-18
+## [2.2.0] — 2026-05-20
 
 ### Added
-- `/compare` and `/avatar` shape options
+- Webhook trigger endpoint `POST /webhook/trigger` — external event dispatch (Twitch, YouTube, GitHub)
+- HMAC verification (`src/utils/hmac.js`) on webhook payloads via `x-sigil-signature`
+- `handleTwitchLive`, `handleYouTubeUpload`, `handleGitHubPush` in `src/automation/webhookHandler.js`
 
 ---
 
-## [1.6.0] — 2026-06-18
+## [2.1.0] — 2026-05-12
 
 ### Added
-- `shape` option on `/icon`, `/logo`, `/random`
+- XP & Levels system — `/xprank`, `/xpleaderboard`, `/weeklyleaderboard`, `/loyalty`, `/levelroles`, `/xpadmin`
+- Weekly XP reset job (auto Sunday)
+- Level-based auto-role assignment
+- Loyalty card canvas generator
 
 ---
 
-## [1.5.1] — 2026-06-18
+## [2.0.0] — 2026-05-01
 
 ### Added
-- `applyShapeClip()` in `canvas.js`, `safeShape()` in `gui-server.js`
+- GUI server (`gui/gui-server.js`) — Express HTTP + WebSocket bridge, replaces inline bot HTTP server
+- Express rate limiting via `express-rate-limit`
+- Static page serving: `/`, `/brand`, `/community`, `/developers`, `/packages`, `/status`, `/setup`, `/login`
+- `GET /health` — unauthenticated JSON health check
+- PM2 `ecosystem.config.js` — runs bot + GUI as separate processes
+- Railway `nixpacks.toml` + `railway.toml` deployment config
+- `.env.example` with all variable definitions
+
+### Changed
+- Bot and GUI now run as **separate Node processes** sharing one SQLite file
+- Port default changed from 3420 → 8080 to match Railway conventions
 
 ---
 
-## [1.5.0] — 2026-06-18
+## [1.x] — Pre-GUI (legacy)
 
-### Added
-- Icon Shape Selector in GUI, shape in URL hash and Config JSON, shape defaults on all 8 templates
-
----
-
-## [1.4.0] — 2026-06-18
-
-### Added
-- 8 brand templates, 7 size presets, URL hash share, Randomize, theme toggle, health pill, Export dialog
-
----
-
-## [1.3.0] — 2026-06-17
-
-### Added
-- GUI Visual Builder, `railpack.json`, `railway.toml`
-
----
-
-## [1.2.0] — 2026-06-16
-
-### Added
-- `/brand ai`, `/brand kit`, `/mood`, `/compare`, `/random`, `/preview`, `/saveme`, `/history`, `/avatar`
-
----
-
-## [1.1.0] — 2026-06-15
-
-### Added
-- `/banner`, `/logo`, font/glow/opacity on `/icon`
-
----
-
-## [1.0.0] — 2026-06-14
-
-### Added
-- Initial release: `/icon`, `/help`, Discord.js v14 framework
+### Included at 1.0
+- 71 slash commands across Brand, Moderation, Community, XP, Scheduler, Integrations, Faith, CulinaryOS
+- SQLite schema (`src/db.js`) with `migrate()` helper for safe ALTER TABLE re-runs
+- Discord.js v14 slash command handler + event system
+- Twitch live alerts (15s poll) + YouTube upload alerts (60s poll)
+- CulinaryOS bridge — `/menu`, `/recipe`, `/inventory` + inbound webhook handler
+- API.Bible integration for `/devotional` (400+ translations)
+- Scheduled content engine — queue any message/embed/banner to any channel
+- Staff shift board with automated daily roster posts
