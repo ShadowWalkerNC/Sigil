@@ -36,14 +36,19 @@ const client = new Client({
 client.commands  = new Collection();
 client.cooldowns = new Collection();
 
-// Load commands
+// Load commands — wrapped in try/catch so a native-addon crash (e.g. canvas/libuuid)
+// on one file never prevents the rest of the bot from starting.
 const commandFiles = readdirSync(join(__dirname, 'commands')).filter(f => f.endsWith('.js'));
 for (const file of commandFiles) {
-    const command = require(join(__dirname, 'commands', file));
-    if (command.data && command.execute) {
-        client.commands.set(command.data.name, command);
-    } else {
-        console.warn(`[WARNING] Command file ${file} is missing 'data' or 'execute'. Skipping.`);
+    try {
+        const command = require(join(__dirname, 'commands', file));
+        if (command.data && command.execute) {
+            client.commands.set(command.data.name, command);
+        } else {
+            console.warn(`[WARNING] Command file ${file} is missing 'data' or 'execute'. Skipping.`);
+        }
+    } catch (err) {
+        console.warn(`[WARNING] Skipping ${file}: ${err.message}`);
     }
 }
 
