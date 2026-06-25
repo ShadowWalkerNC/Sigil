@@ -16,7 +16,7 @@ nixPkgs = [
 [phases.build]
 cmds = [
   "npm install --omit=dev",
-  "PKG_CONFIG_PATH=$(find /nix/store -maxdepth 5 -name '*.pc' 2>/dev/null | xargs -I{} dirname {} | sort -u | tr '\n' ':' | sed 's/:$//') npm rebuild canvas --build-from-source"
+  "bash scripts/rebuild-canvas.sh"
 ]
 
 [start]
