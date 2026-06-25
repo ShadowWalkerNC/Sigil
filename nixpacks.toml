@@ -12,6 +12,7 @@ nixPkgs = [
   "glib",
   "fontconfig",
   "util-linux",
+  "libuuid",
 ]
 
 [phases.build]
