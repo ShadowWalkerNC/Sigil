@@ -11,11 +11,10 @@ nixPkgs = [
   "pixman",
   "glib",
   "fontconfig",
-  "e2fsprogs",
 ]
 
 [phases.build]
-cmds = ["npm install --omit=dev"]
+cmds = ["npm install --omit=dev", "npm rebuild canvas --build-from-source"]
 
 [start]
 cmd = "node start.js"
