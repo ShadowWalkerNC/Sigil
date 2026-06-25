@@ -1,125 +1,97 @@
 'use strict';
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { guiGet, guiPost } = require('../util/guiRequest.js');
+const { getVoiceConnection } = require('@discordjs/voice');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('queue')
-        .setDescription('View or manage the ASCILINE media queue')
+        .setDescription('View or manage the audio queue')
         .addSubcommand(s =>
-            s.setName('list')
-             .setDescription('Show the current video queue'))
+            s.setName('list').setDescription('Show the current audio queue'))
         .addSubcommand(s =>
-            s.setName('skip')
-             .setDescription('Skip the current video'))
+            s.setName('skip').setDescription('Skip the currently playing track'))
         .addSubcommand(s =>
-            s.setName('stop')
-             .setDescription('Stop playback and clear the entire queue'))
+            s.setName('stop').setDescription('Stop playback and clear the queue'))
         .addSubcommand(s =>
-            s.setName('loop')
-             .setDescription('Toggle loop mode on or off')
-             .addStringOption(o =>
-                 o.setName('state')
-                  .setDescription('on or off (omit to toggle)')
-                  .addChoices(
-                      { name: 'On',  value: 'on' },
-                      { name: 'Off', value: 'off' },
-                  ))),
+            s.setName('remove')
+             .setDescription('Remove a track from the queue by position')
+             .addIntegerOption(o =>
+                 o.setName('position')
+                  .setDescription('Queue position to remove (2 or higher)')
+                  .setMinValue(2)
+                  .setRequired(true))),
 
     async execute(interaction) {
         await interaction.deferReply();
         const sub = interaction.options.getSubcommand();
 
-        if (sub === 'list') {
-            let res;
-            try { res = await guiGet('/api/media/queue'); }
-            catch (err) { return interaction.editReply({ embeds: [errEmbed(err.message)] }); }
-            if (!res.ok) return interaction.editReply({ embeds: [warnEmbed(res.error)] });
+        let playCmd;
+        try { playCmd = require('./play.js'); } catch {
+            return interaction.editReply({ content: '❌ Music module unavailable.' });
+        }
 
-            if (!res.queue.length) {
+        const queues = playCmd.getQueues?.();
+        const queue = queues?.get(interaction.guildId) ?? [];
+
+        if (sub === 'list') {
+            if (!queue.length) {
                 return interaction.editReply({
                     embeds: [new EmbedBuilder()
-                        .setColor(0x5865F2)
                         .setTitle('📋 Queue Empty')
-                        .setDescription('Nothing is queued. Use `/play` to add videos.')],
+                        .setDescription('Nothing queued. Use `/play` to add a YouTube URL.')
+                        .setColor('#5865F2')],
                 });
             }
-
-            const lines = res.queue.map((e, i) => {
-                const cur   = i === res.current_index ? ' ◀ **NOW**' : '';
-                const label = e.video.length > 60 ? e.video.slice(0, 57) + '...' : e.video;
-                const meta  = `mode=${e.mode} vol=${e.vol}${e.pixel ? ' pixel' : ''}${e.loop ? ' loop' : ''}`;
-                return `\`${String(i + 1).padStart(2)}.\` ${label}${cur}\n​    \`${meta}\``;
-            });
-
+            const lines = queue.map((t, i) =>
+                `\`${String(i + 1).padStart(2)}.\` ${i === 0 ? '**▶️** ' : ''}[${t.title}](${t.url}) — <@${t.requestedBy}>`
+            );
             let desc = lines.join('\n');
-            if (desc.length > 3800) desc = desc.slice(0, 3800) + `\n...and more`;
-
+            if (desc.length > 3900) desc = desc.slice(0, 3900) + '\n…';
             return interaction.editReply({
                 embeds: [new EmbedBuilder()
-                    .setColor(0x5865F2)
-                    .setTitle(`📋 Queue — ${res.queue.length} item(s)`)
+                    .setTitle(`📋 Queue — ${queue.length} track(s)`)
                     .setDescription(desc)
-                    .setFooter({ text: 'ASCILINE Stream Server' })
+                    .setColor('#5865F2')
                     .setTimestamp()],
             });
         }
 
         if (sub === 'skip') {
-            let res;
-            try { res = await guiPost('/api/media/skip', {}); }
-            catch (err) { return interaction.editReply({ embeds: [errEmbed(err.message)] }); }
-            if (!res.ok) return interaction.editReply({ embeds: [warnEmbed(res.error)] });
+            if (!queue.length) return interaction.editReply({ content: '❌ Nothing is playing.' });
+            const skipped = queue.shift();
+            // Destroy connection so playNext triggers naturally
+            const conn = getVoiceConnection(interaction.guildId);
+            conn?.destroy();
             return interaction.editReply({
                 embeds: [new EmbedBuilder()
-                    .setColor(0xFFA500)
                     .setTitle('⏭️ Skipped')
-                    .setDescription('Moving to the next video in the queue.')],
+                    .setDescription(`Skipped **${skipped.title}**.`)
+                    .setColor('#FFA500')],
             });
         }
 
         if (sub === 'stop') {
-            let res;
-            try { res = await guiPost('/api/media/stop', {}); }
-            catch (err) { return interaction.editReply({ embeds: [errEmbed(err.message)] }); }
-            if (!res.ok) return interaction.editReply({ embeds: [warnEmbed(res.error)] });
+            queues?.set(interaction.guildId, []);
+            const conn = getVoiceConnection(interaction.guildId);
+            conn?.destroy();
             return interaction.editReply({
                 embeds: [new EmbedBuilder()
-                    .setColor(0xFF0000)
                     .setTitle('⏹️ Stopped')
-                    .setDescription('Playback stopped and queue cleared.')],
+                    .setDescription('Playback stopped and queue cleared.')
+                    .setColor('#FF0000')],
             });
         }
 
-        if (sub === 'loop') {
-            const state = interaction.options.getString('state');
-            let enabled;
-            if (state === 'on')       enabled = true;
-            else if (state === 'off') enabled = false;
-            else {
-                try { const s = await guiGet('/api/media/status'); enabled = !s.loop; }
-                catch { enabled = true; }
-            }
-            let res;
-            try { res = await guiPost('/api/media/loop', { enabled }); }
-            catch (err) { return interaction.editReply({ embeds: [errEmbed(err.message)] }); }
-            if (!res.ok) return interaction.editReply({ embeds: [warnEmbed(res.error)] });
+        if (sub === 'remove') {
+            const pos = interaction.options.getInteger('position');
+            if (pos > queue.length) return interaction.editReply({ content: `❌ No track at position ${pos}.` });
+            const removed = queue.splice(pos - 1, 1)[0];
             return interaction.editReply({
                 embeds: [new EmbedBuilder()
-                    .setColor(enabled ? 0x39FF14 : 0x808080)
-                    .setTitle(enabled ? '🔁 Loop Enabled' : '➡️ Loop Disabled')
-                    .setDescription(enabled
-                        ? 'The current video will loop continuously.'
-                        : 'Loop mode is now off.')],
+                    .setTitle('🗑️ Removed')
+                    .setDescription(`Removed **${removed.title}** from position ${pos}.`)
+                    .setColor('#888888')],
             });
         }
     },
 };
-
-function errEmbed(msg) {
-    return new EmbedBuilder().setColor(0xFF0000).setTitle('❌ ASCILINE Unreachable').setDescription('Cannot reach the stream server.').setFooter({ text: msg });
-}
-function warnEmbed(msg) {
-    return new EmbedBuilder().setColor(0xFF6600).setTitle('⚠️ Error').setDescription(msg || 'Unknown error from stream server.');
-}
