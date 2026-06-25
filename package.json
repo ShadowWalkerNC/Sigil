@@ -15,7 +15,8 @@
         "gui": "node gui/gui-server.js",
         "gui:dev": "node --watch gui/gui-server.js",
         "lint": "eslint src/ gui/",
-        "test": "echo \"No tests yet — stub OK\" && exit 0"
+        "test": "echo \"No tests yet — stub OK\" && exit 0",
+        "mcp": "node gui/mcp-server.js"
     },
     "author": "ShadowWalkerNC (fork of NoVa-Gh0ul)",
     "license": "MIT",
