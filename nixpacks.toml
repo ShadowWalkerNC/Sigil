@@ -14,7 +14,10 @@ nixPkgs = [
 ]
 
 [phases.build]
-cmds = ["npm install --omit=dev", "npm rebuild canvas --build-from-source"]
+cmds = [
+  "npm install --omit=dev",
+  "export PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config 2>/dev/null || find /root/.nix-profile/lib/pkgconfig /nix/store -name 'pixman-1.pc' -printf '%h:' 2>/dev/null | sed 's/:$//') && npm rebuild canvas --build-from-source"
+]
 
 [start]
 cmd = "node start.js"
