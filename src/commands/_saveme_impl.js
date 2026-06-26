@@ -9,7 +9,7 @@ async function execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
     const embed = new EmbedBuilder()
-        .setTitle('💙 You Are Not Alone')
+        .setTitle('\ud83d\udc99 You Are Not Alone')
         .setDescription(
             'If you are in crisis or need someone to talk to, please reach out. ' +
             'These resources are free, confidential, and available 24/7.'
@@ -17,19 +17,19 @@ async function execute(interaction) {
         .setColor('#0057b7')
         .addFields(
             {
-                name: '📞 988 Suicide & Crisis Lifeline (US)',
+                name: '\ud83d\udcde 988 Suicide & Crisis Lifeline (US)',
                 value: 'Call or text **988**\n[Chat online](https://988lifeline.org)',
             },
             {
-                name: '💬 Crisis Text Line',
+                name: '\ud83d\udcac Crisis Text Line',
                 value: 'Text **HOME** to **741741** (US, UK, Canada, Ireland)',
             },
             {
-                name: '🌍 International Association for Suicide Prevention',
+                name: '\ud83c\udf0d International Association for Suicide Prevention',
                 value: '[Find a crisis centre near you](https://www.iasp.info/resources/Crisis_Centres/)',
             },
             {
-                name: '🙏 Prayer & Spiritual Support',
+                name: '\ud83d\ude4f Prayer & Spiritual Support',
                 value: 'Use `/prayer request` to share with your community.',
             },
         )
@@ -51,7 +51,47 @@ async function execute(interaction) {
             .setURL('https://www.iasp.info/resources/Crisis_Centres/'),
     );
 
-    return interaction.editReply({ embeds: [embed], components: [row] });
+    // Attempt to DM so resources stay in their inbox even after dismissing
+    let dmSent = false;
+    try {
+        await interaction.user.send({ embeds: [embed], components: [row] });
+        dmSent = true;
+    } catch {
+        // DMs disabled or blocked — ephemeral reply is the fallback
+    }
+
+    const replyEmbed = new EmbedBuilder()
+        .setTitle('\ud83d\udc99 You Are Not Alone')
+        .setDescription(
+            'If you are in crisis or need someone to talk to, please reach out. ' +
+            'These resources are free, confidential, and available 24/7.'
+        )
+        .setColor('#0057b7')
+        .addFields(
+            {
+                name: '\ud83d\udcde 988 Suicide & Crisis Lifeline (US)',
+                value: 'Call or text **988**\n[Chat online](https://988lifeline.org)',
+            },
+            {
+                name: '\ud83d\udcac Crisis Text Line',
+                value: 'Text **HOME** to **741741** (US, UK, Canada, Ireland)',
+            },
+            {
+                name: '\ud83c\udf0d International Association for Suicide Prevention',
+                value: '[Find a crisis centre near you](https://www.iasp.info/resources/Crisis_Centres/)',
+            },
+            {
+                name: '\ud83d\ude4f Prayer & Spiritual Support',
+                value: 'Use `/prayer request` to share with your community.',
+            },
+        )
+        .setFooter({ text: dmSent
+            ? '\ud83d\udce8 A copy has been sent to your DMs. You matter.'
+            : 'This message is only visible to you. You matter.'
+        })
+        .setTimestamp();
+
+    return interaction.editReply({ embeds: [replyEmbed], components: [row] });
 }
 
 module.exports = { data, execute };
