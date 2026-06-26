@@ -1,3 +1,4 @@
+'use strict';
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
@@ -42,20 +43,20 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        const body    = interaction.options.getString('message');
-        const title   = interaction.options.getString('title');
-        const ping    = interaction.options.getRole('ping');
-        const color   = interaction.options.getString('color');
-        const image   = interaction.options.getString('image');
-        const footer  = interaction.options.getString('footer');
-        const target  = interaction.options.getChannel('channel') ?? interaction.channel;
+        await interaction.deferReply({ ephemeral: true });
 
-        // Validate hex color
+        const body   = interaction.options.getString('message');
+        const title  = interaction.options.getString('title');
+        const ping   = interaction.options.getRole('ping');
+        const color  = interaction.options.getString('color');
+        const image  = interaction.options.getString('image');
+        const footer = interaction.options.getString('footer');
+        const target = interaction.options.getChannel('channel') ?? interaction.channel;
+
         const hexColor = color && /^#?[0-9A-Fa-f]{6}$/.test(color)
             ? (color.startsWith('#') ? color : `#${color}`)
             : '#5865F2';
 
-        // Validate image URL
         const imageUrl = image && /^https?:\/\/.+/i.test(image) ? image : null;
 
         const embed = new EmbedBuilder()
@@ -72,15 +73,13 @@ module.exports = {
 
         try {
             await target.send({ content, embeds: [embed] });
-            await interaction.reply({
+            return interaction.editReply({
                 content: `\u2705 Announcement posted to <#${target.id}>${ping ? ` with ping to <@&${ping.id}>` : ''}.`,
-                ephemeral: true,
             });
         } catch (err) {
             console.error('[Announce] Failed to post:', err.message);
-            await interaction.reply({
+            return interaction.editReply({
                 content: `\u274c Could not post to <#${target.id}>. Make sure I have permission to send messages there.`,
-                ephemeral: true,
             });
         }
     },
