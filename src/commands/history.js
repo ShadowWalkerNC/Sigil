@@ -1,16 +1,16 @@
-const guard = require('../utils/packageGuard');
-const impl = (() => { try { return require('./_history_impl'); } catch { return null; } })();
+'use strict';
+const { SlashCommandBuilder } = require('discord.js');
+const impl = require('./_history_impl.js');
+const { isEnabled } = require('../utils/packages.js');
 
-if (impl) {
-    module.exports = { data: impl.data, async autocomplete(i) { return impl.autocomplete?.(i); }, async execute(i) { if (await guard(i, 'aitools')) return; return impl.execute(i); } };
-} else {
-    const { SlashCommandBuilder } = require('discord.js');
-    module.exports = {
-        data: new SlashCommandBuilder().setName('history').setDescription('View your command history'),
-        async execute(interaction) {
-            if (await guard(interaction, 'aitools')) return;
-            await interaction.deferReply({ ephemeral: true });
-            await interaction.editReply({ content: '📜 History initializing.' });
-        },
-    };
-}
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('history')
+        .setDescription('View your AI conversation history.'),
+    async execute(interaction) {
+        if (!isEnabled(interaction.guild.id, 'aitools')) {
+            return interaction.reply({ content: '📦 The **AI Tools** package is not enabled on this server. An admin can enable it via `/sigilconfig packages`.', ephemeral: true });
+        }
+        return impl.execute(interaction);
+    },
+};

@@ -1,16 +1,16 @@
-const guard = require('../utils/packageGuard');
-const impl = (() => { try { return require('./_poll_impl'); } catch { return null; } })();
+'use strict';
+const { SlashCommandBuilder } = require('discord.js');
+const impl = require('./_poll_impl.js');
+const { isEnabled } = require('../utils/packages.js');
 
-if (impl) {
-    module.exports = { data: impl.data, async autocomplete(i) { return impl.autocomplete?.(i); }, async execute(i) { if (await guard(i, 'polls')) return; return impl.execute(i); } };
-} else {
-    const { SlashCommandBuilder } = require('discord.js');
-    module.exports = {
-        data: new SlashCommandBuilder().setName('poll').setDescription('Create a poll'),
-        async execute(interaction) {
-            if (await guard(interaction, 'polls')) return;
-            await interaction.deferReply();
-            await interaction.editReply({ content: '🗳️ Poll system initializing.' });
-        },
-    };
-}
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('poll')
+        .setDescription('Create a multi-option poll.'),
+    async execute(interaction) {
+        if (!isEnabled(interaction.guild.id, 'polls')) {
+            return interaction.reply({ content: '📦 The **Polls** package is not enabled on this server. An admin can enable it via `/sigilconfig packages`.', ephemeral: true });
+        }
+        return impl.execute(interaction);
+    },
+};

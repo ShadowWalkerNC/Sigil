@@ -1,17 +1,16 @@
+'use strict';
 const { SlashCommandBuilder } = require('discord.js');
-const guard = require('../utils/packageGuard');
+const impl = require('./_levelroles_impl.js');
+const { isEnabled } = require('../utils/packages.js');
 
-const _impl = (() => { try { return require('./_levelroles_impl'); } catch { return null; } })();
-
-if (_impl) {
-    module.exports = { data: _impl.data, async autocomplete(i) { return _impl.autocomplete?.(i); }, async execute(i) { if (await guard(i, 'xp')) return; return _impl.execute(i); } };
-} else {
-    module.exports = {
-        data: new SlashCommandBuilder().setName('levelroles').setDescription('Configure level-up role rewards'),
-        async execute(interaction) {
-            if (await guard(interaction, 'xp')) return;
-            await interaction.deferReply();
-            await interaction.editReply({ content: '⭐ Level roles feature coming soon.' });
-        },
-    };
-}
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('levelroles')
+        .setDescription('Configure role rewards for XP levels.'),
+    async execute(interaction) {
+        if (!isEnabled(interaction.guild.id, 'xp')) {
+            return interaction.reply({ content: '📦 The **XP & Levels** package is not enabled on this server. An admin can enable it via `/sigilconfig packages`.', ephemeral: true });
+        }
+        return impl.execute(interaction);
+    },
+};

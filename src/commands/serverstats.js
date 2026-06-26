@@ -1,16 +1,16 @@
-const guard = require('../utils/packageGuard');
-const impl = (() => { try { return require('./_serverstats_impl'); } catch { return null; } })();
+'use strict';
+const { SlashCommandBuilder } = require('discord.js');
+const impl = require('./_serverstats_impl.js');
+const { isEnabled } = require('../utils/packages.js');
 
-if (impl) {
-    module.exports = { data: impl.data, async autocomplete(i) { return impl.autocomplete?.(i); }, async execute(i) { if (await guard(i, 'analytics')) return; return impl.execute(i); } };
-} else {
-    const { SlashCommandBuilder } = require('discord.js');
-    module.exports = {
-        data: new SlashCommandBuilder().setName('serverstats').setDescription('View server statistics'),
-        async execute(interaction) {
-            if (await guard(interaction, 'analytics')) return;
-            await interaction.deferReply();
-            await interaction.editReply({ content: '📊 Server stats initializing.' });
-        },
-    };
-}
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('serverstats')
+        .setDescription('View live server health stats.'),
+    async execute(interaction) {
+        if (!isEnabled(interaction.guild.id, 'analytics')) {
+            return interaction.reply({ content: '📦 The **Analytics** package is not enabled on this server. An admin can enable it via `/sigilconfig packages`.', ephemeral: true });
+        }
+        return impl.execute(interaction);
+    },
+};

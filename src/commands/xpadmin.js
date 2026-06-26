@@ -1,17 +1,16 @@
+'use strict';
 const { SlashCommandBuilder } = require('discord.js');
-const guard = require('../utils/packageGuard');
+const impl = require('./_xpadmin_impl.js');
+const { isEnabled } = require('../utils/packages.js');
 
-const _impl = (() => { try { return require('./_xpadmin_impl'); } catch { return null; } })();
-
-if (_impl) {
-    module.exports = { data: _impl.data, async autocomplete(i) { return _impl.autocomplete?.(i); }, async execute(i) { if (await guard(i, 'xp')) return; return _impl.execute(i); } };
-} else {
-    module.exports = {
-        data: new SlashCommandBuilder().setName('xpadmin').setDescription('Admin XP management commands'),
-        async execute(interaction) {
-            if (await guard(interaction, 'xp')) return;
-            await interaction.deferReply();
-            await interaction.editReply({ content: '⭐ XP admin feature coming soon.' });
-        },
-    };
-}
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('xpadmin')
+        .setDescription('Admin controls for the XP system.'),
+    async execute(interaction) {
+        if (!isEnabled(interaction.guild.id, 'xp')) {
+            return interaction.reply({ content: '📦 The **XP & Levels** package is not enabled on this server. An admin can enable it via `/sigilconfig packages`.', ephemeral: true });
+        }
+        return impl.execute(interaction);
+    },
+};

@@ -1,16 +1,17 @@
-const guard = require('../utils/packageGuard');
-const impl = (() => { try { return require('./_bible_impl'); } catch { return null; } })();
+'use strict';
+const { SlashCommandBuilder } = require('discord.js');
+const impl = require('./_bible_impl.js');
+const { isEnabled } = require('../utils/packages.js');
 
-if (impl) {
-    module.exports = { data: impl.data, async autocomplete(i) { return impl.autocomplete?.(i); }, async execute(i) { if (await guard(i, 'faith')) return; return impl.execute(i); } };
-} else {
-    const { SlashCommandBuilder } = require('discord.js');
-    module.exports = {
-        data: new SlashCommandBuilder().setName('bible').setDescription('Look up a Bible verse'),
-        async execute(interaction) {
-            if (await guard(interaction, 'faith')) return;
-            await interaction.deferReply();
-            await interaction.editReply({ content: '📖 Bible lookup initializing.' });
-        },
-    };
-}
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('bible')
+        .setDescription('Look up a Bible verse.')
+        .addStringOption(o => o.setName('verse').setDescription('e.g. John 3:16').setRequired(true)),
+    async execute(interaction) {
+        if (!isEnabled(interaction.guild.id, 'faith')) {
+            return interaction.reply({ content: '📦 The **Faith** package is not enabled on this server. An admin can enable it via `/sigilconfig packages`.', ephemeral: true });
+        }
+        return impl.execute(interaction);
+    },
+};
